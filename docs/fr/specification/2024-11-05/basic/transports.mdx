@@ -1,0 +1,101 @@
+---
+title: Transports
+type: docs
+weight: 40
+---
+
+<Info>**Révision du protocole** : 2024-11-05</Info>
+
+Le MCP définit actuellement deux mécanismes de transport standard pour la communication client-serveur :
+
+1. [stdio](#stdio), communication via l’entrée et la sortie standard
+2. [HTTP avec événements envoyés par le serveur](#http-with-sse) (SSE)
+
+Les clients **DEVRAIENT** prendre en charge stdio dès que possible.
+
+Il est également possible pour les clients et les serveurs d’implémenter des
+[transports personnalisés](#custom-transports) de manière modulaire.
+
+<div id="stdio">
+  ## stdio
+</div>
+
+Dans le transport **stdio** :
+
+- Le client lance le Serveur MCP en tant que sous-processus.
+- Le serveur reçoit des messages JSON-RPC sur son entrée standard (`stdin`) et écrit
+  les réponses sur sa sortie standard (`stdout`).
+- Les messages sont délimités par des sauts de ligne et **NE DOIVENT PAS** contenir de sauts de ligne intégrés.
+- Le serveur **PEUT** écrire des chaînes UTF-8 sur sa sortie d’erreur standard (`stderr`) à des fins de
+  journalisation. Les clients **PEUVENT** capturer, relayer ou ignorer ces journaux.
+- Le serveur **NE DOIT PAS** écrire sur son `stdout` quoi que ce soit qui ne soit pas un message MCP valide.
+- Le client **NE DOIT PAS** écrire sur le `stdin` du serveur quoi que ce soit qui ne soit pas un
+  message MCP valide.
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Server Process
+
+    Client->>+Server Process: Launch subprocess
+    loop Message Exchange
+        Client->>Server Process: Write to stdin
+        Server Process->>Client: Write to stdout
+        Server Process--)Client: Optional logs on stderr
+    end
+    Client->>Server Process: Close stdin, terminate subprocess
+    deactivate Server Process
+```
+
+<div id="http-with-sse">
+  ## HTTP avec SSE
+</div>
+
+Dans le transport **SSE**, le serveur s’exécute comme un processus indépendant capable de gérer plusieurs connexions de clients.
+
+<div id="security-warning">
+  #### Avertissement de sécurité
+</div>
+
+Lors de l’implémentation de HTTP avec le transport SSE :
+
+1. Les serveurs **DOIVENT** valider l’en-tête `Origin` sur toutes les connexions entrantes afin de prévenir les attaques de rebinding DNS
+2. En local, les serveurs **DEVRAIENT** n’écouter que sur localhost (127.0.0.1) plutôt que sur toutes les interfaces réseau (0.0.0.0)
+3. Les serveurs **DEVRAIENT** mettre en place une authentification appropriée pour toutes les connexions
+
+Sans ces protections, des attaquants pourraient utiliser le rebinding DNS pour interagir avec des serveurs MCP locaux depuis des sites web distants.
+
+Le serveur **DOIT** fournir deux points de terminaison :
+
+1. Un point de terminaison SSE, permettant aux clients d’établir une connexion et de recevoir des messages du
+   serveur
+2. Un point de terminaison HTTP POST classique pour que les clients envoient des messages au serveur
+
+Lorsqu’un client se connecte, le serveur **DOIT** envoyer un événement `endpoint` contenant un URI que le client
+doit utiliser pour l’envoi des messages. Tous les messages ultérieurs du client **DOIVENT** être envoyés
+sous forme de requêtes HTTP POST vers ce point de terminaison.
+
+Les messages du serveur sont envoyés sous forme d’événements SSE `message`, avec le contenu du message encodé en
+JSON dans les données de l’événement.
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Server
+
+    Client->>Server: Open SSE connection
+    Server->>Client: endpoint event
+    loop Message Exchange
+        Client->>Server: HTTP POST messages
+        Server->>Client: SSE message events
+    end
+    Client->>Server: Close SSE connection
+```
+
+<div id="custom-transports">
+  ## Transports personnalisés
+</div>
+
+Les clients et les serveurs **PEUVENT** implémenter des mécanismes de transport personnalisés supplémentaires afin de répondre à leurs besoins spécifiques. Le protocole est indépendant du transport et peut être mis en œuvre sur tout canal de communication prenant en charge l’échange de messages bidirectionnels.
+
+Les implémenteurs qui choisissent de prendre en charge des transports personnalisés **DOIVENT** s’assurer de préserver le format de message et les exigences de cycle de vie JSON-RPC 2.0 définis par le Protocole de contexte de modèle (MCP). Les transports personnalisés **DEVRAIENT** documenter leurs modalités spécifiques d’établissement de la connexion et leurs schémas d’échange de messages afin de faciliter l’interopérabilité.

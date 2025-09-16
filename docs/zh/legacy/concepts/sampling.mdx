@@ -1,0 +1,288 @@
+---
+title: "采样"
+description: "让服务器通过客户端向 LLM 请求补全"
+---
+
+采样是一个强大的 MCP 功能，允许服务器通过客户端请求 LLM 补全，在保障安全与隐私的同时实现更复杂的智能体行为。
+
+<Info>
+
+Claude Desktop 客户端目前尚不支持 MCP 的该功能。
+
+</Info>
+
+<div id="how-sampling-works">
+  ## 采样的工作机制
+</div>
+
+采样流程包括以下步骤：
+
+1. 服务器向客户端发送 `sampling/createMessage` 请求
+2. 客户端审阅并可修改该请求
+3. 客户端通过 LLM 执行采样
+4. 客户端审阅生成结果
+5. 客户端将结果返回给服务器
+
+这种“人参与”的流程设计确保用户始终掌控 LLM 可见与可生成的内容。
+
+<div id="message-format">
+  ## 消息格式
+</div>
+
+采样请求采用标准化的消息格式：
+
+```typescript
+{
+  messages: [
+    {
+      role: "user" | "assistant",
+      content: {
+        type: "text" | "image",
+
+        // 文本：
+        text?: string,
+
+        // 图像：
+        data?: string,             // base64 编码
+        mimeType?: string
+      }
+    }
+  ],
+  modelPreferences?: {
+    hints?: [{
+      name?: string                // 建议的模型名称/系列
+    }],
+    costPriority?: number,         // 0-1，降低成本的优先级
+    speedPriority?: number,        // 0-1，低延迟的优先级
+    intelligencePriority?: number  // 0-1，能力的优先级
+  },
+  systemPrompt?: string,
+  includeContext?: "none" | "thisServer" | "allServers",
+  temperature?: number,
+  maxTokens: number,
+  stopSequences?: string[],
+  metadata?: Record<string, unknown>
+}
+```
+
+<div id="request-parameters">
+  ## 请求参数
+</div>
+
+<div id="messages">
+  ### 消息
+</div>
+
+`messages` 数组包含要发送给 LLM 的会话历史。每条消息包括：
+
+- `role`：为 "user" 或 "assistant"
+- `content`：消息内容，可以是：
+  - 含有 `text` 字段的文本内容
+  - 含有 `data`（base64）和 `mimeType` 字段的图像内容
+
+<div id="model-preferences">
+  ### 模型偏好
+</div>
+
+`modelPreferences` 对象允许服务器指定其模型选择偏好：
+
+- `hints`：可供客户端参考以选择合适模型的模型名称建议数组：
+  - `name`：可匹配完整或部分模型名称的字符串（如“claude-3”“sonnet”）
+  - 客户端可将这些建议映射为不同提供商的等效模型
+  - 多个建议按偏好顺序进行评估
+
+- 优先级（0–1 归一化）：
+  - `costPriority`：降低成本的重要性
+  - `speedPriority`：降低响应时延的重要性
+  - `intelligencePriority`：高级模型能力的重要性
+
+客户端将根据这些偏好以及其可用模型做出最终的模型选择。
+
+<div id="system-prompt">
+  ### 系统提示
+</div>
+
+可选的 `systemPrompt` 字段允许服务器请求使用特定的系统提示。客户端可以对此进行修改或直接忽略。
+
+<div id="context-inclusion">
+  ### 上下文包含
+</div>
+
+`includeContext` 参数用于指定要包含的 MCP 上下文：
+
+- `"none"`：不包含任何额外上下文
+- `"thisServer"`：包含来自当前请求服务器的上下文
+- `"allServers"`：包含来自所有已连接的 MCP 服务器的上下文
+
+由客户端决定实际包含哪些上下文。
+
+<div id="sampling-parameters">
+  ### 采样参数
+</div>
+
+通过以下设置微调 LLM 的采样行为：
+
+- `temperature`: 控制随机性（0.0 到 1.0）
+- `maxTokens`: 生成的最大 token 数
+- `stopSequences`: 触发停止生成的序列数组
+- `metadata`: 额外的、特定于提供商的参数
+
+<div id="response-format">
+  ## 响应格式
+</div>
+
+客户端返回一个补全结果：
+
+```typescript
+{
+  model: string,  // 所用模型名称
+  stopReason?: "endTurn" | "stopSequence" | "maxTokens" | string,
+  role: "user" | "assistant",
+  content: {
+    type: "text" | "image",
+    text?: string,
+    data?: string,
+    mimeType?: string
+  }
+}
+```
+
+<div id="example-request">
+  ## 示例请求
+</div>
+
+以下是从客户端发起采样请求的示例：
+
+```json
+{
+  "method": "sampling/createMessage",
+  "params": {
+    "messages": [
+      {
+        "role": "user",
+        "content": {
+          "type": "text",
+          "text": "What files are in the current directory?"
+        }
+      }
+    ],
+    "systemPrompt": "You are a helpful file system assistant.",
+    "includeContext": "thisServer",
+    "maxTokens": 100
+  }
+}
+```
+
+<div id="best-practices">
+  ## 最佳实践
+</div>
+
+在实现采样时：
+
+1. 始终提供清晰、结构化良好的提示模板
+2. 适当地处理文本与图像内容
+3. 设定合理的 token 限制
+4. 通过 `includeContext` 纳入相关上下文
+5. 在使用前先验证模型响应
+6. 优雅地处理错误
+7. 考虑为采样请求设置速率限制
+8. 记录并说明预期的采样行为
+9. 使用不同的模型参数进行测试
+10. 监控采样成本
+
+<div id="human-in-the-loop-controls">
+  ## 人在回路控制
+</div>
+
+采样在设计上强调人为监督：
+
+<div id="for-prompts">
+  ### 关于提示模板
+</div>
+
+- 客户端应向用户展示拟定的提示模板
+- 用户应可以修改或拒绝提示模板
+- 系统提示模板可以被筛选或修改
+- 上下文的纳入由客户端控制
+
+<div id="for-completions">
+  ### 关于补全
+</div>
+
+- 客户端应向用户展示补全
+- 用户应能够修改或拒绝补全
+- 客户端可以对补全进行筛选或修改
+- 由用户决定使用哪种模型
+
+<div id="security-considerations">
+  ## 安全注意事项
+</div>
+
+在实现采样时：
+
+- 验证所有消息内容
+- 处理并去除敏感信息
+- 实施适当的速率限制
+- 监控采样的使用情况
+- 在传输过程中加密数据
+- 妥善保护用户数据隐私
+- 审计采样请求
+- 控制成本暴露风险
+- 实施超时机制
+- 优雅地处理模型错误
+
+<div id="common-patterns">
+  ## 常见模式
+</div>
+
+<div id="agentic-workflows">
+  ### 代理型工作流
+</div>
+
+采样可实现以下代理型模式：
+
+- 读取并分析资源
+- 基于上下文做出决策
+- 生成结构化数据
+- 处理多步骤任务
+- 提供交互式支持
+
+<div id="context-management">
+  ### 上下文管理
+</div>
+
+上下文的最佳实践：
+
+- 仅请求所需的最小上下文
+- 清晰组织上下文结构
+- 应对上下文大小限制
+- 按需更新上下文
+- 清理过期的上下文
+
+<div id="error-handling">
+  ### 错误处理
+</div>
+
+健壮的错误处理应当：
+
+- 捕获采样失败
+- 处理超时错误
+- 管理速率限制
+- 校验响应
+- 提供兜底行为
+- 适当记录错误
+
+<div id="limitations">
+  ## 限制
+</div>
+
+请注意以下限制：
+
+- 采样取决于客户端能力
+- 采样行为由用户控制
+- 上下文大小有限
+- 可能会有速率限制
+- 需要考虑成本
+- 模型可用性因情况而异
+- 响应时间可能不同
+- 并非所有内容类型都受支持

@@ -1,0 +1,40 @@
+---
+title: Versioning
+type: docs
+weight: 10
+---
+
+Le Model Context Protocol utilise des identifiants de version sous forme de chaînes, au format
+`YYYY-MM-DD`, pour indiquer la dernière date à laquelle des modifications incompatibles avec les versions antérieures ont été apportées.
+
+<Info>
+  La version du protocole ne sera *pas* incrémentée lorsque le
+  protocole est mis à jour, tant que les changements restent compatibles avec les versions antérieures. Cela permet
+  des améliorations progressives tout en préservant l’interopérabilité.
+</Info>
+
+<div id="revisions">
+  ## Révisions
+</div>
+
+Les révisions peuvent être marquées comme :
+
+* **Brouillon** : spécifications en cours d’élaboration, pas encore prêtes à l’emploi.
+* **Actuelle** : la version actuelle du protocole, prête à l’emploi et susceptible de
+  recevoir des modifications rétrocompatibles.
+* **Finale** : anciennes spécifications complètes qui ne seront pas modifiées.
+
+La version **actuelle** du protocole est [**2025-06-18**](/fr/specification/2025-06-18/).
+
+<div id="negotiation">
+  ## Négociation
+</div>
+
+La négociation de version a lieu lors de
+[l&#39;initialisation](/fr/specification/2025-06-18/basic/lifecycle#initialization). Les clients et
+les serveurs **PEUVENT** prendre en charge plusieurs versions du protocole simultanément, mais ils **DOIVENT**
+se mettre d’accord sur une seule version à utiliser pour la session.
+
+Le protocole prévoit une gestion d’erreurs appropriée si la négociation de version échoue, permettant
+aux clients de mettre fin aux connexions proprement lorsqu’ils ne peuvent pas trouver une version compatible
+avec le serveur.

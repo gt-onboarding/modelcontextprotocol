@@ -1,0 +1,402 @@
+---
+title: 授权
+---
+
+<div id="enable-section-numbers" />
+
+<Info>**协议修订**：2025-06-18</Info>
+
+<div id="introduction">
+  ## 简介
+</div>
+
+<div id="purpose-and-scope">
+  ### 目的与范围
+</div>
+
+模型上下文协议（MCP）在传输层提供授权能力，
+使 MCP 客户端能够代表资源所有者向受限的 MCP 服务器发起请求。
+本规范定义了基于 HTTP 的传输方式的授权流程。
+
+<div id="protocol-requirements">
+  ### 协议要求
+</div>
+
+在 MCP 的实现中，授权是**可选**的。若支持授权：
+
+* 采用基于 HTTP 的传输方式的实现**应当**遵循本规范。
+* 采用 STDIO 传输方式的实现**不应**遵循本规范，而应
+  从环境中获取凭据。
+* 采用其他传输方式的实现**必须**遵循其各自协议既有的安全最佳实践。
+
+<div id="standards-compliance">
+  ### 符合标准
+</div>
+
+此授权机制基于下列既有规范，但仅选取并实现其中的部分功能，以在保持简洁性的同时确保安全性与互操作性：
+
+* OAuth 2.1 IETF DRAFT（[draft-ietf-oauth-v2-1-13](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13)）
+* OAuth 2.0 Authorization Server Metadata
+  （[RFC8414](https://datatracker.ietf.org/doc/html/rfc8414)）
+* OAuth 2.0 Dynamic Client Registration Protocol
+  （[RFC7591](https://datatracker.ietf.org/doc/html/rfc7591)）
+* OAuth 2.0 Protected Resource Metadata（[RFC9728](https://datatracker.ietf.org/doc/html/rfc9728)）
+
+<div id="authorization-flow">
+  ## 授权流程
+</div>
+
+<div id="roles">
+  ### 角色
+</div>
+
+受保护的 *MCP 服务器* 充当 [OAuth 2.1 资源服务器](https://www.ietf.org/archive/id/draft-ietf-oauth-v2-1-13.html#name-roles)，
+能够使用访问令牌接受并响应对受保护资源的请求。
+
+*MCP 客户端* 充当 [OAuth 2.1 客户端](https://www.ietf.org/archive/id/draft-ietf-oauth-v2-1-13.html#name-roles)，
+代表资源所有者发起对受保护资源的请求。
+
+*授权服务器* 负责在需要时与用户交互，并签发可在 MCP 服务器上使用的访问令牌。
+授权服务器的实现细节不在本规范的讨论范围内。它可以与资源服务器同一托管，或由独立实体托管。[授权服务器发现](#authorization-server-discovery)
+部分规定了 MCP 服务器如何向客户端指示其对应授权服务器的位置。
+
+<div id="overview">
+  ### 概览
+</div>
+
+1. 授权服务器**必须**为机密客户端和公共客户端按要求实现 OAuth 2.1，并采取相应的安全措施。
+
+2. 授权服务器和 MCP 客户端**应该**支持 OAuth 2.0 动态客户端注册协议（[RFC7591](https://datatracker.ietf.org/doc/html/rfc7591)）。
+
+3. MCP 服务器**必须**实现 OAuth 2.0 受保护资源元数据（[RFC9728](https://datatracker.ietf.org/doc/html/rfc9728)）。
+   MCP 客户端**必须**使用 OAuth 2.0 受保护资源元数据来发现授权服务器。
+
+4. 授权服务器**必须**提供 OAuth 2.0 授权服务器元数据（[RFC8414](https://datatracker.ietf.org/doc/html/rfc8414)）。
+   MCP 客户端**必须**使用该 OAuth 2.0 授权服务器元数据。
+
+<div id="authorization-server-discovery">
+  ### 授权服务器发现
+</div>
+
+本节介绍 MCP 服务器如何向 MCP 客户端公布其关联的授权服务器，以及 MCP 客户端通过发现流程确定授权服务器端点和其支持的功能的方式。
+
+<div id="authorization-server-location">
+  #### 授权服务器位置
+</div>
+
+MCP 服务器**必须**实现 OAuth 2.0 受保护资源元数据（[RFC9728](https://datatracker.ietf.org/doc/html/rfc9728)）规范，用于指示授权服务器的位置。MCP 服务器返回的受保护资源元数据文档**必须**包含 `authorization_servers` 字段，且其中至少包含一个授权服务器。
+
+`authorization_servers` 的具体用法不在本规范范围内；实现者应参考 OAuth 2.0 受保护资源元数据（[RFC9728](https://datatracker.ietf.org/doc/html/rfc9728)）以获取实现细节的指导。
+
+实现者应注意，受保护资源元数据文档可以定义多个授权服务器。选择使用哪个授权服务器由 MCP 客户端负责，并应遵循
+[RFC9728 第 7.6 节“Authorization Servers”](https://datatracker.ietf.org/doc/html/rfc9728#name-authorization-servers) 中的指南。
+
+当返回“*401 Unauthorized*”时，MCP 服务器**必须**使用 HTTP 头 `WWW-Authenticate` 指示资源服务器元数据 URL 的位置，如
+[RFC9728 第 5.1 节“WWW-Authenticate Response”](https://datatracker.ietf.org/doc/html/rfc9728#name-www-authenticate-response) 所述。
+
+MCP 客户端**必须**能够解析 `WWW-Authenticate` 头，并对来自 MCP 服务器的 `HTTP 401 Unauthorized` 做出适当处理。
+
+<div id="server-metadata-discovery">
+  #### 服务器元数据发现
+</div>
+
+MCP 客户端**必须**遵循 OAuth 2.0 授权服务器元数据规范 [RFC8414](https://datatracker.ietf.org/doc/html/rfc8414)，以获取与授权服务器交互所需的信息。
+
+<div id="sequence-diagram">
+  #### 时序图
+</div>
+
+下图展示了一个示例流程：
+
+```mermaid
+sequenceDiagram
+    participant C as 客户端
+    participant M as MCP 服务器（资源服务器）
+    participant A as 授权服务器
+
+    C->>M: 不带令牌的 MCP 请求
+    M-->>C: 返回 HTTP 401 Unauthorized，包含 WWW-Authenticate 头
+    Note over C: 从 WWW-Authenticate 中提取 resource_metadata<br />
+
+    C->>M: GET /.well-known/oauth-protected-resource
+    M-->>C: 返回包含授权服务器 URL 的资源元数据
+    Note over C: 验证 RS 元数据，<br />构建 AS 元数据 URL
+
+    C->>A: GET /.well-known/oauth-authorization-server
+    A-->>C: 授权服务器元数据
+
+    Note over C,A: 此处进行 OAuth 2.1 授权流程
+
+    C->>A: 令牌请求
+    A-->>C: 访问令牌
+
+    C->>M: 携带访问令牌的 MCP 请求
+    M-->>C: MCP 响应
+    Note over C,M: 使用有效令牌继续进行 MCP 通信
+```
+
+<div id="dynamic-client-registration">
+  ### 动态客户端注册
+</div>
+
+MCP 客户端和授权服务器**应当**支持
+OAuth 2.0 动态客户端注册协议 [RFC7591](https://datatracker.ietf.org/doc/html/rfc7591)，
+以便 MCP 客户端在无需用户交互的情况下获取 OAuth 客户端 ID。这样为客户端提供了一种
+标准化的方式，能够自动向新的授权服务器注册，这对 MCP 至关重要，原因包括：
+
+* 客户端可能无法预先知道所有可能的 MCP 服务器及其授权服务器。
+* 手动注册会给用户带来阻碍。
+* 它使得与新的 MCP 服务器及其授权服务器的连接更加无缝。
+* 授权服务器可以实施其自身的注册策略。
+
+任何不支持动态客户端注册的授权服务器需要提供
+获取客户端 ID（以及在适用情况下，客户端凭据）的替代方式。对于此类
+授权服务器，MCP 客户端将不得不：
+
+1. 为 MCP 客户端硬编码一个用于与该授权服务器交互的客户端 ID（以及在适用情况下，客户端凭据），或
+2. 向用户提供一个界面，使其在自行注册一个 OAuth 客户端后（例如，通过该服务器托管的配置界面），
+   输入这些详细信息。
+
+<div id="authorization-flow-steps">
+  ### 授权流程步骤
+</div>
+
+完整的授权流程如下：
+
+```mermaid
+sequenceDiagram
+    participant B as 用户代理（浏览器）
+    participant C as 客户端
+    participant M as MCP 服务器（资源服务器）
+    participant A as 授权服务器
+
+    C->>M: 未携带令牌的 MCP 请求
+    M->>C: 返回 HTTP 401 Unauthorized，并包含 WWW-Authenticate 头
+    Note over C: 从 WWW-Authenticate 中提取 resource_metadata URL
+
+    C->>M: 请求受保护资源的元数据
+    M->>C: 返回元数据
+
+    Note over C: 解析元数据并提取授权服务器信息<br/>客户端确定要使用的授权服务器（AS）
+
+    C->>A: GET /.well-known/oauth-authorization-server
+    A->>C: 返回授权服务器元数据
+
+    alt 动态客户端注册
+        C->>A: POST /register
+        A->>C: 返回客户端凭据
+    end
+
+    Note over C: 生成 PKCE 参数<br/>包含 resource 参数
+    C->>B: 使用授权 URL + code_challenge + resource 打开浏览器
+    B->>A: 携带 resource 参数的授权请求
+    Note over A: 用户授权
+    A->>B: 重定向到回调并附带授权码
+    B->>C: 授权码回调
+    C->>A: 令牌请求 + code_verifier + resource
+    A->>C: 访问令牌（+ 刷新令牌）
+    C->>M: 携带访问令牌的 MCP 请求
+    M-->>C: MCP 响应
+    Note over C,M: 使用有效令牌继续进行 MCP 通信
+```
+
+<div id="resource-parameter-implementation">
+  #### 资源参数实现
+</div>
+
+MCP 客户端**必须**按照 [RFC 8707](https://www.rfc-editor.org/rfc/rfc8707.html) 中对 OAuth 2.0“资源指示器”的定义来实现，
+以明确指定所请求令牌的目标资源。`resource` 参数：
+
+1. **必须**同时包含在授权请求和令牌请求中。
+2. **必须**标识客户端打算使用该令牌访问的 MCP 服务器。
+3. **必须**使用 [RFC 8707 第 2 节](https://www.rfc-editor.org/rfc/rfc8707.html#name-access-token-request)中定义的 MCP 服务器规范 URI。
+
+<div id="canonical-server-uri">
+  ##### 规范服务器 URI
+</div>
+
+就本规范而言，MCP 服务器的规范 URI 定义为 [RFC 8707 第 2 节](https://www.rfc-editor.org/rfc/rfc8707.html#section-2) 所规定的资源标识符，并与 [RFC 9728](https://datatracker.ietf.org/doc/html/rfc9728) 中的 `resource` 参数一致。
+
+MCP 客户端**应当**遵循 [RFC 8707](https://www.rfc-editor.org/rfc/rfc8707) 的指导，为其拟访问的 MCP 服务器提供尽可能具体的 URI。尽管规范形式使用小写的 scheme 和主机名组件，但为增强健壮性与互操作性，实现**应当**接受大写的 scheme 和主机名组件。
+
+有效的规范 URI 示例：
+
+* `https://mcp.example.com/mcp`
+* `https://mcp.example.com`
+* `https://mcp.example.com:8443`
+* `https://mcp.example.com/server/mcp`（当需要通过路径组件标识单个 MCP 服务器时）
+
+无效的规范 URI 示例：
+
+* `mcp.example.com`（缺少 scheme）
+* `https://mcp.example.com#fragment`（包含 fragment）
+
+> 注意：根据 [RFC 3986](https://www.rfc-editor.org/rfc/rfc3986)，`https://mcp.example.com/`（带尾随斜杠）与 `https://mcp.example.com`（不带尾随斜杠）在技术上都是有效的绝对 URI，但除非尾随斜杠对特定资源具有语义意义，否则为更好的互操作性，实现**应当**始终使用不带尾随斜杠的形式。
+
+例如，若访问位于 `https://mcp.example.com` 的 MCP 服务器，授权请求应包含：
+
+```
+&resource=https%3A%2F%2Fmcp.example.com
+```
+
+无论授权服务器是否支持该参数，MCP 客户端**必须**发送该参数。
+
+<div id="access-token-usage">
+  ### 访问令牌的使用
+</div>
+
+<div id="token-requirements">
+  #### 令牌要求
+</div>
+
+向 MCP 服务器发起请求时对访问令牌的处理**必须**符合
+[OAuth 2.1 第 5 节“资源请求”](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#section-5)中定义的要求。
+具体而言：
+
+1. MCP 客户端**必须**使用
+   [OAuth 2.1 第 5.1.1 节](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#section-5.1.1)中定义的 Authorization 请求头字段：
+
+```
+Authorization: Bearer <access-token>
+```
+
+请注意，从客户端到服务器的每个 HTTP 请求**都必须**包含授权信息，
+即使它们属于同一逻辑会话。
+
+2. 访问令牌**不得**包含在 URI 查询字符串中。
+
+示例请求：
+
+```http
+GET /mcp HTTP/1.1
+Host: mcp.example.com
+Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+```
+
+<div id="token-handling">
+  #### 令牌处理
+</div>
+
+MCP 服务器在作为 OAuth 2.1 资源服务器时，**必须**按照
+[OAuth 2.1 第 5.2 节](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#section-5.2)
+验证访问令牌。MCP 服务器**必须**依据
+[RFC 8707 第 2 节](https://www.rfc-editor.org/rfc/rfc8707.html#section-2)
+验证访问令牌的预期受众，确保令牌是专为该服务器签发的。
+如果验证失败，服务器**必须**按照
+[OAuth 2.1 第 5.3 节](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#section-5.3)
+的错误处理要求进行响应。无效或过期的令牌**必须**返回 HTTP 401 响应。
+
+MCP 客户端**不得**向 MCP 服务器发送任何非由该 MCP 服务器的授权服务器签发的令牌。
+
+授权服务器**必须**仅接受对其自身资源有效的令牌。
+
+MCP 服务器**不得**接受或转发任何其他令牌。
+
+<div id="error-handling">
+  ### 错误处理
+</div>
+
+服务器必须针对授权错误返回适当的 HTTP 状态码：
+
+| 状态码 | 描述       | 用法                                 |
+| ------ | ---------- | ------------------------------------ |
+| 401    | 未经授权   | 需要授权或令牌无效                   |
+| 403    | 禁止       | 作用域无效或权限不足                 |
+| 400    | 错误的请求 | 授权请求格式错误                     |
+
+<div id="security-considerations">
+  ## 安全注意事项
+</div>
+
+实现方**必须**遵循 [OAuth 2.1 第 7 节“安全注意事项”](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#name-security-considerations)中阐述的 OAuth 2.1 安全最佳实践。
+
+<div id="token-audience-binding-and-validation">
+  ### 令牌受众绑定与验证
+</div>
+
+当**授权服务器支持该能力时**，[RFC 8707](https://www.rfc-editor.org/rfc/rfc8707.html) 的 Resource Indicators 通过将令牌绑定到其预期受众，带来关键的安全收益。为推动当前与未来的采用：
+
+* MCP 客户端**必须（MUST）**在授权与令牌请求中包含 `resource` 参数，具体见[资源参数实现](#resource-parameter-implementation)一节
+* MCP 服务器**必须（MUST）**验证提交给它们的令牌确实是为其使用而签发的
+
+[安全最佳实践文档](/zh/specification/2025-06-18/basic/security_best_practices#token-passthrough)
+说明了为何令牌受众验证至关重要，以及为何明确禁止令牌直通。
+
+<div id="token-theft">
+  ### 令牌窃取
+</div>
+
+攻击者一旦获取到由客户端存储的令牌，或服务器上被缓存/记录的令牌，就可以向资源服务器发出看似合法的请求，从而访问受保护的资源。
+
+客户端和服务器**必须**实施安全的令牌存储，并遵循 OAuth 的最佳实践，详见 [OAuth 2.1 第 7.1 节](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#section-7.1)。
+
+授权服务器**应**签发短期有效的访问令牌，以降低令牌泄露的影响。对于公共客户端，授权服务器**必须**按照 [OAuth 2.1 第 4.3.1 节“Token Endpoint Extension”](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#section-4.3.1) 的说明轮换刷新令牌。
+
+<div id="communication-security">
+  ### 通信安全
+</div>
+
+实现**必须**遵循 [OAuth 2.1 第 1.5 节“通信安全”](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#section-1.5)。
+
+具体来说：
+
+1. 所有授权服务器端点**必须**通过 HTTPS 提供服务。
+2. 所有重定向 URI **必须**为 `localhost`，或使用 HTTPS。
+
+<div id="authorization-code-protection">
+  ### 授权码保护
+</div>
+
+攻击者一旦获取到授权响应中包含的授权码，可能会尝试用该授权码换取访问令牌，或以其他方式加以利用。
+（详见 [OAuth 2.1 第 7.5 节](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#section-7.5)）
+
+为降低此风险，MCP 客户端**必须**按照 [OAuth 2.1 第 7.5.2 节](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#section-7.5.2) 实现 PKCE。
+PKCE 通过要求客户端创建一对“验证器—质询”（verifier-challenge），来防止授权码拦截与注入攻击，确保只有原始请求方才能将授权码兑换为令牌。
+
+<div id="open-redirection">
+  ### 开放式重定向
+</div>
+
+攻击者可能构造恶意的重定向 URI，将用户引导至钓鱼网站。
+
+MCP 客户端**必须**在授权服务器上注册重定向 URI。
+
+授权服务器**必须**将精确匹配的重定向 URI 与预先注册的值进行校验，以防止重定向攻击。
+
+MCP 客户端**应当**在授权码流程中使用并验证 state 参数，并丢弃任何未包含原始 state 或与之不匹配的结果。
+
+授权服务器**必须**采取预防措施，避免将用户代理重定向到不受信任的 URI，并遵循 [OAuth 2.1 第 7.12.2 节](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#section-7.12.2) 中的建议。
+
+授权服务器**应当**仅在信任该重定向 URI 时才自动重定向用户代理。若该 URI 不受信任，授权服务器可以告知用户，并由用户自行作出正确决定。
+
+<div id="confused-deputy-problem">
+  ### 迷惑副手问题
+</div>
+
+攻击者可以利用充当第三方 API 中介的 MCP 服务器，从而造成[迷惑副手漏洞](/zh/specification/2025-06-18/basic/security_best_practices#confused-deputy-problem)。
+通过使用被盗的授权码，他们可以在未经用户同意的情况下获取访问令牌。
+
+使用静态客户端 ID 的 MCP 代理服务器**必须**在将请求转发至第三方授权服务器之前，为每个动态注册的客户端征得用户同意（第三方授权服务器可能还会要求额外同意）。
+
+<div id="access-token-privilege-restriction">
+  ### 访问令牌权限约束
+</div>
+
+如果 MCP 服务器接受为其他资源签发的令牌，攻击者可能获得未授权访问，或以其他方式攻陷 MCP 服务器。
+
+此类漏洞主要体现在两方面：
+
+1. **受众（audience）校验失败。** 当 MCP 服务器未验证令牌是否明确针对自身（例如依据 [RFC9068](https://www.rfc-editor.org/rfc/rfc9068.html) 中的受众声明进行校验）时，可能会接受最初为其他服务签发的令牌。这破坏了 OAuth 的基本安全边界，使攻击者能够在非预期的服务之间重用合法令牌。
+2. **令牌透传。** 如果 MCP 服务器不仅接受受众不正确的令牌，还将这些未修改的令牌转发给下游服务，则可能引发[&quot;糊涂副官&quot;问题](#confused-deputy-problem)：下游 API 可能错误地信任该令牌仿佛来自 MCP 服务器，或误以为该令牌已由上游 API 验证。更多详情参见安全最佳实践指南中的[令牌透传部分](/zh/specification/2025-06-18/basic/security_best_practices#token-passthrough)。
+
+MCP 服务器在处理请求前**必须**验证访问令牌，确保该令牌是专门为该 MCP 服务器签发的，并采取一切必要措施，确保不会向未授权方返回任何数据。
+
+MCP 服务器**必须**遵循 [OAuth 2.1 第 5.2 节](https://www.ietf.org/archive/id/draft-ietf-oauth-v2-1-13.html#section-5.2)的指南来验证入站令牌。
+
+MCP 服务器**必须**仅接受明确针对自身的令牌，并**必须**拒绝那些在受众声明中未包含自身，或无法通过其他方式验证其为该令牌预期接收者的令牌。详情参见[安全最佳实践的令牌透传部分](/zh/specification/2025-06-18/basic/security_best_practices#token-passthrough)。
+
+如果 MCP 服务器会向上游 API 发起请求，它可能会作为这些 API 的 OAuth 客户端。用于上游 API 的访问令牌是由上游授权服务器签发的独立令牌。MCP 服务器**不得**透传其从 MCP 客户端收到的令牌。
+
+MCP 客户端**必须**实现并使用 [RFC 8707——OAuth 2.0 的资源指示器](https://www.rfc-editor.org/rfc/rfc8707.html)中定义的 `resource` 参数，以明确指定所请求令牌的目标资源。此要求与
+[RFC 9728 第 7.4 节](https://datatracker.ietf.org/doc/html/rfc9728#section-7.4)中的建议一致。这可确保访问令牌绑定到其预期资源，且
+不可在不同服务之间被滥用。

@@ -1,0 +1,1052 @@
+---
+title: Java MCP 服务器
+description: 了解如何实现和配置模型上下文协议（MCP）服务器
+---
+
+<div id="sdk-contents">
+  ## SDK 内容
+</div>
+
+[Java MCP 概览](/zh/sdk/java/mcp-overview)
+
+[Java MCP 客户端](/zh/sdk/java/mcp-client)
+
+[[Java MCP 服务器](/zh/sdk/java/mcp-server)]
+
+<div id="server-features">
+  ## 服务器功能
+</div>
+
+MCP 服务器是模型上下文协议（MCP）架构中的基础组件，向客户端提供工具、资源和各类能力。它实现了协议的服务端部分，负责：
+
+* 暴露供客户端发现和执行的工具；
+  支持输入与输出模式，并可返回结构化与非结构化内容类型。
+* 以基于 URI 的访问模式管理资源
+* 提供提示模板并处理提示请求
+* 支持与客户端进行能力协商
+* 实现服务端协议操作
+* 管理并发的客户端连接
+* 提供结构化日志、进度跟踪和通知
+* 提供 `STDIO`、`Streamable-HTTP` 与 `SSE` 的服务端传输实现，无需依赖外部 Web 框架。
+* **可选**：为 [Spring AI](https://docs.spring.io/spring-ai/reference/api/mcp/mcp-server-boot-starter-docs.html) 用户提供的 Spring 专用传输依赖：`io.modelcontextprotocol.sdk:mcp-spring-webflux`、`io.modelcontextprotocol.sdk:mcp-spring-webmvc`。
+
+<Tip>
+  这个基于 Spring AI MCP 的[快速上手示例](/zh/quickstart/server)将向你展示
+  如何构建一个 MCP 服务器。
+</Tip>
+
+服务器同时支持同步与异步 API，便于在不同应用场景中灵活集成。
+
+<Tabs>
+  <Tab title="Sync API">
+    ```java
+    // Create a server with custom configuration
+    McpSyncServer syncServer = McpServer.sync(transportProvider)
+        .serverInfo("my-server", "1.0.0")
+        .capabilities(ServerCapabilities.builder()
+            .resources(false, true)  // Enable resource support
+            .tools(true)             // Enable tool support
+            .prompts(true)           // Enable prompt support
+            .logging()               // Enable logging support
+            .completions()           // Enable completions support
+            .build())
+        .build();
+
+    // Register tools, resources, and prompts
+    syncServer.addTool(syncToolSpecification);
+    syncServer.addResource(syncResourceSpecification);
+    syncServer.addPrompt(syncPromptSpecification);
+
+    // Close the server when done
+    syncServer.close();
+    ```
+
+    ### 在处理器中保留 thread-local 变量
+
+    `McpSyncServer` 将执行委托给底层的 `McpAsyncServer`。
+    工具、资源等处理器的执行可能不会发生在调用该方法的线程上。
+    在这种情况下，thread-local 变量会丢失，这可能会影响依赖线程绑定机制的框架中的某些功能。
+    若要确保在调用线程上执行，并保持 thread-local 变量可用，请设置 `McpServer.sync(...).immediateExecution(true)`。
+
+    <Note>
+      这只与同步服务器相关。异步服务器使用响应式栈，不应依赖 thread-local 变量。
+    </Note>
+  </Tab>
+
+  <Tab title="Async API">
+    ```java
+    // Create an async server with custom configuration
+    McpAsyncServer asyncServer = McpServer.async(transportProvider)
+        .serverInfo("my-server", "1.0.0")
+        .capabilities(ServerCapabilities.builder()
+            .resources(false, true)     // Enable resource support
+            .tools(true)                // Enable tool support
+            .prompts(true)              // Enable prompt support
+            .logging()                  // Enable logging support
+            .completions()              // Enable completions support
+            .build())
+        .build();
+
+    // Register tools, resources, and prompts
+    asyncServer.addTool(asyncToolSpecification)
+        .doOnSuccess(v -> logger.info("Tool registered"))
+        .subscribe();
+
+    asyncServer.addResource(asyncResourceSpecification)
+        .doOnSuccess(v -> logger.info("Resource registered"))
+        .subscribe();
+
+    asyncServer.addPrompt(asyncPromptSpecification)
+        .doOnSuccess(v -> logger.info("Prompt registered"))
+        .subscribe();
+
+    // Close the server when done
+    asyncServer.close()
+        .doOnSuccess(v -> logger.info("Server closed"))
+        .subscribe();
+    ```
+  </Tab>
+</Tabs>
+
+<div id="server-transport-providers">
+  ## 服务器传输方式提供者
+</div>
+
+MCP SDK 的传输层负责处理客户端与服务器之间的通信。
+它提供多种实现，以支持不同的通信协议与模式。
+该 SDK 内置了多种传输方式提供者实现：
+
+<Tabs>
+  <Tab title="STDIO">
+    创建基于进程内的传输方式：
+
+    ```java
+    StdioServerTransportProvider transportProvider = new StdioServerTransportProvider(new ObjectMapper());
+    ```
+
+    通过标准输入/输出流提供双向 JSON-RPC 消息处理，支持非阻塞式处理、序列化/反序列化，以及优雅的关闭机制。
+
+    关键特性：
+
+    <ul>
+      <li>通过 stdin/stdout 实现双向通信</li>
+      <li>支持进程内集成</li>
+      <li>设置与配置简单</li>
+      <li>实现轻量</li>
+    </ul>
+  </Tab>
+
+  <Tab title="WebFlux">
+    <p>基于 WebFlux 的 服务器发送事件（SSE）和 可流式 HTTP 服务器传输方式。[需要 `mcp-spring-webflux` 依赖](/zh/sdk/java/mcp-overview#dependencies)。</p>
+
+    <Tabs>
+      <Tab title="Streamable-HTTP (WebFlux)">
+        ```java
+        @Configuration
+        class McpConfig {
+            @Bean
+            WebFluxStreamableServerTransportProvider webFluxStreamableServerTransportProvider(ObjectMapper mapper) {
+              	return this.mcpStreamableServerTransportProvider = WebFluxStreamableServerTransportProvider.builder()
+                        .objectMapper(mapper)
+                        .messageEndpoint("/mcp")
+                        .build();
+            }
+
+            @Bean
+            RouterFunction<?> mcpRouterFunction(WebFluxStreamableServerTransportProvider transportProvider) {
+                return transportProvider.getRouterFunction();
+            }
+        }
+        ```
+
+        <p>实现 可流式 HTTP 传输规范，提供：</p>
+
+        <ul>
+          <li>通过 可流式 HTTP 的双向通信</li>
+          <li>基于 WebFlux 的响应式 HTTP 流式传输</li>
+          <li>通过 可流式 HTTP 端点的并发客户端连接</li>
+          <li>消息路由与会话管理</li>
+          <li>优雅的关闭能力</li>
+        </ul>
+
+        <Note>
+          由于缺少会话存储，当前实现不支持会话恢复
+        </Note>
+
+        <Tip>
+          在具有多个 MCP 服务器实例的分布式环境中，需要进行正确的消息路由。
+          若希望在不显著增加基础设施开销的情况下实现可扩展性，请考虑使用 `Stateless Streamable-HTTP` 服务器传输实现。
+        </Tip>
+      </Tab>
+
+      <Tab title="Stateless Streamable-HTTP (WebFlux)">
+        无状态 MCP 服务器面向在请求之间不维护会话状态的简化部署场景。
+        它们实现了 `Streamable-HTTP` 规范的一个子集，并返回 `application/json` 响应。
+        之所以称为无状态，是因为与标准的 可流式 HTTP 传输不同，它们在请求之间不维护会话状态。
+        这些服务器非常适合微服务架构和云原生部署。
+
+        ```java
+        @Configuration
+        class McpConfig {
+            @Bean
+            WebFluxStatelessServerTransport webFluxStatelessServerTransport(ObjectMapper mapper) {
+              	return this.mcpStatelessServerTransport = WebFluxStatelessServerTransport.builder()
+                        .objectMapper(mapper)
+                        .messageEndpoint("/mcp")
+                        .build();
+            }
+
+            @Bean
+            RouterFunction<?> mcpRouterFunction(WebFluxStatelessServerTransport transportProvider) {
+                return transportProvider.getRouterFunction();
+            }
+
+            @Bean
+            public McpStatelessSyncServer prepareSyncServerBuilder(WebFluxStatelessServerTransport statelessServerTransport) {
+              return McpServer.sync(statelessServerTransport)
+                      //...
+                      .build();
+            }
+
+        }
+        ```
+
+        <p>实现 MCP 无状态 可流式 HTTP 传输规范，提供：</p>
+
+        <ul>
+          <li>通过 可流式 HTTP 的单向（客户端到服务器）通信</li>
+          <li>基于 WebFlux 的响应式 HTTP 流式传输</li>
+          <li>通过无状态端点的并发客户端连接</li>
+          <li>消息路由与会话管理</li>
+          <li>优雅的关闭能力</li>
+        </ul>
+
+        <Note>
+          当前实现不支持向客户端发送通知（Notifications）。
+        </Note>
+      </Tab>
+
+      <Tab title="SSE (WebFlux)">
+        ```java
+        @Configuration
+        class McpConfig {
+            @Bean
+            WebFluxSseServerTransportProvider webFluxSseServerTransportProvider(ObjectMapper mapper) {
+                return new WebFluxSseServerTransportProvider(mapper, "/mcp/message");
+            }
+
+            @Bean
+            RouterFunction<?> mcpRouterFunction(WebFluxSseServerTransportProvider transportProvider) {
+                return transportProvider.getRouterFunction();
+            }
+        }
+        ```
+
+        <p>实现 MCP 服务器发送事件（SSE）传输规范，提供：</p>
+
+        <ul>
+          <li>基于 WebFlux 的响应式 HTTP 流式传输</li>
+          <li>通过 SSE 端点的并发客户端连接</li>
+          <li>消息路由与会话管理</li>
+          <li>优雅的关闭能力</li>
+        </ul>
+      </Tab>
+    </Tabs>
+  </Tab>
+
+  <Tab title="WebMVC">
+    <p>创建基于 WebMvc 的 SSE 服务器传输。需要 <code>mcp-spring-webmvc</code> 依赖。</p>
+
+    <Tabs>
+      <Tab title="Streamable-HTTP (WebMvc)">
+        ```java
+        @Configuration
+        @EnableWebMvc
+        class McpConfig {
+            @Bean
+            WebMvcStreamableServerTransportProvider webMvcStreamableHttpServerTransportProvider(ObjectMapper mapper) {
+                return new WebMvcStreamableServerTransportProvider(mapper, "/mcp/message");
+            }
+
+            @Bean
+            RouterFunction<ServerResponse> mcpRouterFunction(WebMvcStreamableServerTransportProvider transportProvider) {
+                return transportProvider.getRouterFunction();
+            }
+        }
+        ```
+
+        <p>实现可流式 HTTP 传输规范，提供：</p>
+
+        <ul>
+          <li>通过 Streamable-HTTP 的双向通信</li>
+          <li>基于 WebFlux 的响应式 HTTP 流式处理</li>
+          <li>通过 Streamable-HTTP 端点的并发客户端连接</li>
+          <li>消息路由与会话管理</li>
+          <li>优雅停机能力</li>
+        </ul>
+
+        <Note>
+          由于缺少会话存储，当前实现不支持会话恢复
+        </Note>
+
+        <Tip>
+          在具有多个 MCP 服务器实例的分布式环境中，需要正确进行消息路由。
+          若希望在不引入大量基础设施开销的情况下实现可扩展性，可考虑使用 `Stateless Streamable-HTTP` 服务器传输实现。
+        </Tip>
+      </Tab>
+
+      <Tab title="Stateless Streamable-HTTP (WebMvc)">
+        无状态 MCP 服务器适用于在请求之间不维护会话状态的简化部署。
+        它们实现了 `Streamable-HTTP` 规范的一个子集，返回 `application/json` 响应。
+        之所以称为无状态，是因为与标准的 Streamable-HTTP 传输不同，它们不会在请求之间维护会话状态。
+        这些服务器非常适合微服务架构和云原生部署。
+
+        ```java
+        @Configuration
+        @EnableWebMvc
+        static class McpConfig {
+
+          @Bean
+          public WebMvcStatelessServerTransport webMvcStatelessServerTransport() {
+
+            return WebMvcStatelessServerTransport.builder()
+              .objectMapper(new ObjectMapper())
+              .messageEndpoint(MESSAGE_ENDPOINT)
+              .build();
+
+          }
+
+          @Bean
+          public RouterFunction<ServerResponse> routerFunction(WebMvcStatelessServerTransport statelessServerTransport) {
+            return statelessServerTransport.getRouterFunction();
+          }
+
+          @Bean
+          public McpStatelessSyncServer prepareSyncServerBuilder(WebMvcStatelessServerTransport statelessServerTransport) {
+            return McpServer.sync(statelessServerTransport)
+                    //...
+                    .build();
+          }
+        }
+        ```
+
+        <p>实现 MCP 的 Streamable-HTTP 无状态传输规范，提供：</p>
+
+        <ul>
+          <li>通过 Streamable-HTTP 的单向（客户端到服务器）通信</li>
+          <li>基于 WebFlux 的响应式 HTTP 流式处理</li>
+          <li>通过无状态端点的并发客户端连接</li>
+          <li>消息路由与会话管理</li>
+          <li>优雅停机能力</li>
+        </ul>
+
+        <Note>
+          当前实现不支持向客户端发送通知（Notifications）。
+        </Note>
+      </Tab>
+
+      <Tab title="SSE (WebMvc)">
+        ```java
+        @Configuration
+        @EnableWebMvc
+        class McpConfig {
+            @Bean
+            WebMvcSseServerTransportProvider webMvcSseServerTransportProvider(ObjectMapper mapper) {
+                return new WebMvcSseServerTransportProvider(mapper, "/mcp/message");
+            }
+
+            @Bean
+            RouterFunction<ServerResponse> mcpRouterFunction(WebMvcSseServerTransportProvider transportProvider) {
+                return transportProvider.getRouterFunction();
+            }
+        }
+        ```
+
+        <p>实现 MCP 的 SSE 传输规范，提供：</p>
+
+        <ul>
+          <li>服务器发送事件流</li>
+          <li>与 Spring WebMvc 的集成</li>
+          <li>支持传统 Web 应用</li>
+          <li>同步操作处理</li>
+        </ul>
+      </Tab>
+    </Tabs>
+  </Tab>
+
+  <Tab title="Servlet">
+    <p>
+      创建基于 Servlet 的 `SSE`、`Streamable HTTP` 和无状态服务器传输方式。
+      可与任何 Servlet 容器配合使用。
+    </p>
+
+    <Tabs>
+      <Tab title="Streamable-HTTP (Servlet)">
+        ```java
+        @Configuration
+        @EnableWebMvc
+        public class McpServerConfig implements WebMvcConfigurer {
+
+            @Bean
+            public HttpServletStreamableServerTransportProvider servletStreamableMcpSessionTransport() {
+                return HttpServletStreamableServerTransportProvider.builder()
+                  .objectMapper(new ObjectMapper())
+                  .contextExtractor(TEST_CONTEXT_EXTRACTOR)
+                  .mcpEndpoint(MESSAGE_ENDPOINT)
+                  .keepAliveInterval(Duration.ofSeconds(1))
+                  .build();
+            }
+
+            //(Optionally) To use it with a Spring Web application, you can register it as a Servlet bean
+            @Bean
+            public ServletRegistrationBean customServletBean(HttpServletStreamableServerTransportProvider transportProvider) {
+                return new ServletRegistrationBean(transportProvider);
+            }
+        }
+        ```
+
+        <p>
+          使用传统 Servlet API 实现可流式 HTTP 传输规范，提供：
+        </p>
+
+        <ul>
+          <li>通过可流式 HTTP 的双向通信</li>
+          <li>借助 Servlet 6.0 异步能力的异步消息处理</li>
+          <li>面向多客户端连接的会话管理</li>
+
+          <li>
+            一个端点：
+
+            <ul>
+              <li>消息端点（可配置），用于客户端到服务器的请求</li>
+            </ul>
+          </li>
+
+          <li>错误处理与响应格式化</li>
+          <li>优雅的关闭支持</li>
+        </ul>
+
+        <Note>
+          由于缺少会话存储，当前实现不支持可恢复性
+        </Note>
+
+        <Tip>
+          在包含多个 MCP 服务器实例的分布式环境中，需要进行正确的消息路由。
+          若希望在不增加大量基础设施开销的情况下实现可扩展性，请考虑使用 `Stateless Streamable-HTTP` 服务器传输实现。
+        </Tip>
+      </Tab>
+
+      <Tab title="Stateless Streamable-HTTP (Servlet)">
+        无状态 MCP 服务器旨在简化部署，在各个请求之间不维护会话状态。
+        它们实现了 `Streamable-HTTP` 规范的一个子集，返回 `application/json` 响应。
+        之所以称为无状态，是因为与标准的 Streamable-HTTP 传输不同，它们不会在请求之间保留会话状态。
+        这些服务器非常适合微服务架构与云原生部署。
+
+        ```java
+        @Configuration
+        @EnableWebMvc
+        public class McpServerConfig implements WebMvcConfigurer {
+
+            @Bean
+            public HttpServletStatelessServerTransport servletStatelessMcpSessionTransport() {
+                return HttpServletStatelessServerTransport.builder()
+                  .objectMapper(new ObjectMapper())
+                  .mcpEndpoint(MESSAGE_ENDPOINT)
+                  .keepAliveInterval(Duration.ofSeconds(1))
+                  .build();
+            }
+
+
+            //(Optionally) To use it with a Spring Web application, you can register it as a Servlet bean
+            @Bean
+            public ServletRegistrationBean customServletBean(HttpServletStatelessServerTransport transportProvider) {
+                return new ServletRegistrationBean(transportProvider);
+            }
+
+            @Bean
+            public McpStatelessSyncServer prepareSyncServerBuilder(HttpServletStatelessServerTransport statelessServerTransport) {
+                return McpServer.sync(statelessServerTransport)
+                        .build();
+            }
+          }
+        }
+        ```
+
+        <p>
+          基于传统 Servlet API 实现了 Streamable-HTTP 无状态传输规范，提供：
+        </p>
+
+        <ul>
+          <li>通过 Streamable-HTTP 实现的单向（客户端到服务器）通信</li>
+          <li>利用 Servlet 6.0 异步能力的异步消息处理</li>
+          <li>面向多个客户端连接的会话管理</li>
+
+          <li>
+            单一端点：
+
+            <ul>
+              <li>消息端点（可配置），用于客户端到服务器的请求</li>
+            </ul>
+          </li>
+
+          <li>错误处理与响应格式化</li>
+          <li>平滑关闭支持</li>
+        </ul>
+
+        <Note>
+          当前实现不支持向客户端发送通知。
+        </Note>
+      </Tab>
+
+      <Tab title="SSE (Servlet)">
+        ```java
+        @Configuration
+        @EnableWebMvc
+        public class McpServerConfig implements WebMvcConfigurer {
+
+            @Bean
+            public HttpServletSseServerTransportProvider servletSseServerTransportProvider() {
+                return HttpServletSseServerTransportProvider.builder()
+                    .objectMapper(new ObjectMapper())
+                    .messageEndpoint("/mcp/message")
+                    .keepAliveInterval(Duration.ofSeconds(1))
+                    .build();
+            }
+
+            //(Optionally) To use it with a Spring Web application, you can register it as a Servlet bean
+            @Bean
+            public ServletRegistrationBean customServletBean(HttpServletSseServerTransportProvider transportProvider) {
+                return new ServletRegistrationBean(transportProvider);
+            }
+        }
+        ```
+
+        <p>
+          基于传统 Servlet API 实现 MCP 的 SSE 传输规范，提供：
+        </p>
+
+        <ul>
+          <li>利用 Servlet 6.0 异步能力的异步消息处理</li>
+          <li>支持多客户端连接的会话管理</li>
+
+          <li>
+            两类端点：
+
+            <ul>
+              <li>SSE 端点（<code>/sse</code>），用于服务器到客户端的事件</li>
+              <li>消息端点（可配置），用于客户端到服务器的请求</li>
+            </ul>
+          </li>
+
+          <li>错误处理和响应格式化</li>
+          <li>优雅关停支持</li>
+        </ul>
+      </Tab>
+    </Tabs>
+  </Tab>
+</Tabs>
+
+<div id="server-capabilities">
+  ## 服务器能力
+</div>
+
+服务器可以配置以下能力：
+
+```java
+var capabilities = ServerCapabilities.builder()
+    .resources(false, true)  // 支持资源，并提供列表变更通知
+    .tools(true)            // 支持工具，并提供列表变更通知
+    .prompts(true)          // 支持提示模板，并提供列表变更通知
+    .logging()              // 启用日志（默认启用，日志级别为 INFO）
+    .build();
+```
+
+<div id="tool-specification">
+  ### 工具规范
+</div>
+
+模型上下文协议（MCP）允许服务器[暴露工具](/zh/specification/2024-11-05/server/tools/)，供语言模型调用。
+Java SDK 支持通过处理函数实现工具规范。
+借助工具，AI 模型可以执行计算、访问外部 API、查询数据库并操作文件：
+
+<Tabs>
+  <Tab title="Sync">
+    ```java
+    // 同步工具规范
+    var schema = """
+                {
+                  "type" : "object",
+                  "id" : "urn:jsonschema:Operation",
+                  "properties" : {
+                    "operation" : {
+                      "type" : "string"
+                    },
+                    "a" : {
+                      "type" : "number"
+                    },
+                    "b" : {
+                      "type" : "number"
+                    }
+                  }
+                }
+                """;
+    var syncToolSpecification = new McpServerFeatures.SyncToolSpecification(
+        new Tool("calculator", "Basic calculator", schema),
+        (exchange, arguments) -> {
+            // 工具实现
+            return new CallToolResult(result, false);
+        }
+    );
+    ```
+  </Tab>
+
+  <Tab title="Async">
+    ```java
+    // 异步工具规范
+    var schema = """
+                {
+                  "type" : "object",
+                  "id" : "urn:jsonschema:Operation",
+                  "properties" : {
+                    "operation" : {
+                      "type" : "string"
+                    },
+                    "a" : {
+                      "type" : "number"
+                    },
+                    "b" : {
+                      "type" : "number"
+                    }
+                  }
+                }
+                """;
+    var asyncToolSpecification = new McpServerFeatures.AsyncToolSpecification(
+        new Tool("calculator", "Basic calculator", schema),
+        (exchange, arguments) -> {
+            // 工具实现
+            return Mono.just(new CallToolResult(result, false));
+        }
+    );
+    ```
+  </Tab>
+</Tabs>
+
+工具规范包含一个工具定义，其中含有 `name`、`description` 和 `parameter schema`，随后是实现工具逻辑的调用处理器。
+该函数的第一个参数是用于与客户端交互的 `McpAsyncServerExchange`，第二个参数是工具参数的映射。
+
+<div id="resource-specification">
+  ### 资源规范
+</div>
+
+带有处理函数的资源规范。
+资源通过暴露以下数据为 AI 模型提供上下文：文件内容、数据库记录、API 响应、系统信息、应用程序状态。
+资源规范示例：
+
+<Tabs>
+  <Tab title="Sync">
+    ```java
+    // Sync resource specification
+    var syncResourceSpecification = new McpServerFeatures.SyncResourceSpecification(
+        new Resource("custom://resource", "name", "description", "mime-type", null),
+        (exchange, request) -> {
+            // Resource read implementation
+            return new ReadResourceResult(contents);
+        }
+    );
+    ```
+  </Tab>
+
+  <Tab title="Async">
+    ```java
+    // Async resource specification
+    var asyncResourceSpecification = new McpServerFeatures.AsyncResourceSpecification(
+        new Resource("custom://resource", "name", "description", "mime-type", null),
+        (exchange, request) -> {
+            // Resource read implementation
+            return Mono.just(new ReadResourceResult(contents));
+        }
+    );
+    ```
+  </Tab>
+</Tabs>
+
+资源规范由资源定义和资源读取处理器组成。
+资源定义包括 `name`、`description` 和 `MIME type`。
+处理资源读取请求的函数的第一个参数是 `McpAsyncServerExchange`，服务器可据此与已连接的客户端交互。
+第二个参数是 `McpSchema.ReadResourceRequest`。
+
+<div id="prompt-specification">
+  ### 提示模板规范
+</div>
+
+作为[提示模板功能](/zh/specification/2024-11-05/server/prompts/)的一部分，MCP 提供了一种标准化方式，便于服务器向客户端公开提示模板。
+提示模板规范是一种用于 AI 模型交互的结构化模板，支持一致的消息格式、参数替换、上下文注入、响应格式化以及指令模板化。
+
+<Tabs>
+  <Tab title="Sync">
+    ```java
+    // Sync prompt specification
+    var syncPromptSpecification = new McpServerFeatures.SyncPromptSpecification(
+        new Prompt("greeting", "description", List.of(
+            new PromptArgument("name", "description", true)
+        )),
+        (exchange, request) -> {
+            // Prompt implementation
+            return new GetPromptResult(description, messages);
+        }
+    );
+    ```
+  </Tab>
+
+  <Tab title="Async">
+    ```java
+    // Async prompt specification
+    var asyncPromptSpecification = new McpServerFeatures.AsyncPromptSpecification(
+        new Prompt("greeting", "description", List.of(
+            new PromptArgument("name", "description", true)
+        )),
+        (exchange, request) -> {
+            // Prompt implementation
+            return Mono.just(new GetPromptResult(description, messages));
+        }
+    );
+    ```
+  </Tab>
+</Tabs>
+
+提示模板的定义包括名称（该提示模板的标识符）、描述（该提示模板的用途）以及参数列表（用于模板化的参数）。
+处理函数负责处理请求并返回格式化后的模板。
+第一个参数是用于与客户端交互的 `McpAsyncServerExchange`，第二个参数是一个 `GetPromptRequest` 实例。
+
+<div id="completion-specification">
+  ### 补全规范
+</div>
+
+作为[补全能力](/zh/specification/2025-03-26/server/utilities/completion)的一部分，MCP 提供了一种标准化方式，使服务器可以为提示模板参数和资源 URI 提供参数自动补全建议。
+
+<Tabs>
+  <Tab title="Sync">
+    ```java
+    // 同步补全规范
+    var syncCompletionSpecification = new McpServerFeatures.SyncCompletionSpecification(
+    			new McpSchema.PromptReference("code_review"), (exchange, request) -> {
+
+            // completion implementation ...
+
+            return new McpSchema.CompleteResult(
+                new CompleteResult.CompleteCompletion(
+                  List.of("python", "pytorch", "pyside"),
+                  10, // total
+                  false // hasMore
+                ));
+          }
+    );
+
+    // 创建一个具备补全能力的同步服务器
+    var mcpServer = McpServer.sync(mcpServerTransportProvider)
+      .capabilities(ServerCapabilities.builder()
+        .completions() // 启用补全支持
+          // ...
+        .build())
+      // ...
+      .completions(new McpServerFeatures.SyncCompletionSpecification( // 注册补全规范
+          new McpSchema.PromptReference("code_review"), syncCompletionSpecification))
+      .build();
+
+    ```
+  </Tab>
+
+  <Tab title="Async">
+    ```java
+    // 异步补全规范
+    var asyncCompletionSpecification = new McpServerFeatures.AsyncCompletionSpecification(
+    			new McpSchema.PromptReference("code_review"), (exchange, request) -> {
+
+            // completion implementation ...
+
+            return Mono.just(new McpSchema.CompleteResult(
+                new CompleteResult.CompleteCompletion(
+                  List.of("python", "pytorch", "pyside"),
+                  10, // total
+                  false // hasMore
+                )));
+          }
+    );
+
+    // 创建一个具备补全能力的异步服务器
+    var mcpServer = McpServer.async(mcpServerTransportProvider)
+      .capabilities(ServerCapabilities.builder()
+        .completions() // 启用补全支持
+          // ...
+        .build())
+      // ...
+      .completions(new McpServerFeatures.AsyncCompletionSpecification( // 注册补全规范
+          new McpSchema.PromptReference("code_review"), asyncCompletionSpecification))
+      .build();
+
+    ```
+  </Tab>
+</Tabs>
+
+`McpSchema.CompletionReference` 的定义用于指定类型（`PromptReference` 或 `ResourceReference`）以及补全规范的标识符（例如处理器）。
+处理器函数负责处理请求并返回补全响应。
+第一个参数是用于与客户端交互的 `McpAsyncServerExchange`，第二个参数是一个 `CompleteRequest` 实例。
+
+参阅[使用补全](/zh/sdk/java/mcp-client#using-completion)，了解如何在客户端使用补全能力。
+
+<div id="using-sampling-from-a-server">
+  ### 在服务器端使用采样
+</div>
+
+要使用[采样功能](/zh/specification/2024-11-05/client/sampling/)，需要使用支持采样的兼容客户端。
+服务器无需特殊配置，但在发起请求前请确认客户端是否支持采样。
+了解更多关于[客户端采样支持](zh/./mcp-client#sampling-support)。
+
+当兼容客户端连接到有状态服务器时，服务器可以请求语言模型生成内容：
+
+<Tabs>
+  <Tab title="Sync API">
+    ```java
+    // Create a server
+    McpSyncServer server = McpServer.sync(transportProvider)
+        .serverInfo("my-server", "1.0.0")
+        .build();
+
+    // Define a tool that uses sampling
+    var calculatorTool = new McpServerFeatures.SyncToolSpecification(
+        new Tool("ai-calculator", "Performs calculations using AI", schema),
+        (exchange, arguments) -> {
+            // Check if client supports sampling
+            if (exchange.getClientCapabilities().sampling() == null) {
+                return new CallToolResult("Client does not support AI capabilities", false);
+            }
+
+            // Create a sampling request
+            McpSchema.CreateMessageRequest request = McpSchema.CreateMessageRequest.builder()
+                .messages(List.of(new McpSchema.SamplingMessage(McpSchema.Role.USER,
+                    new McpSchema.TextContent("Calculate: " + arguments.get("expression")))
+                .modelPreferences(McpSchema.ModelPreferences.builder()
+                    .hints(List.of(
+                        McpSchema.ModelHint.of("claude-3-sonnet"),
+                        McpSchema.ModelHint.of("claude")
+                    ))
+                    .intelligencePriority(0.8)  // 优先考虑智能能力
+                    .speedPriority(0.5)         // 适中速度权重
+                    .build())
+                .systemPrompt("You are a helpful calculator assistant. Provide only the numerical answer.")
+                .maxTokens(100)
+                .build();
+
+            // Request sampling from the client
+            McpSchema.CreateMessageResult result = exchange.createMessage(request);
+
+            // Process the result
+            String answer = result.content().text();
+            return new CallToolResult(answer, false);
+        }
+    );
+
+    // Add the tool to the server
+    server.addTool(calculatorTool);
+    ```
+  </Tab>
+
+  <Tab title="Async API">
+    ```java
+    // Create a server
+    McpAsyncServer server = McpServer.async(transportProvider)
+        .serverInfo("my-server", "1.0.0")
+        .build();
+
+    // Define a tool that uses sampling
+    var calculatorTool = new McpServerFeatures.AsyncToolSpecification(
+        new Tool("ai-calculator", "Performs calculations using AI", schema),
+        (exchange, arguments) -> {
+            // Check if client supports sampling
+            if (exchange.getClientCapabilities().sampling() == null) {
+                return Mono.just(new CallToolResult("Client does not support AI capabilities", false));
+            }
+
+            // Create a sampling request
+            McpSchema.CreateMessageRequest request = McpSchema.CreateMessageRequest.builder()
+                .content(new McpSchema.TextContent("Calculate: " + arguments.get("expression")))
+                .modelPreferences(McpSchema.ModelPreferences.builder()
+                    .hints(List.of(
+                        McpSchema.ModelHint.of("claude-3-sonnet"),
+                        McpSchema.ModelHint.of("claude")
+                    ))
+                    .intelligencePriority(0.8)  // 优先考虑智能能力
+                    .speedPriority(0.5)         // 适中速度权重
+                    .build())
+                .systemPrompt("You are a helpful calculator assistant. Provide only the numerical answer.")
+                .maxTokens(100)
+                .build();
+
+            // Request sampling from the client
+            return exchange.createMessage(request)
+                .map(result -> {
+                    // Process the result
+                    String answer = result.content().text();
+                    return new CallToolResult(answer, false);
+                });
+        }
+    );
+
+    // Add the tool to the server
+    server.addTool(calculatorTool)
+        .subscribe();
+    ```
+  </Tab>
+</Tabs>
+
+`CreateMessageRequest` 对象允许你指定：`Content`——提供给模型的输入文本或图像，`Model Preferences`——用于模型选择的提示与优先级，`System Prompt`——对模型行为的指令，以及 `Max Tokens`——生成响应的最大长度。
+
+<div id="using-elicitation-from-a-server">
+  ### 在服务器中使用信息征询
+</div>
+
+要使用[信息征询功能](/zh/specification/2025-06-18/client/elicitation)，你需要一个支持信息征询的兼容客户端。
+无需对服务器进行特殊配置，但在发起请求前请确认客户端已支持信息征询。
+了解更多[客户端对信息征询的支持情况](zh/./mcp-client#elicitation-support)。
+
+当兼容客户端连接到有状态服务器时，服务器可以请求语言模型生成内容：
+
+<Tabs>
+  <Tab title="Sync API">
+    ```java
+    // Create a server
+    McpSyncServer server = McpServer.sync(transportProvider)
+        .serverInfo("my-server", "1.0.0")
+        .build();
+
+    // Define a tool that uses sampling
+    var calculatorTool = new McpServerFeatures.SyncToolSpecification(
+        new Tool("ai-calculator", "Performs calculations using AI", schema),
+        (exchange, arguments) -> {
+            // Check if client supports elicitation
+            if (exchange.getClientCapabilities().elicitation() == null) {
+                return new CallToolResult("Client does not support elicitation capabilities", false);
+            }
+
+            // Create an elicitation request
+            McpSchema.ElicitRequest request = McpSchema.ElicitRequest.builder()
+    					.message("Test message")
+    					.requestedSchema(
+    							Map.of("type", "object", "properties", Map.of("message", Map.of("type", "string"))))
+    					.build();
+
+            // Request elicitation from the client
+            McpSchema.ElicitResult result = exchange.createElicitation(request);
+
+            // Process the result
+            Map<String, Object> answer = result.content();
+            return new CallToolResult(answer, false);
+        }
+    );
+
+    // Add the tool to the server
+    server.addTool(calculatorTool);
+    ```
+  </Tab>
+
+  <Tab title="Async API">
+    ```java
+    // Create a server
+    McpAsyncServer server = McpServer.async(transportProvider)
+        .serverInfo("my-server", "1.0.0")
+        .build();
+
+    // Define a tool that uses elicitation
+    var calculatorTool = new McpServerFeatures.AsyncToolSpecification(
+        new Tool("ai-calculator", "Performs calculations using AI", schema),
+        (exchange, arguments) -> {
+            // Check if client supports elicitation
+            if (exchange.getClientCapabilities().elicitation() == null) {
+                return Mono.just(new CallToolResult("Client does not support elicitation capabilities", false));
+            }
+
+            // Create an elicitation request
+            McpSchema.ElicitRequest request = McpSchema.ElicitRequest.builder()
+                .message("Test message")
+                .requestedSchema(
+                        Map.of("type", "object", "properties", Map.of("message", Map.of("type", "string"))))
+                .build();
+
+            // Request elicitation from the client
+            return exchange.createElicitation(request)
+                .map(result -> {
+                    // Process the result
+                    Map<String, Object> answer = result.content();
+                    return new CallToolResult(answer, false);
+                });
+        }
+    );
+
+    // Add the tool to the server
+    server.addTool(calculatorTool)
+        .subscribe();
+    ```
+  </Tab>
+</Tabs>
+
+<div id="logging-support">
+  ### 日志支持
+</div>
+
+服务器提供结构化日志功能，可按不同严重级别向客户端发送日志消息。日志通知只能在已有的客户端会话中发送，例如工具、资源和提示模板的调用过程中。
+
+例如，我们可以在工具处理函数中发送一条日志消息。
+在客户端，你可以注册一个日志消费者来接收来自服务器的日志消息，并设置最小日志级别以进行过滤。
+
+```java
+var mcpClient = McpClient.sync(transport)
+        .loggingConsumer(notification -> {
+            System.out.println("Received log message: " + notification.data());
+        })
+        .build();
+
+mcpClient.initialize();
+
+mcpClient.setLoggingLevel(McpSchema.LoggingLevel.INFO);
+
+// 调用会发送日志通知的工具
+CallToolResult result = mcpClient.callTool(new McpSchema.CallToolRequest("logging-test", Map.of()));
+```
+
+服务器可以在工具/资源/提示模板处理函数中使用 `McpAsyncServerExchange`/`McpSyncServerExchange` 对象发送日志消息：
+
+```java
+var tool = new McpServerFeatures.AsyncToolSpecification(
+    new McpSchema.Tool("logging-test", "Test logging notifications", emptyJsonSchema),
+    (exchange, request) -> {
+
+      exchange.loggingNotification( // 使用 exchange 发送日志消息
+          McpSchema.LoggingMessageNotification.builder()
+            .level(McpSchema.LoggingLevel.DEBUG)
+            .logger("test-logger")
+            .data("Debug message")
+            .build())
+        .block();
+
+      return Mono.just(new CallToolResult("Logging test completed", false));
+    });
+
+var mcpServer = McpServer.async(mcpServerTransportProvider)
+  .serverInfo("test-server", "1.0.0")
+  .capabilities(
+    ServerCapabilities.builder()
+      .logging() // 启用日志支持
+      .tools(true)
+      .build())
+  .tools(tool)
+  .build();
+```
+
+客户端可以通过 `mcpClient.setLoggingLevel(level)` 请求控制接收的最小日志级别。低于该级别的消息将被过滤。
+支持的日志级别（按严重性递增）：DEBUG（0）、INFO（1）、NOTICE（2）、WARNING（3）、ERROR（4）、CRITICAL（5）、ALERT（6）、EMERGENCY（7）
+
+<div id="error-handling">
+  ## 错误处理
+</div>
+
+该 SDK 通过 McpError 类提供完善的错误处理，覆盖协议兼容性、传输通信、JSON-RPC 消息、工具执行、资源管理、提示模板处理、超时与连接问题。统一的错误处理方式确保在同步与异步操作中都能实现一致、可靠的错误管理。

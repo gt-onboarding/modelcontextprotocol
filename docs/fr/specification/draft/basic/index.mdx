@@ -1,0 +1,211 @@
+---
+title: Aperçu
+---
+
+<div id="enable-section-numbers" />
+
+<Info>**Révision du protocole** : brouillon</Info>
+
+Le Protocole de contexte de modèle (MCP) comprend plusieurs composants clés qui fonctionnent de concert :
+
+* **Protocole de base** : types de messages JSON-RPC 2.0
+* **Gestion du cycle de vie** : initialisation de la connexion, négociation des capacités et
+  contrôle de session
+* **Autorisation** : cadre d’authentification et d’autorisation pour les transports HTTP
+* **Fonctionnalités serveur** : Ressources, Invites et Outils exposés par les Serveurs MCP
+* **Fonctionnalités client** : Échantillonnage et listes de Racines fournies par les Clients MCP
+* **Utilitaires** : préoccupations transversales comme la journalisation et la complétion des arguments
+
+Toutes les implémentations **DOIVENT** prendre en charge le protocole de base et la gestion du cycle de vie.
+Les autres composants **PEUVENT** être implémentés en fonction des besoins spécifiques de l’application.
+
+Ces couches du protocole établissent une séparation claire des responsabilités tout en permettant des interactions riches entre clients et serveurs. La conception modulaire permet aux implémentations de ne prendre en charge que les fonctionnalités dont elles ont besoin.
+
+<div id="messages">
+  ## Messages
+</div>
+
+Tous les messages échangés entre les clients et les serveurs MCP **DOIVENT** respecter la spécification
+[JSON-RPC 2.0](https://www.jsonrpc.org/specification). Le protocole définit
+les types de messages suivants :
+
+<div id="requests">
+  ### Requêtes
+</div>
+
+Les requêtes sont envoyées du client au serveur, ou l’inverse, pour initier une opération.
+
+```typescript
+{
+  jsonrpc: "2.0";
+  id: string | number;
+  method: string;
+  params?: {
+    [key: string]: unknown;
+  };
+}
+```
+
+* Les requêtes **DOIVENT** inclure un identifiant de type chaîne ou entier.
+* Contrairement à JSON-RPC de base, l’identifiant **NE DOIT PAS** être `null`.
+* L’identifiant de la requête **NE DOIT PAS** avoir déjà été utilisé par l’émetteur au cours de la même session.
+
+<div id="responses">
+  ### Réponses
+</div>
+
+Les réponses sont envoyées en retour aux requêtes et contiennent le résultat ou l’erreur de l’opération.
+
+```typescript
+{
+  jsonrpc: "2.0";
+  id: string | number;
+  result?: {
+    [key: string]: unknown;
+  }
+  error?: {
+    code: number;
+    message: string;
+    data?: unknown;
+  }
+}
+```
+
+* Les réponses **DOIVENT** inclure le même ID que la requête correspondante.
+* Les **réponses** sont ensuite classées en **résultats** ou en **erreurs**. Soit `result`, soit `error` **DOIT** être défini(e). Une réponse **NE DOIT PAS** définir les deux.
+* Les résultats **PEUVENT** avoir n’importe quelle structure d’objet JSON, tandis que les erreurs **DOIVENT** inclure au minimum un code d’erreur et un message.
+* Les codes d’erreur **DOIVENT** être des entiers.
+
+<div id="notifications">
+  ### Notifications
+</div>
+
+Les notifications sont envoyées du client au serveur, ou l’inverse, sous forme de message unidirectionnel.
+Le destinataire **NE DOIT PAS** envoyer de réponse.
+
+```typescript
+{
+  jsonrpc: "2.0";
+  method: string;
+  params?: {
+    [key: string]: unknown;
+  };
+}
+```
+
+* Les notifications **NE DOIVENT PAS** inclure d’identifiant.
+
+<div id="auth">
+  ## Authentification
+</div>
+
+Le Protocole de contexte de modèle (MCP) fournit un cadre [Authorization](/fr/specification/draft/basic/authorization) pour une utilisation avec HTTP.
+Les implémentations utilisant un transport HTTP **DEVRAIENT** se conformer à cette spécification,
+tandis que celles utilisant le transport STDIO **NE DEVRAIENT PAS** la suivre
+et devraient plutôt récupérer les informations d’identification depuis l’environnement.
+
+Par ailleurs, les clients et les serveurs **PEUVENT** négocier leurs propres stratégies personnalisées d’authentification et
+d’autorisation.
+
+Pour participer aux discussions et contribuer à l’évolution des mécanismes d’authentification de MCP, rejoignez-nous
+sur
+[GitHub Discussions](https://github.com/modelcontextprotocol/specification/discussions)
+pour aider à façonner l’avenir du protocole !
+
+<div id="schema">
+  ## Schéma
+</div>
+
+La spécification complète du protocole est définie sous la forme d’un
+[schéma TypeScript](https://github.com/modelcontextprotocol/specification/blob/main/schema/draft/schema.ts).
+C’est la source de vérité pour l’ensemble des messages et structures du protocole.
+
+Il existe également un
+[schéma JSON](https://github.com/modelcontextprotocol/specification/blob/main/schema/draft/schema.json),
+généré automatiquement à partir de cette source de vérité TypeScript, destiné à être utilisé avec
+divers outils d’automatisation.
+
+<div id="general-fields">
+  ### Champs généraux
+</div>
+
+<div id="_meta">
+  #### `_meta`
+</div>
+
+La propriété/le paramètre `_meta` est réservé par le MCP pour permettre aux clients et aux serveurs
+d’associer des métadonnées supplémentaires à leurs interactions.
+
+Certains noms de clé sont réservés par le MCP pour des métadonnées au niveau du protocole, comme spécifié ci-dessous ;
+les implémentations NE DOIVENT PAS faire d’hypothèses quant aux valeurs à ces clés.
+
+En outre, des définitions dans le [schéma](https://github.com/modelcontextprotocol/specification/blob/main/schema/draft/schema.ts)
+peuvent réserver des noms particuliers pour des métadonnées dédiées à un usage spécifique, comme indiqué dans ces définitions.
+
+Format du nom de clé : les noms de clé `_meta` valides comportent deux segments : un **préfixe** facultatif et un **nom**.
+
+Préfixe :
+
+* S’il est précisé, DOIT être une série d’étiquettes séparées par des points (`.`), suivie d’une barre oblique (`/`).
+  * Les étiquettes DOIVENT commencer par une lettre et se terminer par une lettre ou un chiffre ; les caractères internes peuvent être des lettres, des chiffres ou des tirets (`-`).
+* Tout préfixe commençant par zéro ou plusieurs étiquettes valides, suivi de `modelcontextprotocol` ou `mcp`, puis de toute étiquette valide,
+  est **réservé** à l’usage du MCP.
+  * Par exemple : `modelcontextprotocol.io/`, `mcp.dev/`, `api.modelcontextprotocol.org/` et `tools.mcp.com/` sont tous réservés.
+
+Nom :
+
+* À moins d’être vide, DOIT commencer et se terminer par un caractère alphanumérique (`[a-z0-9A-Z]`).
+* PEUT contenir des tirets (`-`), des traits de soulignement (`_`), des points (`.`) et des caractères alphanumériques entre les deux.
+
+<div id="icons">
+  #### `icons`
+</div>
+
+La propriété `icons` offre un moyen standardisé pour les serveurs d’exposer des identifiants visuels pour leurs Ressources, Outils, Invites et implémentations. Les icônes améliorent les interfaces utilisateur en apportant du contexte visuel et en facilitant la découvrabilité des fonctionnalités disponibles.
+
+Les icônes sont représentées par un tableau d’objets `Icon`, où chaque icône comprend :
+
+* `src` : un URI pointant vers la ressource de l’icône (obligatoire). Il peut s’agir :
+  * d’une URL HTTP/HTTPS pointant vers un fichier image ;
+  * d’un URI de données contenant une image encodée en base64.
+* `mimeType` : type MIME facultatif si celui indiqué par le serveur est manquant ou trop générique ;
+* `sizes` : spécification de taille facultative (p. ex. « 48x48 », « any » pour les formats évolutifs comme SVG, ou « 48x48 96x96 » pour plusieurs tailles).
+
+**Prise en charge requise des types MIME :**
+
+Les clients qui prennent en charge l’affichage d’icônes **DOIVENT** au minimum prendre en charge les types MIME suivants :
+
+* `image/png` - images PNG (sûr, compatibilité universelle)
+* `image/jpeg` (et `image/jpg`) - images JPEG (sûr, compatibilité universelle)
+
+Les clients qui prennent en charge l’affichage d’icônes **DEVRAIENT** également prendre en charge :
+
+* `image/svg+xml` - images SVG (évolutives mais nécessitant des précautions de sécurité, voir ci-dessous)
+* `image/webp` - images WebP (format moderne et efficace)
+
+**Considérations de sécurité :**
+
+Les consommateurs de métadonnées d’icônes **DOIVENT** appliquer les précautions de sécurité appropriées lors de la gestion des icônes afin d’éviter toute compromission :
+
+* Traiter les métadonnées et les octets des icônes comme des entrées non fiables et se prémunir contre les risques réseau, de confidentialité et d’analyse.
+* S’assurer que l’URI de l’icône est soit en HTTPS, soit un URI `data:`. Les clients **DOIVENT** rejeter les URI d’icône utilisant des schémas ou redirections non sûrs, tels que `javascript:`, `file:`, `ftp:`, `ws:` ou des schémas d’URI d’applications locales.
+  * Interdire les changements de schéma et les redirections vers des hôtes d’origines différentes.
+* Résister aux attaques d’épuisement des ressources dues à des images trop volumineuses, de grandes dimensions ou à un nombre excessif d’images/frames (p. ex. dans les GIF).
+  * Les consommateurs **PEUVENT** définir des limites de taille pour l’image et le contenu.
+* Récupérer les icônes sans informations d’identification. Ne pas envoyer de cookies, d’en-têtes `Authorization` ni d’identifiants client.
+* Vérifier que les URI des icônes proviennent de la même origine que le serveur, afin de réduire les risques d’exposition de données ou d’informations de suivi à des tiers.
+* Faire preuve de prudence lors de la récupération et du rendu des icônes, car la charge utile **PEUT** contenir du contenu exécutable (p. ex. SVG avec [JavaScript intégré](https://www.w3.org/TR/SVG11/script.html) ou [capacités étendues](https://www.w3.org/TR/SVG11/extend.html)).
+  * Les consommateurs **PEUVENT** choisir d’interdire certains types de fichiers ou d’assainir les fichiers d’icônes avant le rendu.
+* Valider les types MIME et le contenu des fichiers avant le rendu. Considérer les informations de type MIME comme indicatives. Détecter le type de contenu via les octets magiques ; rejeter en cas de non-correspondance ou de type inconnu.
+  * Maintenir une liste d’autorisation stricte des types d’images.
+
+**Utilisation :**
+
+Les icônes peuvent être associées à :
+
+* `Implementation` : identifiant visuel pour l’implémentation du Serveur MCP ou du Client MCP
+* `Tool` : représentation visuelle de la fonctionnalité de l’Outil
+* `Prompt` : icône affichée à côté des modèles d’Invites
+* `Resource` : indicateur visuel pour différents types de Ressources
+
+Plusieurs icônes peuvent être fournies pour couvrir différents contextes d’affichage et résolutions. Les clients doivent sélectionner l’icône la plus appropriée selon les exigences de leur interface utilisateur.

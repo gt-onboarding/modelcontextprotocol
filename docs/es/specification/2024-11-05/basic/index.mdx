@@ -1,0 +1,79 @@
+---
+title: Descripción general
+---
+
+<Info>**Revisión del protocolo**: 2024-11-05</Info>
+
+Todos los mensajes entre Clientes MCP y Servidores MCP **DEBEN** seguir la especificación
+[JSON-RPC 2.0](https://www.jsonrpc.org/specification). El protocolo define
+tres tipos fundamentales de mensajes:
+
+| Tipo            | Descripción                                  | Requisitos                                   |
+| --------------- | -------------------------------------------- | -------------------------------------------- |
+| `Requests`      | Mensajes enviados para iniciar una operación | Deben incluir un ID único y el nombre del método |
+| `Responses`     | Mensajes enviados en respuesta a solicitudes | Deben incluir el mismo ID que la solicitud   |
+| `Notifications` | Mensajes unidireccionales sin respuesta      | No deben incluir un ID                       |
+
+Las **Responses** se subdividen en **resultados satisfactorios** o **errores**.
+Los resultados pueden tener cualquier estructura de objeto JSON, mientras que los errores deben incluir, como mínimo, un código de error y un mensaje.
+
+<div id="protocol-layers">
+  ## Capas del protocolo
+</div>
+
+El Protocolo de Contexto de Modelo (MCP) consta de varios componentes clave que funcionan en conjunto:
+
+* **Protocolo base**: Tipos de mensajes principales de JSON-RPC 2.0
+* **Gestión del ciclo de vida**: Inicialización de la conexión, negociación de capacidades y
+  control de sesiones
+* **Funciones del servidor**: Recursos, Indicaciones y Herramientas expuestos por los servidores
+* **Funciones del cliente**: Muestreo y listas de directorios raíz proporcionadas por los clientes
+* **Utilidades**: Aspectos transversales como el registro y el autocompletado de argumentos
+
+Todas las implementaciones **DEBEN** admitir el protocolo base y los componentes de gestión del ciclo de vida.
+Los demás componentes **PUEDEN** implementarse según las necesidades específicas de la
+aplicación.
+
+Estas capas del protocolo establecen una clara separación de responsabilidades y, al mismo tiempo, habilitan
+interacciones ricas entre clientes y servidores. El diseño modular permite que las implementaciones admitan exactamente las
+funciones que necesitan.
+
+Consulta las siguientes páginas para más detalles sobre los distintos componentes:
+
+<CardGroup cols={3}>
+  <Card title="Ciclo de vida" icon="arrows-rotate" href="/es/specification/2024-11-05/basic/lifecycle" />
+
+  <Card title="Recursos" icon="file-lines" href="/es/specification/2024-11-05/server/resources" />
+
+  <Card title="Indicaciones" icon="message" href="/es/specification/2024-11-05/server/prompts" />
+
+  <Card title="Herramientas" icon="wrench" href="/es/specification/2024-11-05/server/tools" />
+
+  <Card title="Registro" icon="rectangle-list" href="/es/specification/2024-11-05/server/utilities/logging" />
+
+  <Card title="Muestreo" icon="code" href="/es/specification/2024-11-05/client/sampling" />
+</CardGroup>
+
+<div id="auth">
+  ## Autenticación
+</div>
+
+La autenticación y la autorización no forman parte actualmente de la especificación central del Protocolo de Contexto de Modelo (MCP),
+pero estamos evaluando formas de incorporarlas en el futuro. Únete a la conversación en
+[GitHub Discussions](https://github.com/modelcontextprotocol/specification/discussions)
+para ayudar a definir el futuro del protocolo.
+
+Los clientes y los servidores **PUEDEN** negociar sus propias estrategias personalizadas de autenticación y autorización.
+
+<div id="schema">
+  ## Esquema
+</div>
+
+La especificación completa del protocolo se define como un
+[esquema de TypeScript](http://github.com/modelcontextprotocol/specification/tree/main/schema/2024-11-05/schema.ts).
+Esta es la fuente de referencia para todos los mensajes y estructuras del protocolo.
+
+También hay un
+[esquema JSON](http://github.com/modelcontextprotocol/specification/tree/main/schema/2024-11-05/schema.json),
+que se genera automáticamente a partir de la fuente de referencia en TypeScript, para su uso con
+diversas herramientas automatizadas.

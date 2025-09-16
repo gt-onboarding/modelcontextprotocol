@@ -1,0 +1,127 @@
+---
+title: Directives SEP
+description: Directives pour les propositions d’amélioration de la spécification (SEP) visant à modifier le Model Context Protocol (MCP)
+---
+
+<div id="what-is-a-sep">
+  ## Qu'est-ce qu'un SEP ?
+</div>
+
+SEP signifie Specification Enhancement Proposal. Un SEP est un document de conception qui fournit des informations à la communauté MCP ou décrit une nouvelle fonctionnalité pour le Model Context Protocol, ses processus ou son environnement. Le SEP doit proposer une spécification technique concise de la fonctionnalité ainsi qu’une justification de celle-ci.
+
+Nous envisageons les SEP comme les principaux mécanismes pour proposer des fonctionnalités majeures, recueillir les retours de la communauté sur un sujet et documenter les décisions de conception qui ont façonné MCP. L’auteur du SEP est responsable de bâtir un consensus au sein de la communauté et de documenter les opinions divergentes.
+
+Comme les SEP sont conservés sous forme de fichiers texte dans un dépôt versionné (GitHub Issues), leur historique des révisions constitue l’enregistrement historique de la proposition de fonctionnalité.
+
+<div id="what-qualifies-a-sep">
+  ## Qu’est-ce qui qualifie une SEP ?
+</div>
+
+L’objectif est de réserver le processus SEP aux changements suffisamment importants pour nécessiter une large discussion au sein de la communauté, un document de conception formel et une trace historique du processus décisionnel. Un ticket GitHub classique ou une pull request est souvent plus approprié pour des changements plus petits et plus ciblés.
+
+Envisagez de proposer une SEP si votre changement implique l’un des éléments suivants :
+
+- **Une nouvelle fonctionnalité ou une modification du protocole** : tout changement qui ajoute, modifie ou supprime des fonctionnalités dans le Model Context Protocol. Cela inclut :
+  - l’ajout de nouveaux points de terminaison ou méthodes d’API ;
+  - la modification de la syntaxe ou de la sémantique des structures de données ou des messages existants ;
+  - l’introduction d’une nouvelle norme pour l’interopérabilité entre différents outils compatibles MCP ;
+  - des changements significatifs dans la manière dont la spécification elle-même est définie, présentée ou validée.
+- **Un changement non rétrocompatible** : tout changement qui n’est pas rétrocompatible.
+- **Une modification de la gouvernance ou des processus** : toute proposition qui modifie la prise de décision du projet ou les lignes directrices de contribution (comme ce document lui‑même).
+- **Un sujet complexe ou controversé** : si un changement est susceptible d’avoir plusieurs solutions valides ou de susciter un débat important, le processus SEP fournit le cadre nécessaire pour explorer les alternatives, documenter la justification et parvenir à un consensus communautaire avant le début de la mise en œuvre.
+
+<div id="sep-types">
+  ## Types de SEP
+</div>
+
+Il existe trois types de SEP :
+
+1. **Standards Track** Un SEP décrit une nouvelle fonctionnalité ou une implémentation pour le Model Context Protocol. Il peut aussi décrire une norme d’interopérabilité qui sera prise en charge en dehors de la spécification du protocole principal.
+2. **Informational** Un SEP décrit une question de conception du Model Context Protocol ou fournit des lignes directrices générales ou des informations à la communauté MCP, sans proposer de nouvelle fonctionnalité. Les SEP de type « Informational » ne représentent pas nécessairement un consensus ni une recommandation de la communauté MCP.
+3. **Process** Un SEP décrit un processus lié à MCP ou propose une modification d’un processus (ou un événement dans celui‑ci). Les SEP de type « Process » sont semblables aux SEP « Standards Track » mais s’appliquent à des domaines autres que le protocole MCP lui‑même.
+
+<div id="submitting-a-sep">
+  ## Soumettre une SEP
+</div>
+
+Le processus de SEP commence par une nouvelle idée pour le Model Context Protocol. Il est fortement recommandé qu’une SEP ne contienne qu’une seule proposition clé ou une seule idée nouvelle. De petites améliorations ou des correctifs n’ont souvent pas besoin d’une SEP et peuvent être intégrés au flux de travail de développement du MCP via une pull request au dépôt MCP. Plus une SEP est ciblée, plus elle a de chances de réussir.
+
+Chaque SEP doit avoir un **auteur de SEP** — quelqu’un qui rédige la SEP en suivant le style et le format décrits ci-dessous, anime les discussions dans les forums appropriés et cherche à construire un consensus au sein de la communauté autour de l’idée. L’auteur de la SEP devrait d’abord déterminer si l’idée se prête à une SEP. Publier sur les forums de la communauté MCP (Discord, GitHub Discussions) est la meilleure façon de procéder.
+
+<div id="sep-workflow">
+  ### Flux de travail des SEP
+</div>
+
+Les SEP doivent être soumis sous forme d’issue GitHub dans le [dépôt de la spécification](https://github.com/modelcontextprotocol/modelcontextprotocol). Le flux de travail standard d’un SEP est le suivant :
+
+1. Vous, l’auteur du SEP, créez une issue GitHub [bien formatée](#sep-format) avec les étiquettes `SEP` et `proposal`. Le numéro du SEP est identique au numéro de l’issue GitHub ; les deux peuvent être utilisés de manière interchangeable.
+2. Trouvez un Core Maintainer ou un Maintainer pour parrainer votre proposition. Les Core Maintainers et Maintainers passent régulièrement en revue la liste des propositions ouvertes pour déterminer lesquelles parrainer. Vous pouvez mentionner les mainteneurs concernés depuis [la liste des mainteneurs](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/main/MAINTAINERS.md) dans votre proposition.
+3. Une fois un parrain trouvé, l’issue GitHub est assignée au parrain. Le parrain ajoutera l’étiquette `draft`, s’assurera que le numéro du SEP figure dans le titre et assignera un jalon (milestone).
+4. Le parrain examinera informellement la proposition et pourra demander des modifications sur la base des retours de la communauté. Lorsqu’elle est prête pour un examen formel, le parrain ajoutera l’étiquette `in-review`.
+5. Après l’ajout de l’étiquette `in-review`, le SEP entre en revue formelle par l’équipe des Core Maintainers. Le SEP peut être accepté, rejeté ou renvoyé pour révision.
+6. Si le SEP n’a pas trouvé de parrain dans un délai de trois mois, les Core Maintainers peuvent clôturer le SEP en tant que `dormant`.
+
+<div id="sep-format">
+  ### Format des SEP
+</div>
+
+Chaque SEP doit comporter les parties suivantes :
+
+1. **Préambule** -- Un titre descriptif court, les noms et les coordonnées de chaque auteur, ainsi que l’état actuel.
+2. **Résumé** -- Une brève description (~200 mots) de la problématique technique traitée.
+3. **Motivation** -- La motivation doit expliquer clairement pourquoi la spécification du protocole existante est insuffisante pour résoudre le problème que le SEP aborde. La motivation est cruciale pour les SEP qui souhaitent modifier le Model Context Protocol. Les propositions de SEP sans motivation suffisante peuvent être rejetées d’emblée.
+4. **Spécification** -- La spécification technique doit décrire la syntaxe et la sémantique de toute nouvelle fonctionnalité du protocole. Elle doit être suffisamment détaillée pour permettre des implémentations concurrentes et interopérables. Une PR présentant les modifications de la spécification doit être fournie.
+5. **Justification** -- La justification explique pourquoi certaines décisions de conception ont été prises. Elle doit décrire les conceptions alternatives envisagées et les travaux connexes. Elle doit également apporter des éléments attestant d’un consensus au sein de la communauté et discuter des objections ou préoccupations importantes soulevées lors des discussions.
+6. **Rétrocompatibilité** -- Tous les SEP qui introduisent des incompatibilités rétroactives doivent inclure une section décrivant ces incompatibilités et leur gravité. Le SEP doit expliquer comment l’auteur propose de traiter ces incompatibilités.
+7. **Implémentation de référence** -- L’implémentation de référence doit être achevée avant qu’un SEP ne reçoive le statut « Final », mais elle n’a pas besoin d’être terminée avant l’acceptation du SEP. Bien qu’il soit pertinent de parvenir à un consensus sur la spécification et la justification avant d’écrire du code, le principe « consensus approximatif et code en fonctionnement » reste utile pour trancher de nombreuses discussions sur les détails du protocole.
+8. **Implications en matière de sécurité** -- S’il existe des préoccupations de sécurité liées au SEP, elles doivent être explicitement énoncées afin de s’assurer que les relecteurs du SEP en ont bien connaissance.
+
+<div id="sep-states">
+  ### États des SEP
+</div>
+
+Les SEP peuvent être dans l’un des états suivants
+
+- `proposal`: proposition de SEP sans parrain.
+- `draft`: proposition de SEP avec parrain.
+- `in-review`: proposition de SEP prête pour examen.
+- `accepted`: SEP acceptée par les mainteneurs principaux, mais nécessitant encore une formulation finale et une implémentation de référence.
+- `rejected`: SEP rejetée par les mainteneurs principaux.
+- `withdrawn`: SEP retirée.
+- `final`: SEP finalisée.
+- `superseded`: SEP remplacée par une SEP plus récente.
+- `dormant`: SEP qui n’a pas trouvé de parrains et a ensuite été close.
+
+<div id="sep-review-resolution">
+  ### Examen et résolution des SEP
+</div>
+
+Les SEP sont examinés par l’équipe des mainteneurs principaux du MCP toutes les deux semaines.
+
+Pour qu’un SEP soit accepté, il doit répondre à certains critères minimaux :
+
+- Une implémentation de prototype démontrant la proposition
+- Un bénéfice clair pour l’écosystème MCP
+- Un soutien et un consensus de la communauté
+
+Une fois un SEP accepté, l’implémentation de référence doit être finalisée. Lorsque l’implémentation de référence est terminée et intégrée dans le dépôt principal du code source, le statut sera changé en « Final ».
+
+Un SEP peut également être « Rejeté » ou « Retiré ». Un SEP « Retiré » peut être soumis de nouveau à une date ultérieure.
+
+<div id="reporting-sep-bugs-or-submitting-sep-updates">
+  ## Signaler des bogues SEP ou soumettre des mises à jour SEP
+</div>
+
+La manière de signaler un bogue ou de soumettre une mise à jour SEP dépend de plusieurs facteurs, comme la maturité de la SEP, les préférences de l’auteur de la SEP et la nature de vos commentaires. Pour les SEP qui n’ont pas encore atteint l’état `final`, il est généralement préférable d’envoyer vos commentaires et modifications directement à l’auteur de la SEP. Une fois la SEP finalisée, vous pouvez soumettre des corrections sous forme de commentaire GitHub sur l’issue ou la pull request de l’implémentation de référence.
+
+<div id="transferring-sep-ownership">
+  ## Transférer la propriété d’un SEP
+</div>
+
+Il est parfois nécessaire de transférer la propriété de SEP à un nouvel auteur. En général, nous souhaitons conserver l’auteur initial comme coauteur du SEP transféré, mais cela relève de sa décision. Une bonne raison de transférer la propriété est que l’auteur initial n’a plus le temps ni l’intérêt de le mettre à jour ou de mener à bien le processus SEP, ou qu’il a disparu de la circulation sur le Net (c.-à-d. est injoignable ou ne répond pas aux courriels). Une mauvaise raison de transférer la propriété est que vous n’êtes pas d’accord avec l’orientation du SEP. Nous cherchons à bâtir un consensus autour d’un SEP, mais si cela n’est pas possible, vous pouvez toujours soumettre un SEP concurrent.
+
+<div id="copyright">
+  ## Copyright
+</div>
+
+Ce document est versé dans le domaine public ou placé sous la licence CC0-1.0-Universal, selon l’option la plus permissive.

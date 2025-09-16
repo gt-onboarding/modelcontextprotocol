@@ -1,0 +1,75 @@
+---
+title: Aperçu
+---
+
+<Info>**Révision du protocole** : 2024-11-05</Info>
+
+Tous les messages entre les clients et serveurs MCP **DOIVENT** respecter la spécification
+[JSON-RPC 2.0](https://www.jsonrpc.org/specification). Le protocole définit
+trois types fondamentaux de messages :
+
+| Type            | Description                                   | Exigences                                      |
+| --------------- | --------------------------------------------- | ---------------------------------------------- |
+| `Requests`      | Messages envoyés pour initier une opération   | Doivent inclure un identifiant unique et un nom de méthode |
+| `Responses`     | Messages envoyés en réponse aux requêtes      | Doivent inclure le même identifiant que la requête |
+| `Notifications` | Messages unidirectionnels sans réponse attendue | Ne doivent pas inclure d’identifiant          |
+
+Les **Responses** sont en outre subdivisées en **résultats** ou **erreurs**.
+Les résultats peuvent adopter n’importe quelle structure d’objet JSON, tandis que les erreurs doivent inclure au minimum un code d’erreur et un message.
+
+<div id="protocol-layers">
+  ## Couches du protocole
+</div>
+
+Le Protocole de contexte de modèle (MCP) se compose de plusieurs composants clés qui fonctionnent ensemble :
+
+* **Protocole de base** : Types de messages JSON-RPC 2.0 principaux
+* **Gestion du cycle de vie** : Initialisation de la connexion, négociation des capacités et
+  contrôle des sessions
+* **Fonctionnalités côté serveur** : Ressources, Invites et Outils exposés par les serveurs
+* **Fonctionnalités côté client** : Échantillonnage et listes de répertoires racine fournies par les clients
+* **Utilitaires** : Préoccupations transversales comme la journalisation et la complétion des arguments
+
+Toutes les implémentations **DOIVENT** prendre en charge le protocole de base et les composants de gestion du cycle de vie. Les autres composants **PEUVENT** être implémentés selon les besoins spécifiques de l’application.
+
+Ces couches du protocole établissent une séparation claire des responsabilités tout en permettant des interactions riches entre clients et serveurs. La conception modulaire permet aux implémentations de prendre en charge précisément les fonctionnalités dont elles ont besoin.
+
+Voir les pages suivantes pour plus de détails sur les différents composants :
+
+<CardGroup cols={3}>
+  <Card title="Cycle de vie" icon="arrows-rotate" href="/fr/specification/2024-11-05/basic/lifecycle" />
+
+  <Card title="Ressources" icon="file-lines" href="/fr/specification/2024-11-05/server/resources" />
+
+  <Card title="Invites" icon="message" href="/fr/specification/2024-11-05/server/prompts" />
+
+  <Card title="Outils" icon="wrench" href="/fr/specification/2024-11-05/server/tools" />
+
+  <Card title="Journalisation" icon="rectangle-list" href="/fr/specification/2024-11-05/server/utilities/logging" />
+
+  <Card title="Échantillonnage" icon="code" href="/fr/specification/2024-11-05/client/sampling" />
+</CardGroup>
+
+<div id="auth">
+  ## Auth
+</div>
+
+L’authentification et l’autorisation ne font pas partie, à ce stade, du cœur de la spécification du Protocole de contexte de modèle (MCP),
+mais nous étudions des moyens de les introduire à l’avenir. Rejoignez la discussion sur
+[GitHub Discussions](https://github.com/modelcontextprotocol/specification/discussions)
+pour contribuer à façonner l’avenir du protocole !
+
+Les clients et les serveurs **PEUVENT** négocier leurs propres stratégies d’authentification et d’autorisation.
+
+<div id="schema">
+  ## Schéma
+</div>
+
+La spécification complète du protocole est définie sous la forme d’un
+[schéma TypeScript](http://github.com/modelcontextprotocol/specification/tree/main/schema/2024-11-05/schema.ts).
+C’est la source de vérité pour l’ensemble des messages et structures du protocole.
+
+Il existe également un
+[schéma JSON](http://github.com/modelcontextprotocol/specification/tree/main/schema/2024-11-05/schema.json),
+généré automatiquement à partir de la source de vérité TypeScript, destiné à être utilisé avec
+divers outils d’automatisation.

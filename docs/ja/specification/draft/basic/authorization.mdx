@@ -1,0 +1,421 @@
+---
+title: 認可
+---
+
+<div id="enable-section-numbers" />
+
+<Info>**プロトコルリビジョン**: draft</Info>
+
+<div id="introduction">
+  ## イントロダクション
+</div>
+
+<div id="purpose-and-scope">
+  ### 目的と範囲
+</div>
+
+Model Context Protocol（MCP）はトランスポート層での認可機能を提供し、
+MCPクライアントがリソース所有者に代わって、アクセス制限のあるMCPサーバーへリクエストを送信できるようにします。
+本仕様は、HTTPベースのトランスポートにおける認可フローを定義します。
+
+<div id="protocol-requirements">
+  ### プロトコル要件
+</div>
+
+MCP実装において認可は**任意**です。サポートする場合は次のとおりです。
+
+* ストリーム対応HTTPベースのトランスポートを使用する実装は、この仕様に**準拠すべき**です。
+* STDIOトランスポートを使用する実装は、この仕様に**準拠すべきではなく**、代わりに環境から認証情報を取得するべきです。
+* その他のトランスポートを使用する実装は、そのプロトコルにおける確立されたセキュリティのベストプラクティスに**従わなければなりません**。
+
+<div id="standards-compliance">
+  ### 標準への準拠
+</div>
+
+この認可メカニズムは、以下の確立された仕様に基づいていますが、
+シンプルさを維持しつつセキュリティと相互運用性を確保するため、機能の一部のみを選択して実装しています。
+
+* OAuth 2.1 IETF DRAFT（[draft-ietf-oauth-v2-1-13](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13)）
+* OAuth 2.0 Authorization Server Metadata
+  （[RFC8414](https://datatracker.ietf.org/doc/html/rfc8414)）
+* OAuth 2.0 Dynamic Client Registration Protocol
+  （[RFC7591](https://datatracker.ietf.org/doc/html/rfc7591)）
+* OAuth 2.0 Protected Resource Metadata（[RFC9728](https://datatracker.ietf.org/doc/html/rfc9728)）
+
+<div id="authorization-flow">
+  ## 認可フロー
+</div>
+
+<div id="roles">
+  ### 役割
+</div>
+
+保護された *MCPサーバー* は [OAuth 2.1 のリソースサーバー](https://www.ietf.org/archive/id/draft-ietf-oauth-v2-1-13.html#name-roles) として動作し、
+アクセストークンを用いて保護されたリソースへのリクエストを受け付け、応答できます。
+
+*MCPクライアント* は [OAuth 2.1 のクライアント](https://www.ietf.org/archive/id/draft-ietf-oauth-v2-1-13.html#name-roles) として動作し、
+リソースオーナーに代わって保護されたリソースへのリクエストを行います。
+
+*認可サーバー* は、必要に応じてユーザーと対話し、MCPサーバーで使用するアクセストークンを発行する役割を担います。
+認可サーバーの実装詳細は本仕様の範囲外です。リソースサーバーと同一の場所でホストされる場合も、別のエンティティとしてホストされる場合もあります。
+[Authorization Server Discovery セクション](#authorization-server-discovery) では、MCPサーバーが対応する認可サーバーの所在をクライアントへ示す方法を規定します。
+
+<div id="overview">
+  ### 概要
+</div>
+
+1. 認可サーバーは、機密クライアントおよびパブリッククライアントの双方に対して適切なセキュリティ対策を備えた OAuth 2.1 を実装しなければなりません（MUST）。
+
+2. 認可サーバーおよび MCPクライアントは、OAuth 2.0 Dynamic Client Registration Protocol（[RFC7591](https://datatracker.ietf.org/doc/html/rfc7591)）をサポートすることが望まれます（SHOULD）。
+
+3. MCPサーバーは、OAuth 2.0 Protected Resource Metadata（[RFC9728](https://datatracker.ietf.org/doc/html/rfc9728)）を実装しなければなりません（MUST）。
+   MCPクライアントは、認可サーバーのディスカバリーに OAuth 2.0 Protected Resource Metadata を使用しなければなりません（MUST）。
+
+4. MCP の認可サーバーは、少なくとも次のいずれかのディスカバリーメカニズムを提供しなければなりません（MUST）:
+
+   * OAuth 2.0 Authorization Server Metadata（[RFC8414](https://datatracker.ietf.org/doc/html/rfc8414)）
+   * [OpenID Connect Discovery 1.0](https://openid.net/specs/openid-connect-discovery-1_0.html)
+
+   MCPクライアントは、認可サーバーと連携するために必要な情報を取得できるよう、両方のディスカバリーメカニズムをサポートしなければなりません（MUST）。
+
+<div id="authorization-server-discovery">
+  ### 認可サーバーの検出
+</div>
+
+このセクションでは、MCPサーバーが関連する認可サーバーをMCPクライアントに知らせる仕組みと、MCPクライアントが認可サーバーのエンドポイントおよびサポート機能を特定するための検出プロセスについて説明します。
+
+<div id="authorization-server-location">
+  #### 認可サーバーの場所
+</div>
+
+MCPサーバーは、認可サーバーの所在を示すために、OAuth 2.0 Protected Resource Metadata（[RFC9728](https://datatracker.ietf.org/doc/html/rfc9728)）仕様を実装しなければなりません（MUST）。MCPサーバーが返す Protected Resource Metadata ドキュメントには、少なくとも1つの認可サーバーを含む `authorization_servers` フィールドを必ず含めなければなりません（MUST）。
+
+`authorization_servers` の具体的な使用方法は本仕様の範囲外です。実装者は、実装詳細の指針として OAuth 2.0 Protected Resource Metadata（[RFC9728](https://datatracker.ietf.org/doc/html/rfc9728)）を参照してください。
+
+実装者は、Protected Resource Metadata ドキュメントが複数の認可サーバーを定義できることに留意してください。どの認可サーバーを使用するかの選択は、[RFC9728 セクション 7.6「Authorization Servers」](https://datatracker.ietf.org/doc/html/rfc9728#name-authorization-servers)で規定されたガイドラインに従い、MCPクライアントの責務となります。
+
+MCPサーバーは、[RFC9728 セクション 5.1「WWW-Authenticate Response」](https://datatracker.ietf.org/doc/html/rfc9728#name-www-authenticate-response)に記載のとおり、*401 Unauthorized* を返す際、リソースサーバーのメタデータURLの所在を示すために HTTP ヘッダー `WWW-Authenticate` を使用しなければなりません（MUST）。
+
+MCPクライアントは、MCPサーバーからの `HTTP 401 Unauthorized` レスポンスに適切に対応できるよう、`WWW-Authenticate` ヘッダーを解析できなければなりません（MUST）。
+
+<div id="server-metadata-discovery">
+  #### サーバーメタデータのディスカバリー
+</div>
+
+多様な発行者URL形式に対応し、OAuth 2.0 Authorization Server Metadata と OpenID Connect Discovery 1.0 の両仕様との相互運用性を確保するため、MCPクライアントは認可サーバーメタデータのディスカバリー時に複数の well-known エンドポイントを試行しなければなりません（MUST）。
+
+このディスカバリー手法は、OAuth 2.0 Authorization Server Metadata のディスカバリーに関する [RFC8414 セクション3.1「Authorization Server Metadata Request」](https://datatracker.ietf.org/doc/html/rfc8414#section-3.1) および OpenID Connect Discovery 1.0 との相互運用性に関する [RFC8414 セクション5「Compatibility Notes」](https://datatracker.ietf.org/doc/html/rfc8414#section-5) に基づきます。
+
+パス要素を含む発行者URL（例: `https://auth.example.com/tenant1`）では、クライアントは次の優先順位でエンドポイントを試行しなければなりません（MUST）。
+
+1. パス挿入による OAuth 2.0 Authorization Server Metadata: `https://auth.example.com/.well-known/oauth-authorization-server/tenant1`
+2. パス挿入による OpenID Connect Discovery 1.0: `https://auth.example.com/.well-known/openid-configuration/tenant1`
+3. パス付加による OpenID Connect Discovery 1.0: `https://auth.example.com/tenant1/.well-known/openid-configuration`
+
+パス要素を含まない発行者URL（例: `https://auth.example.com`）では、クライアントは次を試行しなければなりません（MUST）。
+
+1. OAuth 2.0 Authorization Server Metadata: `https://auth.example.com/.well-known/oauth-authorization-server`
+2. OpenID Connect Discovery 1.0: `https://auth.example.com/.well-known/openid-configuration`
+
+<div id="sequence-diagram">
+  #### シーケンス図
+</div>
+
+次の図は例示的なフローを示します:
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant M as MCP Server (Resource Server)
+    participant A as Authorization Server
+
+    C->>M: トークンなしのMCPリクエスト
+    M-->>C: WWW-Authenticateヘッダー付きHTTP 401 Unauthorized
+    Note over C: WWW-Authenticateからresource_metadataを抽出
+
+    C->>M: GET /.well-known/oauth-protected-resource
+    M-->>C: 認可サーバーURLを含むリソースメタデータ
+    Note over C: RSメタデータを検証し、ASメタデータURLを構築
+
+    C->>A: 認可サーバーのメタデータエンドポイントへGET
+    Note over C,A: 優先順位に従いOAuth 2.0とOpenID Connectの<br/>ディスカバリーエンドポイントを試行
+    A-->>C: 認可サーバーのメタデータ
+
+    Note over C,A: ここでOAuth 2.1の認可フローが実行される
+
+    C->>A: トークンリクエスト
+    A-->>C: アクセストークン
+
+    C->>M: アクセストークン付きのMCPリクエスト
+    M-->>C: MCPレスポンス
+    Note over C,M: 有効なトークンでMCP通信を継続
+```
+
+<div id="dynamic-client-registration">
+  ### Dynamic Client Registration（Dynamic Client Registration）
+</div>
+
+MCPクライアントと認可サーバーは、ユーザー操作なしにMCPクライアントがOAuthクライアントIDを取得できるよう、OAuth 2.0 Dynamic Client Registration Protocol [RFC7591](https://datatracker.ietf.org/doc/html/rfc7591) をサポートすることが推奨されます（SHOULD）。これは、クライアントが新しい認可サーバーに自動登録するための標準化された方法を提供するもので、次の理由からMCPにとって重要です。
+
+* クライアントは、考えられるすべてのMCPサーバーとその認可サーバーを事前に把握していない可能性があります。
+* 手動登録はユーザーに負担（フリクション）を生じさせます。
+* 新しいMCPサーバーおよびその認可サーバーへのシームレスな接続を可能にします。
+* 認可サーバー側で独自の登録ポリシーを実装できます。
+
+Dynamic Client Registration をサポートしない認可サーバーは、クライアントID（および該当する場合はクライアントクレデンシャル）を取得するための代替手段を提供する必要があります。これらの認可サーバーに対して、MCPクライアントは次のいずれかを行う必要があります。
+
+1. 当該認可サーバーとやり取りする際にMCPクライアントが使用する、特定のクライアントID（および該当する場合はクライアントクレデンシャル）をハードコードする、または
+2. ユーザーが自らOAuthクライアントを登録した後（例：サーバーが提供する設定インターフェース経由）、これらの情報を入力できるUIを提示する。
+
+<div id="authorization-flow-steps">
+  ### 認可フローの手順
+</div>
+
+完全な認可フローは次のとおり進みます。
+
+```mermaid
+sequenceDiagram
+    participant B as User-Agent (Browser)
+    participant C as Client
+    participant M as MCP Server (Resource Server)
+    participant A as Authorization Server
+
+    C->>M: トークンなしの MCP リクエスト
+    M->>C: WWW-Authenticate ヘッダー付きの HTTP 401 Unauthorized
+    Note over C: WWW-Authenticate から resource_metadata の URL を抽出
+
+    C->>M: 保護されたリソースメタデータを要求
+    M->>C: メタデータを返す
+
+    Note over C: メタデータを解析して認可サーバーを特定<br/>クライアントが使用する AS を決定
+
+    C->>A: 認可サーバーのメタデータエンドポイントへ GET
+    Note over C,A: 優先順位に従って OAuth 2.0 と OpenID Connect の<br/>ディスカバリエンドポイントを試行
+    A-->>C: 認可サーバーのメタデータ
+
+    alt Dynamic client registration
+        C->>A: POST /register
+        A->>C: クライアントクレデンシャル
+    end
+
+    Note over C: PKCE パラメータを生成<br/>resource パラメータを含める
+    C->>B: authorization URL + code_challenge + resource でブラウザを開く
+    B->>A: resource パラメータ付きの認可リクエスト
+    Note over A: ユーザーが承認
+    A->>B: 認可コードを付与してコールバックへリダイレクト
+    B->>C: 認可コードのコールバック
+    C->>A: トークンリクエスト + code_verifier + resource
+    A->>C: アクセストークン（+ リフレッシュトークン）
+    C->>M: アクセストークン付きの MCP リクエスト
+    M-->>C: MCP レスポンス
+    Note over C,M: 有効なトークンで MCP 通信を継続
+```
+
+<div id="resource-parameter-implementation">
+  #### リソースパラメータの実装
+</div>
+
+MCPクライアントは、[RFC 8707](https://www.rfc-editor.org/rfc/rfc8707.html) で定義された OAuth 2.0 の Resource Indicators を実装し、トークンを要求する対象リソースを明示的に指定する **必要があります**。`resource` パラメータは次を満たす **必要があります**:
+
+1. 認可リクエストとトークンリクエストの両方に含める **必要があります**。
+2. クライアントがトークンを使用しようとしている MCPサーバー を識別する **必要があります**。
+3. [RFC 8707 セクション2](https://www.rfc-editor.org/rfc/rfc8707.html#name-access-token-request) で定義される MCPサーバー の正規 URI を使用する **必要があります**。
+
+<div id="canonical-server-uri">
+  ##### 正準サーバーURI
+</div>
+
+本仕様において、MCPサーバーの正準URIは、
+[RFC 8707 セクション 2](https://www.rfc-editor.org/rfc/rfc8707.html#section-2) に定義されるリソース識別子であり、
+[RFC 9728](https://datatracker.ietf.org/doc/html/rfc9728) の `resource` パラメータと整合します。
+
+MCPクライアントは、[RFC 8707](https://www.rfc-editor.org/rfc/rfc8707) の指針に従い、アクセス対象のMCPサーバーについて可能な限り最も特定的なURIを提供するべきです（SHOULD）。正準形ではスキームおよびホストは小文字を用いますが、堅牢性と相互運用性のため、実装は大文字のスキームおよびホストも受け入れるべきです（SHOULD）。
+
+有効な正準URIの例:
+
+* `https://mcp.example.com/mcp`
+* `https://mcp.example.com`
+* `https://mcp.example.com:8443`
+* `https://mcp.example.com/server/mcp`（個別のMCPサーバーを識別するためにパス要素が必要な場合）
+
+無効な正準URIの例:
+
+* `mcp.example.com`（スキームがない）
+* `https://mcp.example.com#fragment`（フラグメントを含む）
+
+> 注意: [RFC 3986](https://www.rfc-editor.org/rfc/rfc3986) によれば、`https://mcp.example.com/`（末尾スラッシュあり）と `https://mcp.example.com`（末尾スラッシュなし）は、どちらも技術的には有効な絶対URIです。特定のリソースにおいて末尾スラッシュに意味上の重要性がある場合を除き、相互運用性を高めるため、実装は一貫して末尾スラッシュなしの形式を用いるべきです（SHOULD）。
+
+例えば、`https://mcp.example.com` のMCPサーバーにアクセスする場合、認可リクエストには次が含まれます:
+
+```
+&resource=https%3A%2F%2Fmcp.example.com
+```
+
+MCPクライアントは、認可サーバーがこのパラメータをサポートしているかどうかに関わらず、このパラメータを送信しなければなりません（MUST）。
+
+<div id="access-token-usage">
+  ### アクセストークンの利用
+</div>
+
+<div id="token-requirements">
+  #### トークン要件
+</div>
+
+MCPサーバーへのリクエスト時のアクセストークンの扱いは、
+[OAuth 2.1 セクション5「リソースリクエスト」](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#section-5)
+で定義された要件に必ず準拠しなければなりません（MUST）。具体的には:
+
+1. MCPクライアントは、
+   [OAuth 2.1 セクション5.1.1](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#section-5.1.1)
+   で定義されている Authorization リクエストヘッダーフィールドを必ず使用しなければなりません（MUST）:
+
+```
+Authorization: Bearer <access-token>
+```
+
+認可情報は、同一の論理セッション内であっても、クライアントからサーバーへのすべてのHTTPリクエストに必ず含めなければなりません（MUST）。
+
+2. アクセストークンをURIのクエリ文字列に含めてはなりません（MUST NOT）
+
+リクエスト例:
+
+```http
+GET /mcp HTTP/1.1
+Host: mcp.example.com
+Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+```
+
+<div id="token-handling">
+  #### トークンの取り扱い
+</div>
+
+MCPサーバーは、OAuth 2.1 のリソースサーバーとして、[OAuth 2.1 セクション 5.2](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#section-5.2)に記載のとおりアクセストークンを検証しなければなりません（MUST）。
+また、[RFC 8707 セクション 2](https://www.rfc-editor.org/rfc/rfc8707.html#section-2)に従い、アクセストークンが当該サーバーをオーディエンスとして想定し発行されたものであることを検証しなければなりません（MUST）。
+検証に失敗した場合、サーバーは[OAuth 2.1 セクション 5.3](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#section-5.3)のエラーハンドリング要件に従って応答しなければなりません（MUST）。無効または期限切れのトークンには HTTP 401 を返さなければなりません（MUST）。
+
+MCPクライアントは、MCPサーバーの認可サーバーが発行したもの以外のトークンを MCPサーバーに送信してはなりません（MUST NOT）。
+
+認可サーバーは、自身が管理するリソースでの利用に有効なトークンのみ受け入れなければなりません（MUST）。
+
+MCPサーバーは、その他のトークンを受け入れたり転送したりしてはなりません（MUST NOT）。
+
+<div id="error-handling">
+  ### エラーハンドリング
+</div>
+
+サーバーは、認可エラーに対して適切なHTTPステータスコードを返さなければなりません（MUST）:
+
+| ステータスコード | 説明             | 用途                                   |
+| ---------------- | ---------------- | -------------------------------------- |
+| 401              | 未認証           | 認可が必要、またはトークンが無効        |
+| 403              | 禁止（Forbidden） | スコープが無効、または権限が不足        |
+| 400              | 不正なリクエスト   | 認可リクエストの形式不正                |
+
+<div id="security-considerations">
+  ## セキュリティに関する考慮事項
+</div>
+
+実装は、[OAuth 2.1 セクション 7「セキュリティに関する考慮事項」](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#name-security-considerations)に記載された OAuth 2.1 のセキュリティに関するベストプラクティスに必ず従う必要があります。
+
+<div id="token-audience-binding-and-validation">
+  ### トークンのオーディエンス拘束と検証
+</div>
+
+[RFC 8707](https://www.rfc-editor.org/rfc/rfc8707.html) の Resource Indicators は、トークンを想定されたオーディエンスに結び付けることで、重要なセキュリティ上の利点を提供します（**認可サーバーがその機能をサポートしている場合**）。現在および将来の採用を促進するために:
+
+* MCPクライアントは、[Resource Parameter Implementation](#resource-parameter-implementation) セクションに記載のとおり、認可リクエストおよびトークンリクエストに `resource` パラメータを含めることを**必須**とする
+* MCPサーバーは、提示されたトークンが自サーバー向けに明確に発行されたものであることを**必ず**検証する
+
+[Security Best Practices document](/ja/specification/draft/basic/security_best_practices#token-passthrough) では、トークンのオーディエンス検証がなぜ重要か、そしてトークンのパススルーが明確に禁止されている理由を説明しています。
+
+<div id="token-theft">
+  ### トークン窃取
+</div>
+
+クライアントに保存されたトークンや、サーバーでキャッシュ済み・ログ出力されたトークンを入手した攻撃者は、
+リソースサーバーから見て正当なものに見えるリクエストで、保護されたリソースにアクセスできてしまいます。
+
+クライアントとサーバーは、[OAuth 2.1 セクション 7.1](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#section-7.1)に記載のとおり、
+安全なトークン保管を実装し、OAuth のベストプラクティスに従わなければなりません（MUST）。
+
+認可サーバーは、漏えいトークンの影響を抑えるため、短期間で失効するアクセストークンを発行することが望まれます（SHOULD）。
+パブリッククライアントに対しては、認可サーバーは [OAuth 2.1 セクション 4.3.1「Token Endpoint Extension」](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#section-4.3.1)に記載のとおり、リフレッシュトークンをローテーションしなければなりません（MUST）。
+
+<div id="communication-security">
+  ### 通信セキュリティ
+</div>
+
+実装は [OAuth 2.1 セクション 1.5「Communication Security」](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#section-1.5) に従わなければなりません。
+
+具体的には:
+
+1. すべての認可サーバーのエンドポイントは HTTPS で提供されなければなりません。
+2. すべてのリダイレクト URI は `localhost` であるか、HTTPS を使用しなければなりません。
+
+<div id="authorization-code-protection">
+  ### 認可コードの保護
+</div>
+
+認可レスポンスに含まれる認可コードに攻撃者がアクセスした場合、アクセストークンへの引き換えを試みたり、その他の方法で認可コードを悪用するおそれがあります。
+（詳細は [OAuth 2.1 セクション 7.5](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#section-7.5) を参照）
+
+これを防ぐため、MCPクライアントは [OAuth 2.1 セクション 7.5.2](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#section-7.5.2) に従ってPKCEを実装し、認可に進む前にPKCEサポートを検証することを必須（MUST）とします。
+PKCEは、クライアントにベリファイアとチャレンジからなる秘密のペアの作成を要求することで、認可コードの傍受やインジェクション攻撃を防ぎ、元のリクエスターのみが認可コードをトークンに交換できるようにします。
+
+MCPクライアントは、技術的に可能な場合、[OAuth 2.1 セクション 4.1.1](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#section-4.1.1) の要件どおり、`S256` コードチャレンジ方式を使用することを必須（MUST）とします。
+
+OAuth 2.1 と PKCE の仕様では、クライアントがPKCEサポートの有無を発見する仕組みが定義されていないため、MCPクライアントはこの機能の確認にあたり認可サーバーのメタデータに依拠することを必須（MUST）とします:
+
+* OAuth 2.0 Authorization Server Metadata: `code_challenge_methods_supported` が存在しない場合、その認可サーバーはPKCEをサポートしていないため、MCPクライアントは続行を拒否することを必須（MUST）とします。
+
+* OpenID Connect Discovery 1.0: [OpenID Provider Metadata](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderMetadata) は `code_challenge_methods_supported` を定義していませんが、このフィールドは多くのOpenIDプロバイダーで一般的に含まれます。MCPクライアントは、プロバイダーメタデータのレスポンスに `code_challenge_methods_supported` が存在することを検証することを必須（MUST）とします。フィールドが存在しない場合、MCPクライアントは続行を拒否することを必須（MUST）とします。
+
+OpenID Connect Discovery 1.0 を提供する認可サーバーは、MCPとの互換性を確保するため、メタデータに `code_challenge_methods_supported` を含めることを必須（MUST）とします。
+
+<div id="open-redirection">
+  ### オープンリダイレクション
+</div>
+
+攻撃者は、悪意のあるリダイレクトURIを作成してユーザーをフィッシングサイトへ誘導する可能性があります。
+
+MCPクライアントは、認可サーバーにリダイレクトURIを登録しておくことが**必須**です。
+
+認可サーバーは、リダイレクト攻撃を防ぐため、事前登録済みの値に対してリダイレクトURIの完全一致検証を行うことが**必須**です。
+
+MCPクライアントは、認可コードフローにおいてstateパラメータを使用・検証し、
+元のstateが含まれていない、または不一致となる結果は破棄することが**推奨**されます。
+
+認可サーバーは、[OAuth 2.1 セクション 7.12.2](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#section-7.12.2)の提案に従い、ユーザーエージェントを信頼できないURIへリダイレクトしないよう対策を講じることが**必須**です。
+
+認可サーバーは、リダイレクトURIを信頼できる場合にのみユーザーエージェントを自動的にリダイレクトすることが**推奨**されます。URIが信頼できない場合、認可サーバーはユーザーに通知し、適切な判断をユーザーに委ねても**かまいません**（MAY）。
+
+<div id="confused-deputy-problem">
+  ### 混乱した副官問題
+</div>
+
+攻撃者は、サードパーティAPIへの仲介として機能するMCPサーバーを悪用し、[混乱した副官の脆弱性](/ja/specification/draft/basic/security_best_practices#confused-deputy-problem)を引き起こす可能性があります。
+盗まれた認可コードを用いて、ユーザーの同意なしにアクセストークンを取得できてしまいます。
+
+静的なクライアントIDを用いるMCPプロキシサーバーは、サードパーティの認可サーバーへ転送する前に（追加の同意が求められる場合があります）、動的に登録された各クライアントごとにユーザーの同意を取得することを**必須**としなければなりません。
+
+<div id="access-token-privilege-restriction">
+  ### アクセストークン権限の制限
+</div>
+
+MCPサーバーが他のリソース向けに発行されたトークンを受け入れると、攻撃者が不正アクセスを得たり、MCPサーバーを侵害するおそれがあります。
+
+この脆弱性には次の2つの重要な側面があります:
+
+1. **audience 検証の不備。** MCPサーバーが、トークンが自サーバー向けに発行されたものであること（例: [RFC9068](https://www.rfc-editor.org/rfc/rfc9068.html)で言及される audience クレーム）を確認しない場合、本来は他サービス向けに発行されたトークンを受け入れてしまう可能性があります。これはOAuthの基本的なセキュリティ境界を破り、攻撃者が本来の意図と異なるサービス間で正当なトークンを再利用できてしまいます。
+2. **トークンのパススルー。** MCPサーバーが誤った audience を持つトークンを受け入れるだけでなく、その未改変のトークンを下流サービスへ転送すると、[&quot;confused deputy&quot; 問題](#confused-deputy-problem)を引き起こす可能性があります。下流のAPIが、そのトークンをあたかもMCPサーバーから発行・検証されたかのように誤って信頼してしまうためです。詳細は、Security Best Practices ガイドの[Token Passthrough セクション](/ja/specification/draft/basic/security_best_practices#token-passthrough)を参照してください。
+
+MCPサーバーは、リクエストを処理する前にアクセストークンを検証し、アクセストークンが当該MCPサーバー向けに発行されたものであることを確認し、権限のない第三者にデータが返らないよう必要なあらゆる措置を講じなければなりません（MUST）。
+
+MCPサーバーは、受信トークンの検証にあたり、[OAuth 2.1 - Section 5.2](https://www.ietf.org/archive/id/draft-ietf-oauth-v2-1-13.html#section-5.2)のガイドラインに従わなければなりません（MUST）。
+
+MCPサーバーは、自身を対象として明示的に意図されたトークンのみを受け入れ、audience クレームに自サーバーが含まれていないトークン、または他の方法で自サーバーが正当な受領者であることを確認できないトークンを拒否しなければなりません（MUST）。詳細は [Security Best Practices の Token Passthrough セクション](/ja/specification/draft/basic/security_best_practices#token-passthrough)を参照してください。
+
+MCPサーバーが上流APIにリクエストを行う場合、それらに対してOAuthクライアントとして振る舞うことがあります。上流APIで使用するアクセストークンは、上流の認可サーバーによって発行される別のトークンです。MCPサーバーは、MCPクライアントから受け取ったトークンをパススルーしてはなりません（MUST NOT）。
+
+MCPクライアントは、[RFC 8707 - Resource Indicators for OAuth 2.0](https://www.rfc-editor.org/rfc/rfc8707.html)で定義されているとおり、`resource` パラメータを実装・使用して（MUST）、トークンを要求する対象リソースを明示的に指定しなければなりません。この要件は
+[RFC 9728 Section 7.4](https://datatracker.ietf.org/doc/html/rfc9728#section-7.4)の推奨事項と一致します。これにより、アクセストークンは意図されたリソースに結び付けられ、異なるサービス間で不正に流用されることを防止できます。

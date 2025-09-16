@@ -1,0 +1,304 @@
+---
+title: Se connecter à des serveurs MCP locaux
+description: Découvrez comment étendre Claude Desktop avec des serveurs MCP locaux pour activer l’accès au système de fichiers et d’autres intégrations puissantes
+---
+
+Les serveurs du Model Context Protocol (MCP) étendent les capacités des applications d’IA en fournissant un accès sécurisé et contrôlé aux ressources et outils locaux. De nombreux clients prennent en charge MCP, ce qui ouvre de multiples possibilités d’intégration sur différentes plateformes et applications.
+
+Ce guide montre comment se connecter à des serveurs MCP locaux en utilisant Claude Desktop comme exemple, l’un des [nombreux clients qui prennent en charge MCP](/fr/clients). Bien que nous nous concentrions sur l’implémentation de Claude Desktop, les concepts s’appliquent largement à d’autres clients compatibles MCP. À la fin de ce tutoriel, Claude pourra interagir avec les fichiers sur votre ordinateur, créer de nouveaux documents, organiser des dossiers et rechercher dans votre système de fichiers — toujours avec votre autorisation explicite pour chaque action.
+
+<Frame>
+  <img src="/images/quickstart-filesystem.png" alt="Claude Desktop avec intégration au système de fichiers montrant des capacités de gestion de fichiers" />
+</Frame>
+
+<div id="prerequisites">
+  ## Prérequis
+</div>
+
+Avant de commencer ce tutoriel, assurez-vous d’avoir installé les éléments suivants sur votre système :
+
+<div id="claude-desktop">
+  ### Claude Desktop
+</div>
+
+Téléchargez et installez [Claude Desktop](https://claude.ai/download) pour votre système d’exploitation. Claude Desktop est actuellement disponible pour macOS et Windows. La prise en charge de Linux arrive bientôt.
+
+Si vous avez déjà installé Claude Desktop, vérifiez que vous utilisez la dernière version en cliquant sur le menu Claude, puis en sélectionnant « Check for Updates… ».
+
+<div id="nodejs">
+  ### Node.js
+</div>
+
+Le Serveur de système de fichiers et de nombreux autres Serveurs MCP nécessitent Node.js pour fonctionner. Vérifiez votre installation de Node.js en ouvrant un terminal ou une invite de commandes et en exécutant :
+
+```bash
+node --version
+```
+
+Si Node.js n’est pas installé, téléchargez-le depuis [nodejs.org](https://nodejs.org/). Nous recommandons la version LTS (Long Term Support) pour plus de stabilité.
+
+<div id="understanding-mcp-servers">
+  ## Comprendre les serveurs MCP
+</div>
+
+Les serveurs MCP sont des programmes qui s’exécutent sur votre ordinateur et fournissent des fonctionnalités spécifiques à Claude Desktop via un protocole standardisé. Chaque serveur expose des outils que Claude peut utiliser pour effectuer des actions, avec votre approbation. Le serveur de système de fichiers que nous allons installer fournit des outils pour :
+
+* Lire le contenu des fichiers et la structure des répertoires
+* Créer de nouveaux fichiers et répertoires
+* Déplacer et renommer des fichiers
+* Rechercher des fichiers par nom ou par contenu
+
+Toutes les actions nécessitent votre approbation explicite avant leur exécution, afin que vous conserviez un contrôle total sur ce à quoi Claude peut accéder et ce qu’il peut modifier.
+
+<div id="installing-the-filesystem-server">
+  ## Installation du serveur de système de fichiers
+</div>
+
+Il s’agit de configurer Claude Desktop pour démarrer automatiquement le serveur de système de fichiers à chaque lancement de l’application. Cette configuration s’effectue au moyen d’un fichier JSON qui indique à Claude Desktop quels serveurs exécuter et comment s’y connecter.
+
+<Steps>
+  <Step title="Ouvrir les paramètres de Claude Desktop">
+    Commencez par accéder aux paramètres de Claude Desktop. Cliquez sur le menu Claude dans la barre de menus de votre système (pas les paramètres dans la fenêtre Claude elle‑même) et sélectionnez « Settings… »
+
+    Sur macOS, cela apparaît dans la barre de menus supérieure :
+
+    <Frame style={{ textAlign: "center" }}>
+      <img src="/images/quickstart-menu.png" width="400" alt="Menu Claude Desktop affichant l’option Settings" />
+    </Frame>
+
+    Cela ouvre la fenêtre de configuration de Claude Desktop, distincte des paramètres de votre compte Claude.
+  </Step>
+
+  <Step title="Accéder aux paramètres développeur">
+    Dans la fenêtre Settings, allez à l’onglet « Developer » dans la barre latérale gauche. Cette section contient des options pour configurer les serveurs MCP et d’autres fonctionnalités pour développeurs.
+
+    Cliquez sur le bouton « Edit Config » pour ouvrir le fichier de configuration :
+
+    <Frame>
+      <img src="/images/quickstart-developer.png" alt="Paramètres développeur affichant le bouton Edit Config" />
+    </Frame>
+
+    Cette action crée un nouveau fichier de configuration s’il n’en existe pas, ou ouvre votre configuration existante. Le fichier se trouve à :
+
+    * **macOS** : `~/Library/Application Support/Claude/claude_desktop_config.json`
+    * **Windows** : `%APPDATA%\Claude\claude_desktop_config.json`
+  </Step>
+
+  <Step title="Configurer le serveur de système de fichiers">
+    Remplacez le contenu du fichier de configuration par la structure JSON suivante. Cette configuration indique à Claude Desktop de démarrer le serveur de système de fichiers avec accès à des répertoires spécifiques :
+
+    <CodeGroup>
+      ```json macOS
+      {
+        "mcpServers": {
+          "filesystem": {
+            "command": "npx",
+            "args": [
+              "-y",
+              "@modelcontextprotocol/server-filesystem",
+              "/Users/username/Desktop",
+              "/Users/username/Downloads"
+            ]
+          }
+        }
+      }
+      ```
+
+      ```json Windows
+      {
+        "mcpServers": {
+          "filesystem": {
+            "command": "npx",
+            "args": [
+              "-y",
+              "@modelcontextprotocol/server-filesystem",
+              "C:\\Users\\username\\Desktop",
+              "C:\\Users\\username\\Downloads"
+            ]
+          }
+        }
+      }
+      ```
+    </CodeGroup>
+
+    Remplacez `username` par votre nom d’utilisateur. Les chemins listés dans le tableau `args` indiquent à quels répertoires le serveur de système de fichiers peut accéder. Vous pouvez modifier ces chemins ou ajouter d’autres répertoires selon vos besoins.
+
+    <Tip>
+      **Comprendre la configuration**
+
+      * `"filesystem"` : Nom convivial du serveur tel qu’il apparaît dans Claude Desktop
+      * `"command": "npx"` : Utilise l’outil npx de Node.js pour exécuter le serveur
+      * `"-y"` : Confirme automatiquement l’installation du paquet du serveur
+      * `"@modelcontextprotocol/server-filesystem"` : Nom du paquet du serveur de système de fichiers
+      * Les arguments restants : Répertoires auxquels le serveur est autorisé à accéder
+    </Tip>
+
+    <Warning>
+      **Considérations de sécurité**
+
+      N’accordez l’accès qu’aux répertoires que vous acceptez que Claude lise et modifie. Le serveur s’exécute avec les permissions de votre compte utilisateur ; il peut donc effectuer toutes les opérations sur les fichiers que vous pouvez réaliser manuellement.
+    </Warning>
+  </Step>
+
+  <Step title="Redémarrer Claude Desktop">
+    Après avoir enregistré le fichier de configuration, quittez complètement Claude Desktop puis redémarrez‑le. L’application doit redémarrer pour charger la nouvelle configuration et démarrer le serveur MCP.
+
+    Après un redémarrage réussi, vous verrez un indicateur de serveur MCP <img src="/images/claude-desktop-mcp-slider.svg" style={{display: 'inline', margin: 0, height: '1.3em'}} /> dans le coin inférieur droit de la zone de saisie de la conversation :
+
+    <Frame>
+      <img src="/images/quickstart-slider.png" alt="Interface Claude Desktop affichant l’indicateur de serveur MCP" />
+    </Frame>
+
+    Cliquez sur cet indicateur pour afficher les outils disponibles fournis par le serveur de système de fichiers :
+
+    <Frame style={{ textAlign: "center" }}>
+      <img src="/images/quickstart-tools.png" width="400" alt="Outils de système de fichiers disponibles dans Claude Desktop" />
+    </Frame>
+
+    Si l’indicateur du serveur n’apparaît pas, consultez la section [Troubleshooting](#troubleshooting) pour les étapes de débogage.
+  </Step>
+</Steps>
+
+<div id="using-the-filesystem-server">
+  ## Utilisation du serveur de système de fichiers
+</div>
+
+Avec le serveur de système de fichiers connecté, Claude peut désormais interagir avec votre système de fichiers. Essayez ces exemples de requêtes pour explorer les fonctionnalités :
+
+<div id="file-management-examples">
+  ### Exemples de gestion de fichiers
+</div>
+
+* **« Pouvez-vous écrire un poème et l’enregistrer sur mon bureau ? »** - Claude composera un poème et créera un nouveau fichier texte sur votre bureau
+* **« Quels fichiers professionnels se trouvent dans mon dossier de téléchargements ? »** - Claude analysera votre dossier de téléchargements et identifiera les documents professionnels
+* **« Veuillez organiser toutes les images sur mon bureau dans un nouveau dossier nommé “Images” »** - Claude créera un dossier et y déplacera les fichiers image
+
+<div id="how-approval-works">
+  ### Fonctionnement de l’approbation
+</div>
+
+Avant d’exécuter toute opération sur le système de fichiers, Claude vous demandera votre approbation. Cela vous permet de garder le contrôle sur l’ensemble des actions :
+
+<Frame style={{ textAlign: "center" }}>
+  <img src="/images/quickstart-approve.png" width="500" alt="Claude demandant votre approbation pour effectuer une opération sur le système de fichiers" />
+</Frame>
+
+Examinez attentivement chaque demande avant de l’approuver. Vous pouvez toujours refuser une demande si vous n’êtes pas à l’aise avec l’action proposée.
+
+<div id="troubleshooting">
+  ## Dépannage
+</div>
+
+Si vous rencontrez des problèmes lors de la configuration ou de l’utilisation du serveur de système de fichiers, ces solutions couvrent les cas les plus courants :
+
+<AccordionGroup>
+  <Accordion title="Le serveur n’apparaît pas dans Claude / icône de marteau absente">
+    1. Redémarrez complètement Claude Desktop
+    2. Vérifiez la syntaxe de votre fichier `claude_desktop_config.json`
+    3. Assurez-vous que les chemins de fichiers indiqués dans `claude_desktop_config.json` sont valides et absolus (et non relatifs)
+    4. Consultez les [journaux](#getting-logs-from-claude-for-desktop) pour comprendre pourquoi le serveur ne se connecte pas
+    5. Dans votre terminal, essayez d’exécuter le serveur manuellement (en remplaçant `username` comme dans `claude_desktop_config.json`) pour voir si des erreurs s’affichent :
+
+    <CodeGroup>
+      ```bash macOS/Linux
+      npx -y @modelcontextprotocol/server-filesystem /Users/username/Desktop /Users/username/Downloads
+      ```
+
+      ```powershell Windows
+      npx -y @modelcontextprotocol/server-filesystem C:\Users\username\Desktop C:\Users\username\Downloads
+      ```
+    </CodeGroup>
+  </Accordion>
+
+  <Accordion title="Récupérer les journaux de Claude Desktop">
+    La journalisation de Claude.app liée au MCP est écrite dans les fichiers suivants :
+
+    * macOS : `~/Library/Logs/Claude`
+
+    * Windows : `%APPDATA%\Claude\logs`
+
+    * `mcp.log` contiendra des informations générales sur les connexions MCP et les échecs de connexion.
+
+    * Les fichiers nommés `mcp-server-SERVERNAME.log` contiendront les erreurs (stderr) du serveur nommé.
+
+    Vous pouvez exécuter la commande suivante pour lister les journaux récents et suivre l’arrivée des nouveaux (sous Windows, seuls les journaux récents seront affichés) :
+
+    <CodeGroup>
+      ```bash macOS/Linux
+      tail -n 20 -f ~/Library/Logs/Claude/mcp*.log
+      ```
+
+      ```powershell Windows
+      type "%APPDATA%\Claude\logs\mcp*.log"
+      ```
+    </CodeGroup>
+  </Accordion>
+
+  <Accordion title="Les appels d’outils échouent sans message">
+    Si Claude tente d’utiliser les outils mais qu’ils échouent :
+
+    1. Vérifiez les journaux de Claude pour des erreurs
+    2. Assurez-vous que votre serveur se compile et s’exécute sans erreurs
+    3. Essayez de redémarrer Claude Desktop
+  </Accordion>
+
+  <Accordion title="Rien de tout cela ne fonctionne. Que faire ?">
+    Veuillez consulter notre [guide de débogage](/fr/legacy/tools/debugging) pour des outils de diagnostic plus efficaces et des instructions plus détaillées.
+  </Accordion>
+
+  <Accordion title="Erreur ENOENT et `${APPDATA}` dans les chemins sous Windows">
+    Si votre serveur configuré ne se charge pas et que vous voyez dans ses journaux une erreur faisant référence à `${APPDATA}` dans un chemin, vous devrez peut-être ajouter la valeur développée de `%APPDATA%` à la clé `env` de votre `claude_desktop_config.json` :
+
+    ```json
+    {
+      "brave-search": {
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+        "env": {
+          "APPDATA": "C:\\Users\\user\\AppData\\Roaming\\",
+          "BRAVE_API_KEY": "..."
+        }
+      }
+    }
+    ```
+
+    Après cette modification, relancez Claude Desktop.
+
+    <Warning>
+      **NPM doit être installé globalement**
+
+      La commande `npx` peut continuer à échouer si NPM n’est pas installé globalement. Si NPM est déjà installé globalement, vous trouverez `%APPDATA%\npm` sur votre système. Sinon, installez NPM globalement en exécutant la commande suivante :
+
+      ```bash
+      npm install -g npm
+      ```
+    </Warning>
+  </Accordion>
+</AccordionGroup>
+
+<div id="next-steps">
+  ## Prochaines étapes
+</div>
+
+Maintenant que vous avez connecté avec succès Claude Desktop à un serveur MCP local, explorez ces options pour étendre votre configuration :
+
+<CardGroup cols={2}>
+  <Card title="Explorer d'autres serveurs" icon="grid" href="https://github.com/modelcontextprotocol/servers">
+    Parcourez notre collection de serveurs MCP officiels et créés par la communauté pour
+    des fonctionnalités supplémentaires
+  </Card>
+
+  <Card title="Créer votre propre serveur" icon="code" href="/fr/docs/develop/build-server">
+    Créez des serveurs MCP personnalisés, adaptés à vos flux de travail et à vos
+    intégrations spécifiques
+  </Card>
+
+  <Card title="Se connecter à des serveurs distants" icon="cloud" href="/fr/docs/develop/connect-remote-servers">
+    Découvrez comment connecter Claude à des serveurs MCP distants pour des outils et
+    services cloud
+  </Card>
+
+  <Card title="Comprendre le protocole" icon="book" href="/fr/docs/learn/architecture">
+    Approfondissez le fonctionnement de MCP et son architecture
+  </Card>
+</CardGroup>

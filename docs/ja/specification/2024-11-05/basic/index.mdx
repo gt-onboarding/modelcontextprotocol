@@ -1,0 +1,67 @@
+---
+title: 概要
+---
+
+<Info>**プロトコル改訂**: 2024-11-05</Info>
+
+MCPクライアントとMCPサーバー間のすべてのメッセージは、[JSON-RPC 2.0](https://www.jsonrpc.org/specification) の仕様に**必ず**従わなければなりません。プロトコルでは、次の3つの基本的なメッセージタイプを定義しています:
+
+| Type            | Description                            | Requirements                           |
+| --------------- | -------------------------------------- | -------------------------------------- |
+| `Requests`      | 操作を開始するために送信されるメッセージ | 一意のIDとメソッド名を含めること       |
+| `Responses`     | リクエストへの応答として送信されるメッセージ | リクエストと同じIDを含めること         |
+| `Notifications` | 応答のない一方向メッセージ             | IDを含めないこと                       |
+
+**Responses** はさらに **成功結果** と **エラー** に分類されます。結果は任意のJSONオブジェクト構造を取り得ますが、エラーには少なくともエラーコードとメッセージを含める必要があります。
+
+<div id="protocol-layers">
+  ## プロトコル層
+</div>
+
+Model Context Protocol（MCP）は、連携して動作する複数の主要コンポーネントで構成されています。
+
+* **基本プロトコル**: 中核となる JSON-RPC メッセージ型
+* **ライフサイクル管理**: 接続の初期化、機能ネゴシエーション、セッション制御
+* **サーバー機能**: サーバーが公開するリソース、プロンプト、ツール
+* **クライアント機能**: クライアントが提供するサンプリングとルートディレクトリ一覧
+* **ユーティリティ**: ログ記録や引数補完などの横断的な関心事
+
+すべての実装は、基本プロトコルとライフサイクル管理コンポーネントをサポートすることが必須です。その他のコンポーネントは、アプリケーションの特定のニーズに応じて任意で実装できます。
+
+これらのプロトコル層は、関心の分離を明確にしつつ、クライアントとサーバー間の豊かなやり取りを可能にします。モジュール設計により、実装は必要な機能だけを的確にサポートできます。
+
+各コンポーネントの詳細は、以下のページを参照してください。
+
+<CardGroup cols={3}>
+  <Card title="Lifecycle" icon="arrows-rotate" href="/ja/specification/2024-11-05/basic/lifecycle" />
+
+  <Card title="Resources" icon="file-lines" href="/ja/specification/2024-11-05/server/resources" />
+
+  <Card title="Prompts" icon="message" href="/ja/specification/2024-11-05/server/prompts" />
+
+  <Card title="Tools" icon="wrench" href="/ja/specification/2024-11-05/server/tools" />
+
+  <Card title="Logging" icon="rectangle-list" href="/ja/specification/2024-11-05/server/utilities/logging" />
+
+  <Card title="Sampling" icon="code" href="/ja/specification/2024-11-05/client/sampling" />
+</CardGroup>
+
+<div id="auth">
+  ## 認証
+</div>
+
+認証および認可は、現時点ではMCPの中核仕様には含まれていませんが、将来的な導入方法を検討しています。プロトコルの将来像を共に形作るため、[GitHub Discussions](https://github.com/modelcontextprotocol/specification/discussions) にぜひご参加ください。
+
+クライアントとサーバーは、独自のカスタム認証・認可戦略を相互に取り決めてもかまいません。
+
+<div id="schema">
+  ## スキーマ
+</div>
+
+プロトコルの完全な仕様は
+[TypeScript スキーマ](http://github.com/modelcontextprotocol/specification/tree/main/schema/2024-11-05/schema.ts)
+として定義されています。これは、すべてのプロトコルメッセージと構造に関する信頼できる唯一の基準です。
+
+また、
+[JSON Schema](http://github.com/modelcontextprotocol/specification/tree/main/schema/2024-11-05/schema.json)
+もあり、TypeScript の基準ソースから自動生成され、各種の自動化ツールで使用できます。

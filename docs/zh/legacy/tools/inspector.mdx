@@ -1,0 +1,166 @@
+---
+title: MCP Inspector
+description: 使用 MCP Inspector 测试与调试模型上下文协议（MCP）服务器的进阶指南
+---
+
+[MCP Inspector](https://github.com/modelcontextprotocol/inspector) 是一款用于测试与调试 MCP 服务器的交互式开发工具。虽然[调试指南](/zh/legacy/tools/debugging)将 Inspector 作为整体调试工具包的一部分进行介绍，但本文将更深入地阐述 Inspector 的功能与特性。
+
+<div id="getting-started">
+  ## 快速开始
+</div>
+
+<div id="installation-and-basic-usage">
+  ### 安装与基本用法
+</div>
+
+Inspector 可直接通过 `npx` 运行，无需安装：
+
+```bash
+npx @modelcontextprotocol/inspector <command>
+```
+
+```bash
+npx @modelcontextprotocol/inspector <command> <arg1> <arg2>
+```
+
+<div id="inspecting-servers-from-npm-or-pypi">
+  #### 从 NPM 或 PyPi 检查服务器
+</div>
+
+一种常见的方法是从 [NPM](https://npmjs.com) 或 [PyPi](https://pypi.org) 启动服务器包。
+
+<Tabs>
+  <Tab title="NPM package">
+    ```bash
+    npx -y @modelcontextprotocol/inspector npx <package-name> <args>
+    # 例如：
+    npx -y @modelcontextprotocol/inspector npx @modelcontextprotocol/server-filesystem /Users/username/Desktop
+    ```
+  </Tab>
+
+  <Tab title="PyPi package">
+    ```bash
+    npx @modelcontextprotocol/inspector uvx <package-name> <args>
+    # 例如：
+    npx @modelcontextprotocol/inspector uvx mcp-server-git --repository ~/code/mcp/servers.git
+    ```
+  </Tab>
+</Tabs>
+
+<div id="inspecting-locally-developed-servers">
+  #### 本地检查自研服务器
+</div>
+
+要检查本地开发或以仓库形式下载的服务器，最常见的做法是：
+
+<Tabs>
+  <Tab title="TypeScript">
+    ```bash
+    npx @modelcontextprotocol/inspector node path/to/server/index.js args...
+    ```
+  </Tab>
+
+  <Tab title="Python">
+    ```bash
+    npx @modelcontextprotocol/inspector \
+      uv \
+      --directory path/to/server \
+      run \
+      package-name \
+      args...
+    ```
+  </Tab>
+</Tabs>
+
+请仔细阅读随附的 README，以获取最准确的使用说明。
+
+<div id="feature-overview">
+  ## 功能概览
+</div>
+
+<Frame caption="MCP Inspector 界面">
+  <img src="/images/mcp-inspector.png" />
+</Frame>
+
+Inspector 提供了多项功能，便于与 MCP 服务器进行交互：
+
+<div id="server-connection-pane">
+  ### 服务器连接面板
+</div>
+
+* 可选择用于连接服务器的[传输方式](/zh/legacy/concepts/transports)
+* 对于本地服务器，支持自定义命令行参数和环境变量
+
+<div id="resources-tab">
+  ### 资源标签页
+</div>
+
+* 列出所有可用资源
+* 显示资源元数据（MIME 类型、描述）
+* 可查看资源内容
+* 支持订阅功能测试
+
+<div id="prompts-tab">
+  ### 提示模板选项卡
+</div>
+
+* 显示可用的提示模板
+* 显示提示参数和描述
+* 支持使用自定义参数测试提示
+* 预览生成的消息
+
+<div id="tools-tab">
+  ### 工具选项卡
+</div>
+
+* 列出可用工具
+* 显示工具的架构和描述
+* 支持使用自定义输入测试工具
+* 展示工具的执行结果
+
+<div id="notifications-pane">
+  ### 通知窗格
+</div>
+
+* 显示服务器记录的所有日志
+* 显示从服务器接收的通知
+
+<div id="best-practices">
+  ## 最佳实践
+</div>
+
+<div id="development-workflow">
+  ### 开发流程
+</div>
+
+1. 开始开发
+   * 使用你的服务器启动 Inspector
+   * 验证基本连通性
+   * 检查能力协商
+
+2. 迭代测试
+   * 修改服务器
+   * 重新构建服务器
+   * 重新连接 Inspector
+   * 测试受影响的功能
+   * 监控消息
+
+3. 测试边界情况
+   * 无效输入
+   * 缺少提示模板参数
+   * 并发操作
+   * 验证错误处理与错误响应
+
+<div id="next-steps">
+  ## 后续步骤
+</div>
+
+<CardGroup cols={2}>
+  <Card title="Inspector 仓库" icon="github" href="https://github.com/modelcontextprotocol/inspector">
+    查看 MCP Inspector 源码
+  </Card>
+
+  <Card title="调试指南" icon="bug" href="/zh/legacy/tools/debugging">
+    了解更全面的调试策略
+  </Card>
+</CardGroup>

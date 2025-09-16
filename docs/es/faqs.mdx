@@ -1,0 +1,76 @@
+---
+title: "Preguntas frecuentes"
+description: "Explicación del Protocolo de Contexto de Modelo (MCP) y por qué es importante en términos simples"
+---
+
+<div id="what-is-mcp">
+  ## ¿Qué es MCP?
+</div>
+
+MCP (Model Context Protocol) es una forma estándar para que las aplicaciones y agentes de IA se conecten y trabajen con tus fuentes de datos (p. ej., archivos locales, bases de datos o repositorios de contenido) y Herramientas (p. ej., GitHub, Google Maps o Puppeteer).
+
+Piensa en MCP como un adaptador universal para aplicaciones de IA, similar a lo que USB-C es para los dispositivos físicos. USB-C funciona como un adaptador universal que conecta dispositivos con diversos periféricos y accesorios. Del mismo modo, MCP ofrece una forma estandarizada de conectar aplicaciones de IA a distintos datos y Herramientas.
+
+Antes de USB-C, necesitabas cables diferentes para conexiones diferentes. De manera similar, antes de MCP, los desarrolladores tenían que crear conexiones personalizadas para cada fuente de datos o Herramienta con la que querían que su aplicación de IA trabajara, un proceso que consumía mucho tiempo y a menudo derivaba en una funcionalidad limitada. Ahora, con MCP, los desarrolladores pueden añadir fácilmente conexiones a sus aplicaciones de IA, haciendo que sean mucho más potentes desde el primer día.
+
+<div id="why-does-mcp-matter">
+  ## ¿Por qué es importante MCP?
+</div>
+
+<div id="for-ai-application-users">
+  ### Para usuarios de aplicaciones de IA
+</div>
+
+MCP significa que tus aplicaciones de IA pueden acceder a la información y a las Herramientas con las que trabajas a diario, lo que las hace mucho más útiles. En lugar de que la IA esté limitada a lo que ya conoce, ahora puede entender tus documentos, datos y contexto de trabajo específicos.
+
+Por ejemplo, al usar Servidores MCP, las aplicaciones pueden acceder a tus documentos personales de Google Drive o a datos sobre tu base de código desde GitHub, ofreciendo ayuda más personalizada y relevante según el contexto.
+
+Imagina pedirle a un asistente de IA: &quot;Resume las notas de la reunión del equipo de la semana pasada y programa seguimientos con todos&quot;.
+
+Al usar conexiones a fuentes de datos con tecnología de MCP, el asistente de IA puede:
+
+* Conectarse a tu Google Drive a través de un Servidor MCP para leer las notas de la reunión
+* Determinar quién necesita seguimiento en función de las notas
+* Conectarse a tu calendario a través de otro Servidor MCP para programar automáticamente las reuniones
+
+<div id="for-developers">
+  ### Para desarrolladores
+</div>
+
+MCP reduce el tiempo y la complejidad del desarrollo al crear aplicaciones de IA que necesitan acceder a diversas fuentes de datos. Con MCP, los desarrolladores pueden centrarse en ofrecer excelentes experiencias de IA en lugar de crear conectores personalizados una y otra vez.
+
+Tradicionalmente, conectar aplicaciones con fuentes de datos requería desarrollar conexiones personalizadas y puntuales para cada fuente y cada aplicación. Esto generaba una cantidad significativa de trabajo duplicado: cada desarrollador que quisiera conectar su aplicación de IA con Google Drive o Slack tenía que crear su propia conexión.
+
+MCP simplifica esto al permitir que los desarrolladores creen Servidores MCP para fuentes de datos que luego pueden ser reutilizados por varias aplicaciones. Por ejemplo, con el Servidor MCP de Google Drive de código abierto, muchas aplicaciones diferentes pueden acceder a datos de Google Drive sin que cada desarrollador deba crear una conexión personalizada.
+
+Este ecosistema de Servidores MCP de código abierto permite a los desarrolladores aprovechar el trabajo existente en lugar de empezar desde cero, facilitando la creación de aplicaciones de IA potentes que se integran sin inconvenientes con las Herramientas y las fuentes de datos en las que sus usuarios ya confían.
+
+<div id="how-does-mcp-work">
+  ## ¿Cómo funciona MCP?
+</div>
+
+<Frame>
+  <img src="/images/mcp-simple-diagram.png" />
+</Frame>
+
+MCP crea un puente entre tus aplicaciones de IA y tus datos mediante un sistema sencillo:
+
+* Los **Servidores MCP** se conectan a tus fuentes de datos y herramientas (como Google Drive o Slack)
+* Los **Clientes MCP** son ejecutados por aplicaciones de IA (como Claude Desktop) para conectarlas a estos servidores
+* Cuando das permiso, tu aplicación de IA descubre los Servidores MCP disponibles
+* El modelo de IA puede usar estas conexiones para leer información y realizar acciones
+
+Este sistema modular permite añadir nuevas capacidades sin cambiar las propias aplicaciones de IA, igual que añadir nuevos accesorios a tu computadora sin actualizar todo el sistema.
+
+<div id="who-creates-and-maintains-mcp-servers">
+  ## ¿Quién crea y mantiene los servidores MCP?
+</div>
+
+Los servidores MCP son desarrollados y mantenidos por:
+
+* Desarrolladores de Anthropic que crean servidores para Herramientas y fuentes de datos comunes
+* Colaboradores de código abierto que crean servidores para las Herramientas que utilizan
+* Equipos de desarrollo empresarial que construyen servidores para sus sistemas internos
+* Proveedores de software que preparan sus aplicaciones para la IA
+
+Una vez que se crea un Servidor MCP de código abierto para una fuente de datos, cualquier aplicación de IA compatible con MCP puede utilizarlo, lo que crea un ecosistema de conexiones en crecimiento. Consulta nuestra [lista de servidores de ejemplo](/es/examples) o [empieza a crear tu propio servidor](/es/quickstart/server).

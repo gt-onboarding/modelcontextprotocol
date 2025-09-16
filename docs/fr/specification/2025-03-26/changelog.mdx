@@ -1,0 +1,40 @@
+---
+title: Principales modifications
+---
+
+Ce document répertorie les changements apportés à la spécification du Protocole de contexte de modèle (MCP) depuis
+la révision précédente, [2024-11-05](/fr/specification/2024-11-05).
+
+<div id="major-changes">
+  ## Changements majeurs
+</div>
+
+1. Ajout d’un **[cadre d’autorisation](/fr/specification/2025-03-26/basic/authorization)** complet
+   basé sur OAuth 2.1 (PR
+   [#133](https://github.com/modelcontextprotocol/specification/pull/133))
+2. Remplacement de l’ancien transport HTTP+SSE par un **[transport HTTP diffusé en continu](/fr/specification/2025-03-26/basic/transports#streamable-http)** plus flexible (PR
+   [#206](https://github.com/modelcontextprotocol/specification/pull/206))
+3. Ajout de la prise en charge de **[la mise en lot](https://www.jsonrpc.org/specification#batch)** JSON-RPC
+   (PR [#228](https://github.com/modelcontextprotocol/specification/pull/228))
+4. Ajout d’**annotations d’outils** complètes pour mieux décrire le comportement des outils, par exemple
+   s’ils sont en lecture seule ou destructifs (PR
+   [#185](https://github.com/modelcontextprotocol/specification/pull/185))
+
+<div id="other-schema-changes">
+  ## Autres modifications du schéma
+</div>
+
+* Ajout du champ `message` à `ProgressNotification` pour fournir des mises à jour d’état descriptives
+* Ajout de la prise en charge des données audio, en plus des types de contenu texte et image existants
+* Ajout de la capacité `completions` pour indiquer explicitement la prise en charge des suggestions d’autocomplétion d’arguments
+
+Voir
+[le schéma mis à jour](http://github.com/modelcontextprotocol/specification/tree/main/schema/2025-03-26/schema.ts)
+pour plus de détails.
+
+<div id="full-changelog">
+  ## Journal complet des modifications
+</div>
+
+Pour consulter la liste exhaustive de toutes les modifications apportées depuis la dernière révision du protocole,
+[voir GitHub](https://github.com/modelcontextprotocol/specification/compare/2024-11-05...2025-03-26).

@@ -1,0 +1,459 @@
+---
+title: ツール
+---
+
+<div id="enable-section-numbers" />
+
+<Info>**プロトコル改訂**: 2025-06-18</Info>
+
+Model Context Protocol（MCP）は、サーバーが言語モデルから呼び出せるツールを公開できるようにします。ツールによって、モデルはデータベースへのクエリ、APIの呼び出し、計算の実行など、外部システムとやり取りできます。各ツールは固有の名前で識別され、そのスキーマを説明するメタデータを含みます。
+
+<div id="user-interaction-model">
+  ## ユーザーインタラクションモデル
+</div>
+
+MCP におけるツールは**モデル主導**で扱われるよう設計されており、言語モデルが文脈理解とユーザーのプロンプトに基づいて、ツールを自動的に発見・呼び出せます。
+
+ただし、実装側はニーズに合った任意のインターフェースパターンでツールを公開できます。プロトコル自体は、特定のユーザーインタラクションモデルを要求しません。
+
+<Warning>
+  トラスト &amp; セーフティおよびセキュリティの観点から、ツール呼び出しを拒否できる権限を持つ人間が常に介在するべきです（**SHOULD**）。
+
+  アプリケーションは**SHOULD**（推奨）:
+
+  * どのツールが AI モデルに公開されているかを明確に示す UI を提供する
+  * ツールが呼び出された際に明確な視覚的インジケーターを表示する
+  * 人間の関与を確実にするため、操作時にユーザーへ確認用のプロンプトを提示する
+</Warning>
+
+<div id="capabilities">
+  ## 機能
+</div>
+
+ツールをサポートするサーバーは、`tools` 機能を宣言することが**必須**です:
+
+```json
+{
+  "capabilities": {
+    "tools": {
+      "listChanged": true
+    }
+  }
+}
+```
+
+`listChanged` は、利用可能なツールの一覧が変更されたときに、サーバーが通知を発行するかどうかを示します。
+
+<div id="protocol-messages">
+  ## プロトコルメッセージ
+</div>
+
+<div id="listing-tools">
+  ### ツールの一覧取得
+</div>
+
+利用可能なツールを確認するには、クライアントは `tools/list` リクエストを送信します。この操作は
+[ページネーション](/ja/specification/2025-06-18/server/utilities/pagination)をサポートします。
+
+**リクエスト:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/list",
+  "params": {
+    "cursor": "optional-cursor-value"
+  }
+}
+```
+
+**レスポンス:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "tools": [
+      {
+        "name": "get_weather",
+        "title": "天気情報プロバイダー",
+        "description": "指定した場所の現在の天気情報を取得します",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "location": {
+              "type": "string",
+              "description": "市区町村名または郵便番号"
+            }
+          },
+          "required": ["location"]
+        }
+      }
+    ],
+    "nextCursor": "next-page-cursor"
+  }
+}
+```
+
+<div id="calling-tools">
+  ### ツールの呼び出し
+</div>
+
+ツールを実行するには、クライアントは `tools/call` リクエストを送信します:
+
+**リクエスト:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/call",
+  "params": {
+    "name": "get_weather",
+    "arguments": {
+      "location": "New York"
+    }
+  }
+}
+```
+
+**レスポンス:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Current weather in New York:\nTemperature: 72°F\nConditions: Partly cloudy"
+      }
+    ],
+    "isError": false
+  }
+}
+```
+
+<div id="list-changed-notification">
+  ### リスト変更の通知
+</div>
+
+利用可能なツールのリストが変更された場合、`listChanged`
+機能を宣言しているサーバーは通知を送信することが**望まれます**:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/tools/list_changed"
+}
+```
+
+<div id="message-flow">
+  ## メッセージフロー
+</div>
+
+```mermaid
+sequenceDiagram
+    participant LLM
+    participant Client
+    participant Server
+
+    Note over Client,Server: ディスカバリ
+    Client->>Server: tools/list
+    Server-->>Client: ツール一覧
+
+    Note over Client,LLM: ツール選択
+    LLM->>Client: 使用するツールを選択
+
+    Note over Client,Server: 呼び出し
+    Client->>Server: tools/call
+    Server-->>Client: ツールの結果
+    Client->>LLM: 結果を処理
+
+    Note over Client,Server: 更新
+    Server--)Client: tools/list_changed
+    Client->>Server: tools/list
+    Server-->>Client: 更新されたツール一覧
+```
+
+<div id="data-types">
+  ## データ型
+</div>
+
+<div id="tool">
+  ### ツール
+</div>
+
+ツール定義には次が含まれます:
+
+* `name`: ツールの一意な識別子
+* `title`: 表示用の任意の人間可読名
+* `description`: 機能の人間可読な説明
+* `inputSchema`: 期待されるパラメータを定義する JSON Schema
+* `outputSchema`: 期待される出力構造を定義する任意の JSON Schema
+* `annotations`: ツールの挙動を記述する任意のプロパティ
+
+<Warning>
+  トラスト＆セーフティおよびセキュリティの観点から、信頼できるサーバー由来でない限り、クライアントはツールのアノテーションを不可信として扱わなければなりません。
+</Warning>
+
+<div id="tool-result">
+  ### ツール結果
+</div>
+
+ツール結果には[**構造化**](#structured-content)または**非構造化**コンテンツが含まれる場合があります。
+
+**非構造化**コンテンツは結果の`content`フィールドで返され、異なる種類のコンテンツ項目を複数含むことができます。
+
+<Note>
+  すべてのコンテンツタイプ（テキスト、画像、音声、リソースリンク、埋め込みリソース）は、
+  任意の
+  [annotations](/ja/specification/2025-06-18/server/resources#annotations) をサポートし、
+  想定読者、優先度、変更時刻に関するメタデータを付与できます。これはリソースやプロンプトで使用されるものと同じ注釈形式です。
+</Note>
+
+<div id="text-content">
+  #### テキスト内容
+</div>
+
+```json
+{
+  "type": "text",
+  "text": "ツールの結果テキスト"
+}
+```
+
+<div id="image-content">
+  #### 画像コンテンツ
+</div>
+
+```json
+{
+  "type": "image",
+  "data": "base64-encoded-data",
+  "mimeType": "image/png"
+  "annotations": {
+    "audience": ["user"],
+    "priority": 0.9
+  }
+
+}
+```
+
+この例は、オプションのアノテーションの使用方法を示しています。
+
+<div id="audio-content">
+  #### 音声データ
+</div>
+
+```json
+{
+  "type": "audio",
+  "data": "base64-encoded-audio-data",
+  "mimeType": "audio/wav"
+}
+```
+
+<div id="resource-links">
+  #### リソースリンク
+</div>
+
+ツールは、追加のコンテキストやデータを提供するために、[リソース](/ja/specification/2025-06-18/server/resources)へのリンクを返すことが**できます（MAY）**。
+この場合、ツールはクライアントが購読または取得できる URI を返します:
+
+```json
+{
+  "type": "resource_link",
+  "uri": "file:///project/src/main.rs",
+  "name": "main.rs",
+  "description": "Primary application entry point",
+  "mimeType": "text/x-rust",
+  "annotations": {
+    "audience": ["assistant"],
+    "priority": 0.9
+  }
+}
+```
+
+リソースリンクは、クライアントが利用方法を理解できるよう、通常のリソースと同じ[リソース注釈](/ja/specification/2025-06-18/server/resources#annotations)をサポートします。
+
+<Info>
+  ツールが返すリソースリンクは、`resources/list` リクエストの結果に必ずしも含まれるとは限りません。
+</Info>
+
+<div id="embedded-resources">
+  #### 埋め込みリソース
+</div>
+
+[リソース](/ja/specification/2025-06-18/server/resources) は、適切な [URI スキーム](ja/./resources#common-uri-schemes) を用いて追加のコンテキストやデータを提供する目的で埋め込むことができます（**MAY**）。埋め込みリソースを使用するサーバーは、`resources` 機能を実装することが望まれます（**SHOULD**）:
+
+```json
+{
+  "type": "resource",
+  "resource": {
+    "uri": "file:///project/src/main.rs",
+    "title": "Project Rust Main File",
+    "mimeType": "text/x-rust",
+    "text": "fn main() {\n    println!(\"Hello world!\");\n}",
+    "annotations": {
+      "audience": ["user", "assistant"],
+      "priority": 0.7,
+      "lastModified": "2025-05-03T14:30:00Z"
+    }
+  }
+}
+```
+
+埋め込みリソースは、クライアントが利用方法を理解できるよう、通常のリソースと同様に [リソース注釈](/ja/specification/2025-06-18/server/resources#annotations) をサポートします。
+
+<div id="structured-content">
+  #### 構造化コンテンツ
+</div>
+
+**構造化**コンテンツは、結果の`structuredContent`フィールドにあるJSONオブジェクトとして返されます。
+
+後方互換性のため、構造化コンテンツを返すツールは、TextContentブロック内にシリアライズしたJSONも併せて返すべきです（SHOULD）。
+
+<div id="output-schema">
+  #### 出力スキーマ
+</div>
+
+ツールは、構造化結果の検証のために出力スキーマを提供することもできます。
+出力スキーマが提供されている場合：
+
+* サーバーは、このスキーマに準拠した構造化結果を提供しなければなりません（MUST）。
+* クライアントは、このスキーマに対して構造化結果を検証すべきです（SHOULD）。
+
+出力スキーマを備えたツールの例：
+
+```json
+{
+  "name": "get_weather_data",
+  "title": "Weather Data Retriever",
+  "description": "Get current weather data for a location",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "location": {
+        "type": "string",
+        "description": "City name or zip code"
+      }
+    },
+    "required": ["location"]
+  },
+  "outputSchema": {
+    "type": "object",
+    "properties": {
+      "temperature": {
+        "type": "number",
+        "description": "Temperature in celsius"
+      },
+      "conditions": {
+        "type": "string",
+        "description": "Weather conditions description"
+      },
+      "humidity": {
+        "type": "number",
+        "description": "Humidity percentage"
+      }
+    },
+    "required": ["temperature", "conditions", "humidity"]
+  }
+}
+```
+
+このツールに対する有効なレスポンスの例：
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 5,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"temperature\": 22.5, \"conditions\": \"Partly cloudy\", \"humidity\": 65}"
+      }
+    ],
+    "structuredContent": {
+      "temperature": 22.5,
+      "conditions": "Partly cloudy",
+      "humidity": 65
+    }
+  }
+}
+```
+
+出力スキーマを提供することで、クライアントとLLMが構造化されたツール出力を理解し、適切に扱えるようになります：
+
+* レスポンスの厳密なスキーマ検証を可能にする
+* プログラミング言語との統合性を高める型情報を提供する
+* 返却データを適切にパースして活用できるよう、クライアントとLLMを導く
+* ドキュメントと開発者体験の向上に寄与する
+
+<div id="error-handling">
+  ## エラーハンドリング
+</div>
+
+ツールは2種類のエラー報告メカニズムを使用します：
+
+1. **プロトコルエラー**: 次のような問題に対する標準的なJSON-RPCエラー
+   * 不明なツール
+   * 無効な引数
+   * サーバーエラー
+
+2. **ツール実行エラー**: ツールの結果で `isError: true` として報告
+   * APIの失敗
+   * 無効な入力データ
+   * ビジネスロジックエラー
+
+プロトコルエラーの例:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "error": {
+    "code": -32602,
+    "message": "Unknown tool: invalid_tool_name"
+  }
+}
+```
+
+ツール実行エラーの例:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 4,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Failed to fetch weather data: API rate limit exceeded"
+      }
+    ],
+    "isError": true
+  }
+}
+```
+
+<div id="security-considerations">
+  ## セキュリティ上の考慮事項
+</div>
+
+1. サーバーは**必須**:
+   * すべてのツール入力を検証する
+   * 適切なアクセス制御を実装する
+   * ツールの呼び出しをレート制限する
+   * ツール出力をサニタイズする
+
+2. クライアントは**推奨**:
+   * 機微な操作ではユーザーの確認を求める
+   * 悪意あるまたは偶発的なデータ流出を避けるため、サーバーを呼び出す前にツール入力をユーザーに表示する
+   * ツールの結果をLLMに渡す前に検証する
+   * ツール呼び出しにタイムアウトを設定する
+   * 監査目的でツールの使用状況を記録する

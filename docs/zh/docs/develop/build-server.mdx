@@ -1,0 +1,1854 @@
+---
+title: "构建 MCP 服务器"
+description: "开始构建你自己的服务器，用于 Claude for Desktop 及其他客户端。"
+---
+
+在本教程中，我们将构建一个简单的 MCP 天气服务器，并将其连接到 MCP 主机 Claude for Desktop。
+
+<div id="what-well-be-building">
+  ### 我们将要构建的内容
+</div>
+
+我们将构建一个服务器，提供两个工具：`get_alerts` 和 `get_forecast`。然后我们会将该服务器连接到一个 MCP 主机（此处以 Claude for Desktop 为例）：
+
+<Frame>
+  <img src="/images/current-weather.png" />
+</Frame>
+
+<Note>
+  服务器可以连接到任何客户端。为便于演示，我们在此选择了 Claude for Desktop；此外，我们还提供了[构建你自己的客户端](/zh/docs/develop/build-client)的指南，以及[其他客户端列表](/zh/clients)。
+</Note>
+
+<div id="core-mcp-concepts">
+  ### 核心 MCP 概念
+</div>
+
+MCP 服务器可以提供三类主要能力：
+
+1. **[资源](/zh/docs/learn/server-concepts#resources)**：类似文件的数据，可供客户端读取（如 API 响应或文件内容）
+2. **[工具](/zh/docs/learn/server-concepts#tools)**：可由 LLM 调用的函数（经用户批准）
+3. **[提示模板](/zh/docs/learn/server-concepts#prompts)**：预先编写的模板，帮助用户完成特定任务
+
+本教程将主要聚焦于工具。
+
+<Tabs>
+  <Tab title="Python">
+    让我们开始搭建天气服务器吧！[完整示例代码在此查看。](https://github.com/modelcontextprotocol/quickstart-resources/tree/main/weather-server-python)
+
+    ### 先决知识
+
+    本快速入门假设你已熟悉以下内容：
+
+    * Python
+    * 诸如 Claude 等大型语言模型（LLM）
+
+    ### MCP 服务器的日志记录
+
+    在实现 MCP 服务器时，请谨慎处理日志记录：
+
+    **对于基于 STDIO 的服务器：** 切勿写入标准输出（stdout）。包括以下情况：
+
+    * Python 中的 `print()` 语句
+    * JavaScript 中的 `console.log()`
+    * Go 语言中的 `fmt.Println()`
+    * 其他语言中类似的 stdout 函数
+
+    向 stdout 写入会损坏 JSON-RPC 消息，并导致你的服务器崩溃。
+
+    **对于基于 HTTP 的服务器：** 使用标准输出记录日志没有问题，因为它不会干扰 HTTP 响应。
+
+    ### 最佳实践
+
+    1. 使用能将日志写入 stderr 或文件的日志库。
+
+    ### 快速示例
+
+    ```python
+    # ❌ 不推荐（STDIO）
+    print("正在处理请求")
+
+    # ✅ 推荐（STDIO）
+    import logging
+    logging.info("正在处理请求")
+    ```
+
+    ### 系统要求
+
+    * 已安装 Python 3.10 或更高版本。
+    * 你必须使用 Python 的 MCP SDK 1.2.0 或更高版本。
+
+    ### 设置您的环境
+
+    首先，我们先安装 `uv`，并配置 Python 项目和环境：
+
+    <CodeGroup>
+      ```bash macOS/Linux
+      curl -LsSf https://astral.sh/uv/install.sh | sh
+      ```
+
+      ```powershell Windows
+      powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+      ```
+    </CodeGroup>
+
+    请务必在完成后重启终端，以便系统识别到 `uv` 命令。
+
+    现在，让我们创建并初始化项目：
+
+    <CodeGroup>
+      ```bash macOS/Linux
+      # 为项目创建新目录
+      uv init weather
+      cd weather
+
+      # 创建并激活虚拟环境
+      uv venv
+      source .venv/bin/activate
+
+      # 安装依赖
+      uv add "mcp[cli]" httpx
+
+      # 创建服务器文件
+      touch weather.py
+      ```
+
+      ```powershell Windows
+      # 为项目创建新目录
+      uv init weather
+      cd weather
+
+      # 创建并激活虚拟环境
+      uv venv
+      .venv\Scripts\activate
+
+      # 安装依赖
+      uv add mcp[cli] httpx
+
+      # 创建服务器文件
+      new-item weather.py
+      ```
+    </CodeGroup>
+
+    现在，让我们开始搭建你的服务器。
+
+    ## 构建你的服务器
+
+    ### 导入包并设置实例
+
+    在你的 `weather.py` 文件开头添加以下内容：
+
+    ```python
+    from typing import Any
+    import httpx
+    from mcp.server.fastmcp import FastMCP
+
+    # 初始化 FastMCP 服务器
+    mcp = FastMCP("weather")
+
+    # 常量
+    NWS_API_BASE = "https://api.weather.gov"
+    USER_AGENT = "weather-app/1.0"
+    ```
+
+    FastMCP 类利用 Python 类型注解和文档字符串自动生成工具定义，便于创建和维护 MCP 工具。
+
+    ### 帮助函数
+
+    接下来，让我们添加用于从美国国家气象局（National Weather Service）API 查询并格式化数据的辅助函数：
+
+    ```python
+    async def make_nws_request(url: str) -> dict[str, Any] | None:
+        """向 NWS API 发起请求，并妥善处理错误。"""
+        headers = {
+            "User-Agent": USER_AGENT,
+            "Accept": "application/geo+json"
+        }
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(url, headers=headers, timeout=30.0)
+                response.raise_for_status()
+                return response.json()
+            except Exception:
+                return None
+
+    def format_alert(feature: dict) -> str:
+        """将警报要素格式化为可读字符串。"""
+        props = feature["properties"]
+        return f"""
+    Event: {props.get('event', '未知')}
+    Area: {props.get('areaDesc', '未知')}
+    Severity: {props.get('severity', '未知')}
+    Description: {props.get('description', '暂无描述')}
+    Instructions: {props.get('instruction', '未提供具体说明')}
+    """
+    ```
+
+    ### 实现工具执行功能
+
+    工具执行处理器负责具体执行每个工具的逻辑。我们把它加上：
+
+    ```python
+    @mcp.tool()
+    async def get_alerts(state: str) -> str:
+        """获取美国某州的天气预警。
+
+        参数：
+            state: 两位字母的美国州代码（如 CA、NY）
+        """
+        url = f"{NWS_API_BASE}/alerts/active/area/{state}"
+        data = await make_nws_request(url)
+
+        if not data or "features" not in data:
+            return "无法获取预警或未发现任何预警。"
+
+        if not data["features"]:
+            return "该州目前没有有效的预警。"
+
+        alerts = [format_alert(feature) for feature in data["features"]]
+        return "\n---\n".join(alerts)
+
+    @mcp.tool()
+    async def get_forecast(latitude: float, longitude: float) -> str:
+        """获取某位置的天气预报。
+
+        参数：
+            latitude: 该位置的纬度
+            longitude: 该位置的经度
+        """
+        # First get the forecast grid endpoint
+        points_url = f"{NWS_API_BASE}/points/{latitude},{longitude}"
+        points_data = await make_nws_request(points_url)
+
+        if not points_data:
+            return "无法获取该位置的预报数据。"
+
+        # Get the forecast URL from the points response
+        forecast_url = points_data["properties"]["forecast"]
+        forecast_data = await make_nws_request(forecast_url)
+
+        if not forecast_data:
+            return "无法获取详细预报。"
+
+        # Format the periods into a readable forecast
+        periods = forecast_data["properties"]["periods"]
+        forecasts = []
+        for period in periods[:5]:  # Only show next 5 periods
+            forecast = f"""
+    {period['name']}:
+    气温: {period['temperature']}°{period['temperatureUnit']}
+    风: {period['windSpeed']} {period['windDirection']}
+    预报: {period['detailedForecast']}
+    """
+            forecasts.append(forecast)
+
+        return "\n---\n".join(forecasts)
+    ```
+
+    ### 运行服务器
+
+    最后，我们来初始化并运行服务器：
+
+    ```python
+    if __name__ == "__main__":
+        # 初始化并运行服务器
+        mcp.run(transport='stdio')
+    ```
+
+    您的服务器已就绪！运行 `uv run weather.py` 启动 MCP 服务器，它将监听来自 MCP 主机的消息。
+
+    现在我们来使用现有的 MCP 主机——Claude for Desktop，来测试你的服务器。
+
+    ## 使用 Claude for Desktop 测试你的服务器
+
+    <Note>
+      Claude for Desktop 目前尚未在 Linux 上提供。Linux 用户可以继续阅读 [Building a client](/zh/docs/develop/build-client) 教程，构建一个连接到我们刚刚搭建的服务器的 MCP 客户端。
+    </Note>
+
+    首先，请确保已安装 Claude for Desktop。[可在此处下载最新版本。](https://claude.ai/download)
+    如果你已经安装了 Claude for Desktop，**请确保已更新到最新版本。**
+
+    我们需要为你打算使用的 MCP 服务器在 Claude for Desktop 中进行配置。为此，请在文本编辑器中打开位于 `~/Library/Application Support/Claude/claude_desktop_config.json` 的 Claude for Desktop 应用配置文件。如果该文件不存在，请先创建它。
+
+    例如，如果你已经安装了 [VS Code](https://code.visualstudio.com/)：
+
+    <CodeGroup>
+      ```bash macOS/Linux
+      code ~/Library/Application\ Support/Claude/claude_desktop_config.json
+      ```
+
+      ```powershell Windows
+      code $env:AppData\Claude\claude_desktop_config.json
+      ```
+    </CodeGroup>
+
+    然后在 `mcpServers` 键下添加你的服务器。只有在至少配置好一个服务器时，Claude for Desktop 才会显示 MCP 的界面元素。
+
+    在这个例子中，我们将这样添加一个天气服务器：
+
+    <CodeGroup>
+      ```json macOS/Linux
+      {
+        "mcpServers": {
+          "weather": {
+            "command": "uv",
+            "args": [
+              "--directory",
+              "/ABSOLUTE/PATH/TO/PARENT/FOLDER/weather",
+              "run",
+              "weather.py"
+            ]
+          }
+        }
+      }
+      ```
+
+      ```json Windows
+      {
+        "mcpServers": {
+          "weather": {
+            "command": "uv",
+            "args": [
+              "--directory",
+              "C:\\ABSOLUTE\\PATH\\TO\\PARENT\\FOLDER\\weather",
+              "run",
+              "weather.py"
+            ]
+          }
+        }
+      }
+      ```
+    </CodeGroup>
+
+    <Warning>
+      你可能需要在 `command` 字段中填写 `uv` 可执行文件的完整路径。可以在 macOS/Linux 上运行 `which uv`，或在 Windows 上运行 `where uv` 获取该路径。
+    </Warning>
+
+    <Note>
+      请确保传入服务器的绝对路径。你可以在 macOS/Linux 上运行 `pwd`，或在 Windows 命令提示符中运行 `cd` 来获取该路径。在 Windows 上，请记得在 JSON 路径中使用双反斜杠（`\\`）或正斜杠（`/`）。
+    </Note>
+
+    这表示要告知 Claude for Desktop：
+
+    1. 有一个名为“weather”的 MCP 服务器
+    2. 通过运行 `uv --directory /ABSOLUTE/PATH/TO/PARENT/FOLDER/weather run weather.py` 启动它
+
+    保存文件，然后重启 **Claude for Desktop**。
+  </Tab>
+
+  <Tab title="Node">
+    让我们开始构建天气服务器吧！[你可以在这里查看我们将要构建的完整代码。](https://github.com/modelcontextprotocol/quickstart-resources/tree/main/weather-server-typescript)
+
+    ### 前置知识
+
+    本快速入门假定你已熟悉以下内容：
+
+    * TypeScript
+    * 像 Claude 这样的语言模型（LLM）
+
+    ### MCP 服务器中的日志
+
+    在实现 MCP 服务器时，请谨慎处理日志记录：
+
+    **对于基于 STDIO 的服务器：**切勿向标准输出（stdout）写入。这包括：
+
+    * Python 中的 `print()` 语句
+    * JavaScript 中的 `console.log()`
+    * Go 中的 `fmt.Println()`
+    * 其他语言中的类似 stdout 函数
+
+    向标准输出写入会破坏 JSON-RPC 消息并导致服务器故障。
+
+    **对于基于 HTTP 的服务器：** 可以使用标准输出进行日志记录，因为这不会干扰 HTTP 响应。
+
+    ### 最佳实践
+
+    1. 使用可写入 stderr 或文件的日志库，例如 Python 的 `logging`。
+    2. 在使用 JavaScript 时要格外注意：`console.log()` 默认会写到标准输出（stdout）
+
+    ### 快速示例
+
+    ```javascript
+    // ❌ 不推荐（STDIO）
+    console.log("服务器已启动");
+
+    // ✅ 推荐（STDIO）
+    console.error("服务器已启动"); // 使用 stderr 更安全
+    ```
+
+    ### 系统要求
+
+    在使用 TypeScript 时，请确保已安装最新版本的 Node。
+
+    ### 设置你的开发环境
+
+    首先，如果尚未安装 Node.js 和 npm，请先安装。你可以从 [nodejs.org](https://nodejs.org/) 下载。
+    验证你的 Node.js 是否安装成功：
+
+    ```bash
+    node --version
+    npm --version
+    ```
+
+    本教程需要 Node.js 16 或更高版本。
+
+    现在，让我们创建并配置项目：
+
+    <CodeGroup>
+      ```bash macOS/Linux
+      # 为项目创建新目录
+      mkdir weather
+      cd weather
+
+      # 初始化新的 npm 项目
+      npm init -y
+
+      # 安装依赖
+      npm install @modelcontextprotocol/sdk zod@3
+      npm install -D @types/node typescript
+
+      # 创建项目文件
+      mkdir src
+      touch src/index.ts
+      ```
+
+      ```powershell Windows
+      # 为项目创建新目录
+      md weather
+      cd weather
+
+      # 初始化新的 npm 项目
+      npm init -y
+
+      # 安装依赖
+      npm install @modelcontextprotocol/sdk zod@3
+      npm install -D @types/node typescript
+
+      # 创建项目文件
+      md src
+      new-item src\index.ts
+      ```
+    </CodeGroup>
+
+    在你的 package.json 中添加 type: &quot;module&quot;，并新增一个构建脚本：
+
+    ```json package.json
+    {
+      "type": "module",
+      "bin": {
+        "weather": "./build/index.js"
+      },
+      "scripts": {
+        "build": "tsc && chmod 755 build/index.js"
+      },
+      "files": ["build"]
+    }
+    ```
+
+    在项目根目录创建一个 `tsconfig.json`：
+
+    ```json tsconfig.json
+    {
+      "compilerOptions": {
+        "target": "ES2022",
+        "module": "Node16",
+        "moduleResolution": "Node16",
+        "outDir": "./build",
+        "rootDir": "./src",
+        "strict": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true
+      },
+      "include": ["src/**/*"],
+      "exclude": ["node_modules"]
+    }
+    ```
+
+    现在让我们开始搭建你的服务器。
+
+    ## 构建你的服务器
+
+    ### 导入包并初始化实例
+
+    在你的 `src/index.ts` 文件顶部添加以下内容：
+
+    ```typescript
+    import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+    import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+    import { z } from "zod";
+
+    const NWS_API_BASE = "https://api.weather.gov";
+    const USER_AGENT = "weather-app/1.0";
+
+    // 创建服务端实例
+    const server = new McpServer({
+      name: "weather",
+      version: "1.0.0",
+      capabilities: {
+        resources: {},
+        tools: {},
+      },
+    });
+    ```
+
+    ### 帮助函数
+
+    接下来，我们来添加一些辅助函数，用于从 National Weather Service API 查询并格式化数据：
+
+    ```typescript
+    // 发起 NWS API 请求的辅助函数
+    async function makeNWSRequest<T>(url: string): Promise<T | null> {
+      const headers = {
+        "User-Agent": USER_AGENT,
+        Accept: "application/geo+json",
+      };
+
+      try {
+        const response = await fetch(url, { headers });
+        if (!response.ok) {
+          throw new Error(`HTTP 错误！状态码：${response.status}`);
+        }
+        return (await response.json()) as T;
+      } catch (error) {
+        console.error("NWS 请求出错：", error);
+        return null;
+      }
+    }
+
+    interface AlertFeature {
+      properties: {
+        event?: string;
+        areaDesc?: string;
+        severity?: string;
+        status?: string;
+        headline?: string;
+      };
+    }
+
+    // 格式化告警数据
+    function formatAlert(feature: AlertFeature): string {
+      const props = feature.properties;
+      return [
+        `事件：${props.event || "未知"}`,
+        `区域：${props.areaDesc || "未知"}`,
+        `严重性：${props.severity || "未知"}`,
+        `状态：${props.status || "未知"}`,
+        `标题：${props.headline || "无标题"}`,
+        "---",
+      ].join("\n");
+    }
+
+    interface ForecastPeriod {
+      name?: string;
+      temperature?: number;
+      temperatureUnit?: string;
+      windSpeed?: string;
+      windDirection?: string;
+      shortForecast?: string;
+    }
+
+    interface AlertsResponse {
+      features: AlertFeature[];
+    }
+
+    interface PointsResponse {
+      properties: {
+        forecast?: string;
+      };
+    }
+
+    interface ForecastResponse {
+      properties: {
+        periods: ForecastPeriod[];
+      };
+    }
+    ```
+
+    ### 实现工具调用
+
+    工具执行处理器负责真正执行每个工具的逻辑。我们把它加上：
+
+    ```typescript
+    // 注册天气工具
+    server.tool(
+      "get_alerts",
+      "获取某州的天气警报",
+      {
+        state: z.string().length(2).describe("两位字母的州代码（如 CA、NY）"),
+      },
+      async ({ state }) => {
+        const stateCode = state.toUpperCase();
+        const alertsUrl = `${NWS_API_BASE}/alerts?area=${stateCode}`;
+        const alertsData = await makeNWSRequest<AlertsResponse>(alertsUrl);
+
+        if (!alertsData) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: "无法获取警报数据",
+              },
+            ],
+          };
+        }
+
+        const features = alertsData.features || [];
+        if (features.length === 0) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `暂无 ${stateCode} 的有效警报`,
+              },
+            ],
+          };
+        }
+
+        const formattedAlerts = features.map(formatAlert);
+        const alertsText = `当前 ${stateCode} 的有效警报：\n\n${formattedAlerts.join("\n")}`;
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: alertsText,
+            },
+          ],
+        };
+      },
+    );
+
+    server.tool(
+      "get_forecast",
+      "获取某位置的天气预报",
+      {
+        latitude: z.number().min(-90).max(90).describe("位置的纬度"),
+        longitude: z
+          .number()
+          .min(-180)
+          .max(180)
+          .describe("位置的经度"),
+      },
+      async ({ latitude, longitude }) => {
+        // 获取网格点数据
+        const pointsUrl = `${NWS_API_BASE}/points/${latitude.toFixed(4)},${longitude.toFixed(4)}`;
+        const pointsData = await makeNWSRequest<PointsResponse>(pointsUrl);
+
+        if (!pointsData) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `获取坐标对应的网格点数据失败：${latitude}，${longitude}。该位置可能不受 NWS API 支持（仅支持美国境内位置）。`,
+              },
+            ],
+          };
+        }
+
+        const forecastUrl = pointsData.properties?.forecast;
+        if (!forecastUrl) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: "无法从网格点数据中获取预报 URL",
+              },
+            ],
+          };
+        }
+
+        // 获取预报数据
+        const forecastData = await makeNWSRequest<ForecastResponse>(forecastUrl);
+        if (!forecastData) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: "无法获取预报数据",
+              },
+            ],
+          };
+        }
+
+        const periods = forecastData.properties?.periods || [];
+        if (periods.length === 0) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: "暂无可用的预报时段",
+              },
+            ],
+          };
+        }
+
+        // 格式化预报时段
+        const formattedForecast = periods.map((period: ForecastPeriod) =>
+          [
+            `${period.name || "未知"}：`,
+            `气温：${period.temperature || "未知"}°${period.temperatureUnit || "F"}`,
+            `风：${period.windSpeed || "未知"} ${period.windDirection || ""}`,
+            `${period.shortForecast || "暂无预报"}`,
+            "---",
+          ].join("\n"),
+        );
+
+        const forecastText = `坐标 ${latitude}，${longitude} 的预报：\n\n${formattedForecast.join("\n")}`;
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: forecastText,
+            },
+          ],
+        };
+      },
+    );
+    ```
+
+    ### 运行该服务器
+
+    最后，编写 main 函数来启动服务器：
+
+    ```typescript
+    async function main() {
+      const transport = new StdioServerTransport();
+      await server.connect(transport);
+      console.error("Weather MCP 服务器正在通过 STDIO 运行");
+    }
+
+    main().catch((error) => {
+      console.error("main() 中发生致命错误：", error);
+      process.exit(1);
+    });
+    ```
+
+    务必运行 `npm run build` 来构建你的服务器！这是使你的服务器能够连接的关键步骤。
+
+    现在，我们来用现有的 MCP 主机 Claude for Desktop 测试你的服务器。
+
+    ## 使用 Claude for Desktop 测试你的服务器
+
+    <Note>
+      Claude for Desktop 目前尚不可用于 Linux。Linux 用户可继续查看 [Building a client](/zh/docs/develop/build-client) 教程，构建一个连接到我们刚刚搭建的服务器的 MCP 客户端。
+    </Note>
+
+    首先，请确保已安装 Claude 桌面版。[你可以在此下载最新版本](https://claude.ai/download)
+    如果你已经安装了 Claude 桌面版，**请确保已更新到最新版本。**
+
+    我们需要为你想使用的 MCP 服务器配置 Claude for Desktop。为此，请用文本编辑器打开位于 `~/Library/Application Support/Claude/claude_desktop_config.json` 的 Claude for Desktop 应用配置文件。若该文件不存在，请先创建它。
+
+    例如，如果你已安装 [VS Code](https://code.visualstudio.com/)：
+
+    <CodeGroup>
+      ```bash macOS/Linux
+      code ~/Library/Application\ Support/Claude/claude_desktop_config.json
+      ```
+
+      ```powershell Windows
+      code $env:AppData\Claude\claude_desktop_config.json
+      ```
+    </CodeGroup>
+
+    接下来，将你的服务器添加到 `mcpServers` 键下。只有在至少有一个服务器正确配置的情况下，Claude for Desktop 中才会显示 MCP 的界面元素。
+
+    在这个例子中，我们将这样添加单个天气服务器：
+
+    <CodeGroup>
+      ```json macOS/Linux
+      {
+        "mcpServers": {
+          "weather": {
+            "command": "node",
+            "args": ["/ABSOLUTE/PATH/TO/PARENT/FOLDER/weather/build/index.js"]
+          }
+        }
+      }
+      ```
+
+      ```json Windows
+      {
+        "mcpServers": {
+          "weather": {
+            "command": "node",
+            "args": ["C:\\PATH\\TO\\PARENT\\FOLDER\\weather\\build\\index.js"]
+          }
+        }
+      }
+      ```
+    </CodeGroup>
+
+    这会告诉 Claude for Desktop：
+
+    1. 有一个名为“weather”的 MCP 服务器
+    2. 通过运行 `node /ABSOLUTE/PATH/TO/PARENT/FOLDER/weather/build/index.js` 启动它
+
+    保存文件，并重新启动 **Claude for Desktop**。
+  </Tab>
+
+  <Tab title="Java">
+    <Note>
+      这是一个基于 Spring AI MCP 自动配置和启动器的快速入门示例。
+      要了解如何手动创建同步和异步的 MCP 服务器，请参阅 [Java SDK Server](/zh/sdk/java/mcp-server) 文档。
+    </Note>
+
+    现在开始动手构建我们的天气服务器吧！
+    [你可以在这里找到本教程所构建内容的完整代码。](https://github.com/spring-projects/spring-ai-examples/tree/main/model-context-protocol/weather/starter-stdio-server)
+
+    如需更多信息，请参阅 [MCP Server Boot Starter](https://docs.spring.io/spring-ai/reference/api/mcp/mcp-server-boot-starter-docs.html) 参考文档。
+    如需手动实现 MCP 服务器，请参阅 [MCP Server Java SDK 文档](/zh/sdk/java/mcp-server)。
+
+    ### MCP 服务器的日志记录
+
+    实现 MCP 服务器时，请注意日志的处理方式：
+
+    **对于基于 STDIO 的服务器：**切勿向标准输出（stdout）写入。包括以下情况：
+
+    * Python 中的 `print()` 语句
+    * JavaScript 中的 `console.log()`
+    * Go 中的 `fmt.Println()`
+    * 其他语言中类似的 stdout 函数
+
+    向标准输出写入会损坏 JSON-RPC 消息并导致服务器出错。
+
+    **对于基于 HTTP 的服务器：**使用标准输出记录日志是可以的，因为这不会干扰 HTTP 响应。
+
+    ### 最佳实践
+
+    1. 使用可将日志写入 stderr 或文件的日志库。
+    2. 确保任何已配置的日志库不会写入标准输出（STDOUT）
+
+    ### 系统要求
+
+    * 已安装 Java 17 或更高版本。
+    * [Spring Boot 3.3.x](https://docs.spring.io/spring-boot/installing.html) 或更高版本
+
+    ### 配置你的环境
+
+    使用 [Spring Initializr](https://start.spring.io/) 来快速初始化项目。
+
+    您需要添加以下依赖：
+
+    <CodeGroup>
+      ```xml Maven
+      <dependencies>
+            <dependency>
+                <groupId>org.springframework.ai</groupId>
+                <artifactId>spring-ai-starter-mcp-server</artifactId>
+            </dependency>
+
+            <dependency>
+                <groupId>org.springframework</groupId>
+                <artifactId>spring-web</artifactId>
+            </dependency>
+      </dependencies>
+      ```
+
+      ```groovy Gradle
+      dependencies {
+        implementation platform("org.springframework.ai:spring-ai-starter-mcp-server")
+        implementation platform("org.springframework:spring-web")
+      }
+      ```
+    </CodeGroup>
+
+    然后通过设置应用属性来配置你的应用程序：
+
+    <CodeGroup>
+      ```bash application.properties
+      spring.main.bannerMode=off
+      logging.pattern.console=
+      ```
+
+      ```yaml application.yml
+      logging:
+        pattern:
+          console:
+      spring:
+        main:
+          banner-mode: off
+      ```
+    </CodeGroup>
+
+    [服务器配置属性](https://docs.spring.io/spring-ai/reference/api/mcp/mcp-server-boot-starter-docs.html#_configuration_properties) 文档记录了所有可用属性。
+
+    现在让我们开始搭建你的服务器。
+
+    ## 构建你的服务器
+
+    ### 天气服务
+
+    让我们实现一个 [WeatherService.java](https://github.com/spring-projects/spring-ai-examples/blob/main/model-context-protocol/weather/starter-stdio-server/src/main/java/org/springframework/ai/mcp/sample/server/WeatherService.java)，使用 REST 客户端从美国国家气象局（National Weather Service）API 获取数据：
+
+    ```java
+    @Service
+    public class WeatherService {
+
+    	private final RestClient restClient;
+
+    	public WeatherService() {
+    		this.restClient = RestClient.builder()
+    			.baseUrl("https://api.weather.gov")
+    			.defaultHeader("Accept", "application/geo+json")
+    			.defaultHeader("User-Agent", "WeatherApiClient/1.0 (your@email.com)")
+    			.build();
+    	}
+
+      @Tool(description = "按指定经纬度获取天气预报")
+      public String getWeatherForecastByLocation(
+          double latitude,   // 纬度
+          double longitude   // 经度
+      ) {
+          // 返回的详细预报包括：
+          // - 气温及单位
+          // - 风速和风向
+          // - 详细预报描述
+      }
+
+      @Tool(description = "获取指定美国州的天气警报")
+      public String getAlerts(
+          @ToolParam(description = "两位字母的美国州缩写（如 CA、NY）") String state
+      ) {
+          // 返回的当前生效警报包括：
+          // - 事件类型
+          // - 受影响区域
+          // - 严重程度
+          // - 描述
+          // - 安全提示
+      }
+
+      // ......
+    }
+    ```
+
+    `@Service` 注解会在应用程序上下文中自动注册该服务。
+    借助 Spring AI 的 `@Tool` 注解，可轻松创建与维护 MCP 工具。
+
+    自动配置会将这些工具自动注册到 MCP 服务器。
+
+    ### 创建你的启动应用程序
+
+    ```java
+    @SpringBootApplication
+    public class McpServerApplication {
+
+    	public static void main(String[] args) {
+    		SpringApplication.run(McpServerApplication.class, args);
+    	}
+
+    	@Bean
+    	public ToolCallbackProvider weatherTools(WeatherService weatherService) {
+    		return  MethodToolCallbackProvider.builder().toolObjects(weatherService).build();
+    	}
+    }
+    ```
+
+    使用 `MethodToolCallbackProvider` 实用工具将 `@Tools` 转换为 MCP 服务器可用的可执行回调。
+
+    ### 运行该服务器
+
+    最后，我们来构建服务器：
+
+    ```bash
+    ./mvnw clean install
+    ```
+
+    这将在 `target` 文件夹中生成一个 `mcp-weather-stdio-server-0.0.1-SNAPSHOT.jar` 文件。
+
+    现在，让我们用现有的 MCP 主机——Claude for Desktop——来测试你的服务器。
+
+    ## 使用 Claude for Desktop 测试你的服务器
+
+    <Note>
+      Claude for Desktop 目前尚不支持 Linux。
+    </Note>
+
+    首先，确保已安装 Claude 桌面版。
+    [你可以在此下载最新版本。](https://claude.ai/download) 如果你已经安装了 Claude 桌面版，**请确保已更新到最新版本。**
+
+    我们需要为你要使用的各个 MCP 服务器配置 Claude for Desktop。
+    为此，请用文本编辑器打开 `~/Library/Application Support/Claude/claude_desktop_config.json`，这是 Claude for Desktop 的应用配置文件。
+    如果该文件不存在，请先创建它。
+
+    例如，如果你已安装 [VS Code](https://code.visualstudio.com/)：
+
+    <CodeGroup>
+      ```bash macOS/Linux
+      code ~/Library/Application\ Support/Claude/claude_desktop_config.json
+      ```
+
+      ```powershell Windows
+      code $env:AppData\Claude\claude_desktop_config.json
+      ```
+    </CodeGroup>
+
+    接下来在 `mcpServers` 键下添加你的服务器。
+    仅当至少正确配置了一个服务器时，Claude for Desktop 才会显示 MCP 的界面元素。
+
+    在这种情况下，我们将这样添加我们的单一天气服务器：
+
+    <CodeGroup>
+      ```json macOS/Linux
+      {
+        "mcpServers": {
+          "spring-ai-mcp-weather": {
+            "command": "java",
+            "args": [
+              "-Dspring.ai.mcp.server.stdio=true",
+              "-jar",
+              "/ABSOLUTE/PATH/TO/PARENT/FOLDER/mcp-weather-stdio-server-0.0.1-SNAPSHOT.jar"
+            ]
+          }
+        }
+      }
+      ```
+
+      ```json Windows
+      {
+        "mcpServers": {
+          "spring-ai-mcp-weather": {
+            "command": "java",
+            "args": [
+              "-Dspring.ai.mcp.server.transport=STDIO",
+              "-jar",
+              "C:\\ABSOLUTE\\PATH\\TO\\PARENT\\FOLDER\\weather\\mcp-weather-stdio-server-0.0.1-SNAPSHOT.jar"
+            ]
+          }
+        }
+      }
+      ```
+    </CodeGroup>
+
+    <Note>
+      请确保传入你服务器的绝对路径。
+    </Note>
+
+    这会通知 Claude for Desktop：
+
+    1. 有一个名为“my-weather-server”的 MCP 服务器
+    2. 通过运行 `java -jar /ABSOLUTE/PATH/TO/PARENT/FOLDER/mcp-weather-stdio-server-0.0.1-SNAPSHOT.jar` 启动它
+
+    保存文件，然后重新启动 **Claude for Desktop**。
+
+    ## 使用 Java 客户端测试服务器
+
+    ### 手动创建 MCP 客户端
+
+    使用 `MCP 客户端` 连接到服务器：
+
+    ```java
+    var stdioParams = ServerParameters.builder("java")
+      .args("-jar", "/ABSOLUTE/PATH/TO/PARENT/FOLDER/mcp-weather-stdio-server-0.0.1-SNAPSHOT.jar")
+      .build();
+
+    var stdioTransport = new StdioClientTransport(stdioParams);
+
+    var mcpClient = McpClient.sync(stdioTransport).build();
+
+    mcpClient.initialize();
+
+    ListToolsResult toolsList = mcpClient.listTools();
+
+    CallToolResult weather = mcpClient.callTool(
+      new CallToolRequest("getWeatherForecastByLocation",
+          Map.of("latitude", "47.6062", "longitude", "-122.3321")));
+
+    CallToolResult alert = mcpClient.callTool(
+      new CallToolRequest("getAlerts", Map.of("state", "NY")));
+
+    mcpClient.closeGracefully();
+    ```
+
+    ### 使用 MCP 客户端启动器
+
+    使用 `spring-ai-starter-mcp-client` 依赖创建一个新的 Spring Boot 启动器应用：
+
+    ```xml
+    <dependency>
+        <groupId>org.springframework.ai</groupId>
+        <artifactId>spring-ai-starter-mcp-client</artifactId>
+    </dependency>
+    ```
+
+    并将 `spring.ai.mcp.client.stdio.servers-configuration` 属性设置为指向你的 `claude_desktop_config.json`。
+    你可以复用现有的 Anthropic Desktop 配置：
+
+    ```properties
+    spring.ai.mcp.client.stdio.servers-configuration=file:PATH/TO/claude_desktop_config.json
+    ```
+
+    当你启动客户端应用时，自动配置会根据 claude_desktop_config.json 自动创建 MCP 客户端。
+
+    更多信息请参阅参考文档《MCP 客户端 Boot Starters》：https://docs.spring.io/spring-ai/reference/api/mcp/mcp-server-boot-client-docs.html
+
+    ## 更多 Java MCP 服务器示例
+
+    [starter-webflux-server](https://github.com/spring-projects/spring-ai-examples/tree/main/model-context-protocol/weather/starter-webflux-server) 演示了如何使用服务器发送事件（SSE）传输方式创建 MCP 服务器。
+    它展示了如何借助 Spring Boot 的自动配置能力来定义并注册 MCP 工具、资源和提示模板。
+  </Tab>
+
+  <Tab title="Kotlin">
+    让我们开始构建天气服务器吧！[完整示例代码在此查看。](https://github.com/modelcontextprotocol/kotlin-sdk/tree/main/samples/weather-stdio-server)
+
+    ### 前置知识
+
+    本快速入门假设你已熟悉以下内容：
+
+    * Kotlin
+    * 像 Claude 这样的大型语言模型（LLM）
+
+    ### 系统要求
+
+    * 已安装 Java 17 或更高版本。
+
+    ### 设置开发环境
+
+    首先，如果尚未安装，请先安装 `Java` 和 `Gradle`。
+    你可以从 [Oracle 官方 JDK 网站](https://www.oracle.com/java/technologies/downloads/) 下载 `Java`。
+    验证你的 `Java` 安装：
+
+    ```bash
+    java --version
+    ```
+
+    现在，让我们创建并配置你的项目：
+
+    <CodeGroup>
+      ```bash macOS/Linux
+      # 为项目创建一个新目录
+      mkdir weather
+      cd weather
+
+      # 初始化一个新的 Kotlin 项目
+      gradle init
+      ```
+
+      ```powershell Windows
+      # 为项目创建一个新目录
+      md weather
+      cd weather
+
+      # 初始化一个新的 Kotlin 项目
+      gradle init
+      ```
+    </CodeGroup>
+
+    运行 `gradle init` 后，你将看到用于创建项目的选项。
+    将项目类型选择为 **Application**，编程语言选择 **Kotlin**，Java 版本选择 **Java 17**。
+
+    或者，你也可以使用 [IntelliJ IDEA 项目向导](https://kotlinlang.org/docs/jvm-get-started.html) 创建 Kotlin 应用程序。
+
+    创建项目后，添加以下依赖：
+
+    <CodeGroup>
+      ```kotlin build.gradle.kts
+      val mcpVersion = "0.4.0"
+      val slf4jVersion = "2.0.9"
+      val ktorVersion = "3.1.1"
+
+      dependencies {
+          implementation("io.modelcontextprotocol:kotlin-sdk:$mcpVersion")
+          implementation("org.slf4j:slf4j-nop:$slf4jVersion")
+          implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
+          implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
+      }
+      ```
+
+      ```groovy build.gradle
+      def mcpVersion = '0.3.0'
+      def slf4jVersion = '2.0.9'
+      def ktorVersion = '3.1.1'
+
+      dependencies {
+          implementation "io.modelcontextprotocol:kotlin-sdk:$mcpVersion"
+          implementation "org.slf4j:slf4j-nop:$slf4jVersion"
+          implementation "io.ktor:ktor-client-content-negotiation:$ktorVersion"
+          implementation "io.ktor:ktor-serialization-kotlinx-json:$ktorVersion"
+      }
+      ```
+    </CodeGroup>
+
+    另外，请在构建脚本中添加以下插件：
+
+    <CodeGroup>
+      ```kotlin build.gradle.kts
+      plugins {
+          kotlin("plugin.serialization") version "your_version_of_kotlin"
+          id("com.github.johnrengelman.shadow") version "8.1.1"
+      }
+      ```
+
+      ```groovy build.gradle
+      plugins {
+          id 'org.jetbrains.kotlin.plugin.serialization' version 'your_version_of_kotlin'
+          id 'com.github.johnrengelman.shadow' version '8.1.1'
+      }
+      ```
+    </CodeGroup>
+
+    现在，让我们开始搭建你的服务器。
+
+    ## 构建你的服务器
+
+    ### 设置实例环境
+
+    添加服务器初始化函数：
+
+    ```kotlin
+    // 运行 MCP 服务器的主函数
+    fun `run mcp server`() {
+        // 使用基础实现创建 MCP 服务器实例
+        val server = Server(
+            Implementation(
+                name = "weather", // 工具名称为 "weather"
+                version = "1.0.0" // 实现版本
+            ),
+            ServerOptions(
+                capabilities = ServerCapabilities(tools = ServerCapabilities.Tools(listChanged = true))
+            )
+        )
+
+        // 使用标准 IO 创建用于与服务器通信的传输层
+        val transport = StdioServerTransport(
+            System.`in`.asInput(),
+            System.out.asSink().buffered()
+        )
+
+        runBlocking {
+            server.connect(transport)
+            val done = Job()
+            server.onClose {
+                done.complete()
+            }
+            done.join()
+        }
+    }
+    ```
+
+    ### 天气 API 帮助函数
+
+    接下来，我们添加用于从国家气象局 API 查询并转换响应的函数和数据类：
+
+    ```kotlin
+    // 根据给定的纬度和经度获取预报信息的扩展函数
+    suspend fun HttpClient.getForecast(latitude: Double, longitude: Double): List<String> {
+        val points = this.get("/points/$latitude,$longitude").body<Points>()
+        val forecast = this.get(points.properties.forecast).body<Forecast>()
+        return forecast.properties.periods.map { period ->
+            """
+                ${period.name}:
+                气温：${period.temperature} ${period.temperatureUnit}
+                风况：${period.windSpeed} ${period.windDirection}
+                预报：${period.detailedForecast}
+            """.trimIndent()
+        }
+    }
+
+    // 获取指定州天气预警的扩展函数
+    suspend fun HttpClient.getAlerts(state: String): List<String> {
+        val alerts = this.get("/alerts/active/area/$state").body<Alert>()
+        return alerts.features.map { feature ->
+            """
+                事件：${feature.properties.event}
+                区域：${feature.properties.areaDesc}
+                严重程度：${feature.properties.severity}
+                描述：${feature.properties.description}
+                指南：${feature.properties.instruction}
+            """.trimIndent()
+        }
+    }
+
+    @Serializable
+    data class Points(
+        val properties: Properties
+    ) {
+        @Serializable
+        data class Properties(val forecast: String)
+    }
+
+    @Serializable
+    data class Forecast(
+        val properties: Properties
+    ) {
+        @Serializable
+        data class Properties(val periods: List<Period>)
+
+        @Serializable
+        data class Period(
+            val number: Int, val name: String, val startTime: String, val endTime: String,
+            val isDaytime: Boolean, val temperature: Int, val temperatureUnit: String,
+            val temperatureTrend: String, val probabilityOfPrecipitation: JsonObject,
+            val windSpeed: String, val windDirection: String,
+            val shortForecast: String, val detailedForecast: String,
+        )
+    }
+
+    @Serializable
+    data class Alert(
+        val features: List<Feature>
+    ) {
+        @Serializable
+        data class Feature(
+            val properties: Properties
+        )
+
+        @Serializable
+        data class Properties(
+            val event: String, val areaDesc: String, val severity: String,
+            val description: String, val instruction: String?,
+        )
+    }
+    ```
+
+    ### 实现工具执行逻辑
+
+    工具执行处理器负责真正执行各个工具的逻辑。让我们把它加上：
+
+    ```kotlin
+    // 使用默认请求配置和 JSON 内容协商创建 HTTP 客户端
+    val httpClient = HttpClient {
+        defaultRequest {
+            url("https://api.weather.gov")
+                append("Accept", "application/geo+json")
+                append("Accept", "application/geo+json")
+                append("User-Agent", "WeatherApiClient/1.0")
+            }
+            contentType(ContentType.Application.Json)
+        }
+        // 安装内容协商插件，用于 JSON 的序列化/反序列化
+        install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
+    }
+
+    // 注册工具：按州获取天气警报
+    server.addTool(
+        name = "get_alerts",
+        description = """
+            获取指定美国州的天气警报。输入为两位字母的美国州代码（例如 CA、NY）
+        """.trimIndent(),
+        inputSchema = Tool.Input(
+            properties = buildJsonObject {
+                putJsonObject("state") {
+                    put("type", "string")
+                    put("description", "两位字母的美国州代码（例如 CA、NY）")
+                }
+            },
+            required = listOf("state")
+        )
+    ) { request ->
+        val state = request.arguments["state"]?.jsonPrimitive?.content
+        if (state == null) {
+            return@addTool CallToolResult(
+                content = listOf(TextContent("必须提供“state”参数。"))
+            )
+        }
+
+        val alerts = httpClient.getAlerts(state)
+
+        CallToolResult(content = alerts.map { TextContent(it) })
+    }
+
+    // 注册工具：根据纬度和经度获取天气预报
+    server.addTool(
+        name = "get_forecast",
+        description = """
+            获取指定纬度/经度的天气预报
+        """.trimIndent(),
+        inputSchema = Tool.Input(
+            properties = buildJsonObject {
+                putJsonObject("latitude") { put("type", "number") }
+                putJsonObject("longitude") { put("type", "number") }
+            },
+            required = listOf("latitude", "longitude")
+        )
+    ) { request ->
+        val latitude = request.arguments["latitude"]?.jsonPrimitive?.doubleOrNull
+        val longitude = request.arguments["longitude"]?.jsonPrimitive?.doubleOrNull
+        if (latitude == null || longitude == null) {
+            return@addTool CallToolResult(
+                content = listOf(TextContent("必须提供“latitude”和“longitude”参数。"))
+            )
+        }
+
+        val forecast = httpClient.getForecast(latitude, longitude)
+
+        CallToolResult(content = forecast.map { TextContent(it) })
+    }
+    ```
+
+    ### 运行服务器
+
+    最后，实现 main 函数以运行服务器：
+
+    ```kotlin
+    fun main() = `run mcp server`()
+    ```
+
+    请务必运行 `./gradlew build` 来构建你的服务器。这是确保服务器能够成功连接的关键一步。
+
+    现在让我们在现有的 MCP 主机 Claude for Desktop 中测试你的服务器。
+
+    ## 使用 Claude for Desktop 测试你的服务器
+
+    <Note>
+      Claude for Desktop 目前尚未在 Linux 上提供。Linux 用户可以前往[构建客户端](/zh/docs/develop/build-client)教程，构建一个 MCP 客户端以连接到我们刚刚构建的服务器。
+    </Note>
+
+    首先，确保你已安装 Claude for Desktop。[你可以在此下载最新版本](https://claude.ai/download)
+    如果你已经安装了 Claude for Desktop，**请确保已更新至最新版本。**
+
+    我们需要为你想使用的 MCP 服务器在 Claude for Desktop 中进行配置。
+    为此，请用文本编辑器打开位于 `~/Library/Application Support/Claude/claude_desktop_config.json` 的 Claude for Desktop 应用配置文件。
+    如果该文件不存在，请先创建它。
+
+    例如，如果你已经安装了 [VS Code](https://code.visualstudio.com/)：
+
+    <CodeGroup>
+      ```bash macOS/Linux
+      code ~/Library/Application\ Support/Claude/claude_desktop_config.json
+      ```
+
+      ```powershell Windows
+      code $env:AppData\Claude\claude_desktop_config.json
+      ```
+    </CodeGroup>
+
+    接下来，在 `mcpServers` 键下添加你的服务器。
+    只有至少正确配置了一个服务器时，Claude for Desktop 中才会显示 MCP 的界面元素。
+
+    在这种情况下，我们将按如下方式添加我们的单个天气服务器：
+
+    <CodeGroup>
+      ```json macOS/Linux
+      {
+        "mcpServers": {
+          "weather": {
+            "command": "java",
+            "args": [
+              "-jar",
+              "/ABSOLUTE/PATH/TO/PARENT/FOLDER/weather/build/libs/weather-0.1.0-all.jar"
+            ]
+          }
+        }
+      }
+      ```
+
+      ```json Windows
+      {
+        "mcpServers": {
+          "weather": {
+            "command": "java",
+            "args": [
+              "-jar",
+              "C:\\PATH\\TO\\PARENT\\FOLDER\\weather\\build\\libs\\weather-0.1.0-all.jar"
+            ]
+          }
+        }
+      }
+      ```
+    </CodeGroup>
+
+    这将告知 Claude for Desktop：
+
+    1. 有一个名为“weather”的 MCP 服务器
+    2. 通过运行 `java -jar /ABSOLUTE/PATH/TO/PARENT/FOLDER/weather/build/libs/weather-0.1.0-all.jar` 启动它
+
+    保存文件，并重启 **Claude for Desktop**。
+  </Tab>
+
+  <Tab title="C#">
+    让我们开始构建天气服务器吧！[本示例的完整代码在此查看。](https://github.com/modelcontextprotocol/csharp-sdk/tree/main/samples/QuickstartWeatherServer)
+
+    ### 前提知识
+
+    本快速入门假设你已熟悉以下内容：
+
+    * C#
+    * 诸如 Claude 等 LLM
+    * .NET 8 及以上版本
+
+    ### MCP 服务器中的日志记录
+
+    实现 MCP 服务器时，请谨慎处理日志记录：
+
+    **对于基于 STDIO 的服务器：**严禁向标准输出（stdout）写入。具体包括：
+
+    * Python 中的 `print()` 语句
+    * JavaScript 中的 `console.log()`
+    * Go 语言中的 `fmt.Println()`
+    * 其他语言中的类似 stdout 函数
+
+    向标准输出写入会破坏 JSON-RPC 消息并使你的服务器崩溃。
+
+    **对于基于 HTTP 的服务器：**使用标准输出记录日志是可以的，因为这不会干扰 HTTP 响应。
+
+    ### 最佳实践
+
+    1. 使用可将日志写入 stderr 或文件的日志库
+
+    ### 系统要求
+
+    * 已安装 [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) 或更高版本。
+
+    ### 设置开发环境
+
+    首先，如果你尚未安装 `dotnet`，请先进行安装。你可以从[Microsoft .NET 官方网站](https://dotnet.microsoft.com/download/)下载 `dotnet`。然后验证你的 `dotnet` 安装：
+
+    ```bash
+    dotnet --version
+    ```
+
+    现在，让我们创建并配置你的项目：
+
+    <CodeGroup>
+      ```bash macOS/Linux
+      # 为项目创建新目录
+      mkdir weather
+      cd weather
+      # 初始化一个新的 C# 项目
+      dotnet new console
+      ```
+
+      ```powershell Windows
+      # 为项目创建新目录
+      mkdir weather
+      cd weather
+      # 初始化一个新的 C# 项目
+      dotnet new console
+      ```
+    </CodeGroup>
+
+    运行 `dotnet new console` 后，会生成一个新的 C# 项目。
+    您可以在喜欢的 IDE 中打开该项目，例如 [Visual Studio](https://visualstudio.microsoft.com/) 或 [Rider](https://www.jetbrains.com/rider/)。
+    或者，您也可以使用 [Visual Studio 项目向导](https://learn.microsoft.com/en-us/visualstudio/get-started/csharp/tutorial-console?view=vs-2022) 创建一个 C# 应用程序。
+    创建项目后，添加用于模型上下文协议（MCP）SDK 及托管的 NuGet 包：
+
+    ```bash
+    # 添加模型上下文协议（MCP）SDK 的 NuGet 包
+    dotnet add package ModelContextProtocol --prerelease
+    # 添加 .NET 托管库的 NuGet 包
+    dotnet add package Microsoft.Extensions.Hosting
+    ```
+
+    现在我们开始动手构建你的服务器吧。
+
+    ## 构建你的服务器
+
+    在项目中打开 `Program.cs` 文件，并将其内容替换为以下代码：
+
+    ```csharp
+    using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.Extensions.Hosting;
+    using ModelContextProtocol;
+    using System.Net.Http.Headers;
+
+    var builder = Host.CreateEmptyApplicationBuilder(settings: null);
+
+    builder.Services.AddMcpServer()
+        .WithStdioServerTransport()
+        .WithToolsFromAssembly();
+
+    builder.Services.AddSingleton(_ =>
+    {
+        var client = new HttpClient() { BaseAddress = new Uri("https://api.weather.gov") };
+        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("weather-tool", "1.0"));
+        return client;
+    });
+
+    var app = builder.Build();
+
+    await app.RunAsync();
+    ```
+
+    <Note>
+      在创建 `ApplicationHostBuilder` 时，请使用 `CreateEmptyApplicationBuilder` 而非 `CreateDefaultBuilder`。这样可确保服务器不会向控制台写入任何额外消息。此要求仅适用于使用 STDIO 传输方式的服务器。
+    </Note>
+
+    此代码构建了一个基本的控制台应用，使用模型上下文协议（MCP）SDK，通过标准 I/O 传输创建一个 MCP 服务器。
+
+    ### 天气 API 助手函数
+
+    为 `HttpClient` 创建一个扩展类，以简化 JSON 请求的处理：
+
+    ```csharp
+    using System.Text.Json;
+
+    internal static class HttpClientExt
+    {
+        public static async Task<JsonDocument> ReadJsonDocumentAsync(this HttpClient client, string requestUri)
+        {
+            using var response = await client.GetAsync(requestUri);
+            response.EnsureSuccessStatusCode();
+            return await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync());
+        }
+    }
+    ```
+
+    接下来，定义一个类，其中包含用于查询国家气象局 API 并转换其响应的工具执行处理器：
+
+    ```csharp
+    using ModelContextProtocol.Server;
+    using System.ComponentModel;
+    using System.Globalization;
+    using System.Text.Json;
+
+    namespace QuickstartWeatherServer.Tools;
+
+    [McpServerToolType]
+    public static class WeatherTools
+    {
+        [McpServerTool, Description("获取指定美国州的天气预警。")]
+        public static async Task<string> GetAlerts(
+            HttpClient client,
+            [Description("要查询天气预警的美国州名。")] string state)
+        {
+            using var jsonDocument = await client.ReadJsonDocumentAsync($"/alerts/active/area/{state}");
+            var jsonElement = jsonDocument.RootElement;
+            var alerts = jsonElement.GetProperty("features").EnumerateArray();
+
+            if (!alerts.Any())
+            {
+                return "该州目前没有生效的预警。";
+            }
+
+            return string.Join("\n--\n", alerts.Select(alert =>
+            {
+                JsonElement properties = alert.GetProperty("properties");
+                return $"""
+                        事件：{properties.GetProperty("event").GetString()}
+                        区域：{properties.GetProperty("areaDesc").GetString()}
+                        严重程度：{properties.GetProperty("severity").GetString()}
+                        说明：{properties.GetProperty("description").GetString()}
+                        指南：{properties.GetProperty("instruction").GetString()}
+                        """;
+            }));
+        }
+
+        [McpServerTool, Description("获取指定位置的天气预报。")]
+        public static async Task<string> GetForecast(
+            HttpClient client,
+            [Description("该位置的纬度。")] double latitude,
+            [Description("该位置的经度。")] double longitude)
+        {
+            var pointUrl = string.Create(CultureInfo.InvariantCulture, $"/points/{latitude},{longitude}");
+            using var jsonDocument = await client.ReadJsonDocumentAsync(pointUrl);
+            var forecastUrl = jsonDocument.RootElement.GetProperty("properties").GetProperty("forecast").GetString()
+                ?? throw new Exception($"未从 {client.BaseAddress}points/{latitude},{longitude} 获取到预报 URL")
+
+            using var forecastDocument = await client.ReadJsonDocumentAsync(forecastUrl);
+            var periods = forecastDocument.RootElement.GetProperty("properties").GetProperty("periods").EnumerateArray();
+
+            return string.Join("\n---\n", periods.Select(period => $"""
+                    {period.GetProperty("name").GetString()}
+                    温度：{period.GetProperty("temperature").GetInt32()}°F
+                    风：{period.GetProperty("windSpeed").GetString()} {period.GetProperty("windDirection").GetString()}
+                    预报：{period.GetProperty("detailedForecast").GetString()}
+                    """));
+        }
+    }
+    ```
+
+    ### 运行服务器
+
+    最后，运行以下命令启动服务器：
+
+    ```bash
+    dotnet run
+    ```
+
+    这将启动服务器，并通过标准输入/输出监听传入的请求。
+
+    ## 使用 Claude 桌面版测试你的服务器
+
+    <Note>
+      Claude for Desktop 目前尚未提供 Linux 版本。Linux 用户可以前往 [Building a client](/zh/docs/develop/build-client) 教程，构建一个 MCP 客户端以连接我们刚刚搭建的服务器。
+    </Note>
+
+    首先，确保你已安装 Claude 桌面版。[可在此处下载最新版本](https://claude.ai/download)。如果你已经安装了 Claude 桌面版，**请确保已更新到最新版本。**
+    here.](https://claude.ai/download) If you already have Claude for Desktop, **make sure it&#39;s updated to the latest version.**
+    接下来，需要为你打算使用的 MCP 服务器配置 Claude 桌面版。为此，请在文本编辑器中打开位于 `~/Library/Application Support/Claude/claude_desktop_config.json` 的 Claude 桌面版应用配置文件。若该文件不存在，请先创建。
+    例如，如果你已安装 [VS Code](https://code.visualstudio.com/)：
+
+    <CodeGroup>
+      ```bash macOS/Linux
+      code ~/Library/Application\ Support/Claude/claude_desktop_config.json
+      ```
+
+      ```powershell Windows
+      code $env:AppData\Claude\claude_desktop_config.json
+      ```
+    </CodeGroup>
+
+    接下来在 `mcpServers` 键下添加你的服务器。只有至少正确配置了一个服务器，Claude for Desktop 中才会显示 MCP 的 UI 元素。
+    在本例中，我们将这样添加唯一的天气服务器：
+
+    <CodeGroup>
+      ```json macOS/Linux
+      {
+        "mcpServers": {
+          "weather": {
+            "command": "dotnet",
+            "args": ["run", "--project", "/ABSOLUTE/PATH/TO/PROJECT", "--no-build"]
+          }
+        }
+      }
+      ```
+
+      ```json Windows
+      {
+        "mcpServers": {
+          "weather": {
+            "command": "dotnet",
+            "args": [
+              "run",
+              "--project",
+              "C:\\ABSOLUTE\\PATH\\TO\\PROJECT",
+              "--no-build"
+            ]
+          }
+        }
+      }
+      ```
+    </CodeGroup>
+
+    这会告知 Claude for Desktop：
+
+    1. 有一个名为“weather”的 MCP 服务器
+    2. 通过运行 `dotnet run /ABSOLUTE/PATH/TO/PROJECT` 启动它
+       保存文件，然后重新启动 **Claude for Desktop**。
+  </Tab>
+</Tabs>
+
+<div id="test-with-commands">
+  ### 使用命令进行测试
+</div>
+
+让我们确认 Claude for Desktop 是否已经识别出我们在 `weather` 服务器中提供的两个工具。你可以通过查找 “Search and tools” <img src="/images/claude-desktop-mcp-slider.svg" style={{display: 'inline', margin: 0, height: '1.3em'}} /> 图标来进行确认：
+
+<Frame>
+  <img src="/images/visual-indicator-mcp-tools.png" />
+</Frame>
+
+点击该滑块图标后，你应能看到列出的两个工具：
+
+<Frame>
+  <img src="/images/available-mcp-tools.png" />
+</Frame>
+
+如果你的服务器没有被 Claude for Desktop 识别，请前往[故障排查](#troubleshooting)部分获取调试建议。
+
+如果工具设置图标已出现，现在你可以在 Claude for Desktop 中运行以下命令来测试你的服务器：
+
+* 萨克拉门托现在的天气如何？
+* 得克萨斯州当前有哪些有效的天气警报？
+
+<Frame>
+  <img src="/images/current-weather.png" />
+</Frame>
+
+<Frame>
+  <img src="/images/weather-alerts.png" />
+</Frame>
+
+<Note>
+  由于这是美国国家气象局，查询仅适用于美国境内的地点。
+</Note>
+
+<div id="whats-happening-under-the-hood">
+  ## 底层机制是如何运作的
+</div>
+
+当你提出问题时：
+
+1. 客户端将你的问题发送给 Claude
+2. Claude 分析可用的工具并决定使用哪些工具
+3. 客户端通过 MCP 服务器执行所选工具
+4. 将结果返回给 Claude
+5. Claude 生成自然语言响应
+6. 响应呈现给你！
+
+<div id="troubleshooting">
+  ## 故障排查
+</div>
+
+<AccordionGroup>
+  <Accordion title="Claude for Desktop 集成问题">
+    **获取 Claude for Desktop 的日志**
+
+    与 MCP 相关的 Claude.app 日志会写入 `~/Library/Logs/Claude` 路径下的日志文件：
+
+    * `mcp.log` 包含关于 MCP 连接及连接失败的通用日志。
+    * 名为 `mcp-server-SERVERNAME.log` 的文件包含对应服务器的错误（stderr）日志。
+
+    你可以运行以下命令来列出最近的日志并实时查看新日志：
+
+    ```bash
+    # 检查 Claude 的日志是否有错误
+    tail -n 20 -f ~/Library/Logs/Claude/mcp*.log
+    ```
+
+    **服务器未在 Claude 中显示**
+
+    1. 检查你的 `claude_desktop_config.json` 文件语法
+    2. 确保项目路径为绝对路径而非相对路径
+    3. 完全重启 Claude for Desktop
+
+    **工具调用无提示地失败**
+
+    如果 Claude 试图使用工具但失败：
+
+    1. 检查 Claude 的日志是否有错误
+    2. 确认你的服务器能正常构建并运行，无报错
+    3. 尝试重启 Claude for Desktop
+
+    **以上方法均无效，该怎么办？**
+
+    请参阅我们的[调试指南](/zh/legacy/tools/debugging)，获取更强大的调试工具和更详细的指导。
+  </Accordion>
+
+  <Accordion title="Weather API 问题">
+    **错误：Failed to retrieve grid point data**
+
+    通常意味着：
+
+    1. 坐标不在美国境内
+    2. NWS API 出现故障
+    3. 触发了速率限制
+
+    解决方法：
+
+    * 确认你使用的是美国境内的坐标
+    * 在请求之间添加短暂延迟
+    * 查看 NWS API 状态页
+
+    **错误：No active alerts for [STATE]**
+
+    这不是错误——只是表示该州当前没有天气警报。可尝试其他州，或在恶劣天气期间再查看。
+  </Accordion>
+</AccordionGroup>
+
+<Note>
+  若需更高级的故障排查，请查看我们的[调试 MCP](/zh/legacy/tools/debugging) 指南
+</Note>
+
+<div id="next-steps">
+  ## 后续步骤
+</div>
+
+<CardGroup cols={2}>
+  <Card title="构建客户端" icon="outlet" href="/zh/docs/develop/build-client">
+    了解如何构建可连接到你服务器的 MCP 客户端
+  </Card>
+
+  <Card title="示例服务器" icon="grid" href="/zh/examples">
+    浏览我们的官方 MCP 服务器与实现库
+  </Card>
+
+  <Card title="调试指南" icon="bug" href="/zh/legacy/tools/debugging">
+    了解如何高效调试 MCP 服务器与集成
+  </Card>
+
+  <Card title="使用 LLM 构建 MCP" icon="comments" href="/zh/tutorials/building-mcp-with-llms">
+    了解如何使用 Claude 等 LLM 加速你的 MCP 开发
+  </Card>
+</CardGroup>

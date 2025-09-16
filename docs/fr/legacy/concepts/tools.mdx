@@ -1,0 +1,530 @@
+---
+title: "Outils"
+description: "Permettre aux LLM d’effectuer des actions via votre serveur"
+---
+
+Les outils sont une primitive puissante du Protocole de contexte de modèle (MCP) qui permet aux serveurs d’exposer des fonctionnalités exécutables aux clients. Grâce aux outils, les LLM peuvent interagir avec des systèmes externes, effectuer des calculs et prendre des actions dans le monde réel.
+
+<Note>
+  Les outils sont conçus pour être **pilotés par le modèle**, ce qui signifie qu’ils sont exposés par les serveurs aux clients afin que le modèle d’IA puisse les invoquer automatiquement (avec un humain dans la boucle pour accorder l’approbation).
+</Note>
+
+<div id="overview">
+  ## Aperçu
+</div>
+
+Les Outils dans le Protocole de contexte de modèle (MCP) permettent aux Serveurs MCP d’exposer des fonctions exécutables pouvant être invoquées par des Clients MCP et utilisées par des LLM pour effectuer des actions. Les aspects clés des Outils incluent :
+
+* **Découverte** : les clients peuvent obtenir la liste des outils disponibles en envoyant une requête `tools/list`
+* **Appel** : les outils sont appelés via la requête `tools/call`, les serveurs exécutent alors l’opération demandée et renvoient les résultats
+* **Flexibilité** : les outils couvrent aussi bien de simples calculs que des interactions API complexes
+
+Comme les [Ressources](/fr/legacy/concepts/resources), les outils sont identifiés par des noms uniques et peuvent inclure des descriptions pour guider leur utilisation. Cependant, contrairement aux ressources, les outils représentent des opérations dynamiques susceptibles de modifier l’état ou d’interagir avec des systèmes externes.
+
+<div id="tool-definition-structure">
+  ## Structure de définition d’un outil
+</div>
+
+Chaque outil est défini avec la structure suivante :
+
+```typescript
+{
+  name: string;          // Identifiant unique de l’outil
+  description?: string;  // Description destinée aux humains
+  inputSchema: {         // Schéma JSON pour les paramètres de l’outil
+    type: "object",
+    properties: { ... }  // Paramètres spécifiques à l’outil
+  },
+  annotations?: {        // Indications optionnelles sur le comportement de l’outil
+    title?: string;      // Titre destiné aux humains pour l’outil
+    readOnlyHint?: boolean;    // Si true, l’outil ne modifie pas son environnement
+    destructiveHint?: boolean; // Si true, l’outil peut effectuer des mises à jour destructrices
+    idempotentHint?: boolean;  // Si true, des appels répétés avec les mêmes arguments n’ont aucun effet supplémentaire
+    openWorldHint?: boolean;   // Si true, l’outil interagit avec des entités externes
+  }
+}
+```
+
+<div id="implementing-tools">
+  ## Implémentation d’outils
+</div>
+
+Voici un exemple d’implémentation d’un outil de base dans un serveur MCP :
+
+<CodeGroup>
+  ```typescript TypeScript
+  const server = new Server(
+    {
+      name: "example-server",
+      version: "1.0.0",
+    },
+    {
+      capabilities: {
+        tools: {},
+      },
+    },
+  );
+
+  // Définir les outils disponibles
+  server.setRequestHandler(ListToolsRequestSchema, async () => {
+    return {
+      tools: [
+        {
+          name: "calculate_sum",
+          description: "Additionner deux nombres",
+          inputSchema: {
+            type: "object",
+            properties: {
+              a: { type: "number" },
+              b: { type: "number" },
+            },
+            required: ["a", "b"],
+          },
+        },
+      ],
+    };
+  });
+
+  // Gérer l’exécution de l’outil
+  server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    if (request.params.name === "calculate_sum") {
+      const { a, b } = request.params.arguments;
+      return {
+        content: [
+          {
+            type: "text",
+            text: String(a + b),
+          },
+        ],
+      };
+    }
+    throw new Error("Outil introuvable");
+  });
+  ```
+
+  ```python Python
+  app = Server("example-server")
+
+  @app.list_tools()
+  async def list_tools() -> list[types.Tool]:
+      return [
+          types.Tool(
+              name="calculate_sum",
+              description="Additionner deux nombres",
+              inputSchema={
+                  "type": "object",
+                  "properties": {
+                      "a": {"type": "number"},
+                      "b": {"type": "number"}
+                  },
+                  "required": ["a", "b"]
+              }
+          )
+      ]
+
+  @app.call_tool()
+  async def call_tool(
+      name: str,
+      arguments: dict
+  ) -> list[types.TextContent | types.ImageContent | types.EmbeddedResource]:
+      if name == "calculate_sum":
+          a = arguments["a"]
+          b = arguments["b"]
+          result = a + b
+          return [types.TextContent(type="text", text=str(result))]
+      raise ValueError(f"Outil introuvable : {name}")
+  ```
+</CodeGroup>
+
+<div id="example-tool-patterns">
+  ## Exemples de modèles d’outils
+</div>
+
+Voici quelques exemples de types d’outils qu’un serveur MCP pourrait fournir :
+
+<div id="system-operations">
+  ### Opérations système
+</div>
+
+Outils qui interagissent avec le système local :
+
+```typescript
+{
+  name: "execute_command",
+  description: "Run a shell command",
+  inputSchema: {
+    type: "object",
+    properties: {
+      command: { type: "string" },
+      args: { type: "array", items: { type: "string" } }
+    }
+  }
+}
+```
+
+<div id="api-integrations">
+  ### Intégrations d’API
+</div>
+
+Outils qui enveloppent des API externes :
+
+```typescript
+{
+  name: "github_create_issue",
+  description: "Create a GitHub issue",
+  inputSchema: {
+    type: "object",
+    properties: {
+      title: { type: "string" },
+      body: { type: "string" },
+      labels: { type: "array", items: { type: "string" } }
+    }
+  }
+}
+```
+
+<div id="data-processing">
+  ### Traitement des données
+</div>
+
+Outils qui transforment ou analysent des données :
+
+```typescript
+{
+  name: "analyze_csv",
+  description: "Analyser un fichier CSV",
+  inputSchema: {
+    type: "object",
+    properties: {
+      filepath: { type: "string" },
+      operations: {
+        type: "array",
+        items: {
+          enum: ["sum", "average", "count"]
+        }
+      }
+    }
+  }
+}
+```
+
+<div id="best-practices">
+  ## Bonnes pratiques
+</div>
+
+Lors de la mise en œuvre des Outils :
+
+1. Donnez des noms et des descriptions clairs et parlants
+2. Utilisez des définitions JSON Schema détaillées pour les paramètres
+3. Ajoutez des exemples dans les descriptions des Outils pour montrer comment le modèle doit les utiliser
+4. Mettez en place une gestion des erreurs et une validation adéquates
+5. Utilisez un suivi d’avancement pour les opérations longues
+6. Gardez les opérations des Outils ciblées et atomiques
+7. Documentez les structures de retour attendues
+8. Implémentez des délais d’attente appropriés
+9. Envisagez une limitation du débit pour les opérations gourmandes en ressources
+10. Journalisez l’utilisation des Outils pour le débogage et la supervision
+
+<div id="tool-name-conflicts">
+  ### Conflits de noms d’outils
+</div>
+
+Les applications Client MCP et les proxys de Serveur MCP peuvent rencontrer des conflits de noms d’outils lorsqu’elles constituent leurs propres listes d’outils. Par exemple, deux serveurs MCP connectés `web1` et `web2` peuvent tous deux exposer un outil nommé `search_web`.
+
+Les applications peuvent désambiguïser les outils à l’aide de l’une des stratégies suivantes (entre autres ; liste non exhaustive) :
+
+* Concaténer un nom de serveur unique défini par l’utilisateur avec le nom de l’outil, p. ex. `web1___search_web` et `web2___search_web`. Cette stratégie peut être préférable lorsque des noms de serveur uniques sont déjà fournis par l’utilisateur dans un fichier de configuration.
+* Générer un préfixe aléatoire pour le nom de l’outil, p. ex. `jrwxs___search_web` et `6cq52___search_web`. Cette stratégie peut être préférable dans des proxys de serveur où des noms uniques définis par l’utilisateur ne sont pas disponibles.
+* Utiliser l’URI du serveur comme préfixe pour le nom de l’outil, p. ex. `web1.example.com:search_web` et `web2.example.com:search_web`. Cette stratégie peut convenir lors de l’utilisation de serveurs MCP distants.
+
+Notez que le nom fourni par le serveur lors du flux d’initialisation n’est pas garanti unique et n’est généralement pas adapté à la désambiguïsation.
+
+<div id="security-considerations">
+  ## Considérations de sécurité
+</div>
+
+Lors de l’exposition des Outils :
+
+<div id="input-validation">
+  ### Validation des entrées
+</div>
+
+* Valider tous les paramètres par rapport au schéma
+* Nettoyer/sécuriser les chemins de fichiers et les commandes système
+* Valider les URL et les identifiants externes
+* Vérifier les tailles et les plages des paramètres
+* Empêcher les injections de commandes
+
+<div id="access-control">
+  ### Contrôle d’accès
+</div>
+
+* Mettre en place l’authentification lorsque c’est nécessaire
+* Effectuer des contrôles d’autorisation appropriés
+* Auditer l’utilisation des outils
+* Limiter le taux de requêtes
+* Surveiller les abus
+
+<div id="error-handling">
+  ### Gestion des erreurs
+</div>
+
+* N&#39;exposez pas les erreurs internes aux clients
+* Consignez les erreurs liées à la sécurité
+* Gérez correctement les délais
+* Libérez les ressources après une erreur
+* Validez les valeurs de retour
+
+<div id="tool-discovery-and-updates">
+  ## Découverte et mises à jour des Outils
+</div>
+
+MCP prend en charge la découverte dynamique des Outils :
+
+1. Les Clients peuvent répertorier les Outils disponibles à tout moment
+2. Les Serveurs peuvent informer les Clients lorsque les Outils changent à l’aide de `notifications/tools/list_changed`
+3. Des Outils peuvent être ajoutés ou supprimés pendant l’exécution
+4. Les définitions d’Outil peuvent être mises à jour (à faire avec prudence)
+
+<div id="error-handling">
+  ## Gestion des erreurs
+</div>
+
+Les erreurs d’outils doivent être signalées dans l’objet de résultat, et non comme des erreurs au niveau du protocole MCP. Cela permet au LLM de voir l’erreur et éventuellement de la gérer. Lorsqu’un outil rencontre une erreur :
+
+1. Définissez `isError` sur `true` dans le résultat
+2. Incluez les détails de l’erreur dans le tableau `content`
+
+Voici un exemple de bonne gestion des erreurs pour les outils :
+
+<CodeGroup>
+  ```typescript TypeScript
+  try {
+    // Tool operation
+    const result = performOperation();
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Operation successful: ${result}`,
+        },
+      ],
+    };
+  } catch (error) {
+    return {
+      isError: true,
+      content: [
+        {
+          type: "text",
+          text: `Error: ${error.message}`,
+        },
+      ],
+    };
+  }
+  ```
+
+  ```python Python
+  try:
+      # Tool operation
+      result = perform_operation()
+      return types.CallToolResult(
+          content=[
+              types.TextContent(
+                  type="text",
+                  text=f"Operation successful: {result}"
+              )
+          ]
+      )
+  except Exception as error:
+      return types.CallToolResult(
+          isError=True,
+          content=[
+              types.TextContent(
+                  type="text",
+                  text=f"Error: {str(error)}"
+              )
+          ]
+      )
+  ```
+</CodeGroup>
+
+Cette approche permet au LLM de constater qu’une erreur s’est produite et, le cas échéant, de prendre des mesures correctives ou de demander une intervention humaine.
+
+<div id="tool-annotations">
+  ## Annotations d’outil
+</div>
+
+Les annotations d’outil fournissent des métadonnées supplémentaires sur le comportement d’un outil, aidant les clients à déterminer comment présenter et gérer les outils. Ces annotations servent d’indications sur la nature et l’impact d’un outil, mais ne doivent pas être prises en compte pour des décisions de sécurité.
+
+<div id="purpose-of-tool-annotations">
+  ### Objectif des annotations d’outil
+</div>
+
+Les annotations d’outil remplissent plusieurs fonctions essentielles :
+
+1. Fournir des informations propres à l’UX sans affecter le contexte du modèle
+2. Aider les clients à catégoriser et à présenter les outils de manière appropriée
+3. Indiquer les effets potentiels d’un outil
+4. Faciliter la conception d’interfaces intuitives pour l’approbation des outils
+
+<div id="available-tool-annotations">
+  ### Annotations d’outils disponibles
+</div>
+
+La spécification MCP définit les annotations suivantes pour les outils :
+
+| Annotation        | Type    | Par défaut | Description                                                                                                                            |
+| ----------------- | ------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `title`           | string  | -          | Un titre compréhensible par l’humain pour l’outil, utile pour l’affichage dans l’interface utilisateur                                 |
+| `readOnlyHint`    | boolean | false      | Si true, indique que l’outil ne modifie pas son environnement                                                                          |
+| `destructiveHint` | boolean | true       | Si true, l’outil peut effectuer des opérations destructrices (pertinent uniquement lorsque `readOnlyHint` est false)                   |
+| `idempotentHint`  | boolean | false      | Si true, appeler l’outil à plusieurs reprises avec les mêmes arguments n’a aucun effet supplémentaire (pertinent uniquement lorsque `readOnlyHint` est false) |
+| `openWorldHint`   | boolean | true       | Si true, l’outil peut interagir avec un « monde ouvert » d’entités externes                                                            |
+
+<div id="example-usage">
+  ### Exemple d’utilisation
+</div>
+
+Voici comment définir des outils avec des annotations pour différents scénarios :
+
+```typescript
+// Un outil de recherche en lecture seule
+{
+  name: "web_search",
+  description: "Rechercher des informations sur le Web",
+  inputSchema: {
+    type: "object",
+    properties: {
+      query: { type: "string" }
+    },
+    required: ["query"]
+  },
+  annotations: {
+    title: "Recherche Web",
+    readOnlyHint: true,
+    openWorldHint: true
+  }
+}
+
+// Un outil destructif de suppression de fichiers
+{
+  name: "delete_file",
+  description: "Supprimer un fichier du système de fichiers",
+  inputSchema: {
+    type: "object",
+    properties: {
+      path: { type: "string" }
+    },
+    required: ["path"]
+  },
+  annotations: {
+    title: "Supprimer un fichier",
+    readOnlyHint: false,
+    destructiveHint: true,
+    idempotentHint: true,
+    openWorldHint: false
+  }
+}
+
+// Un outil non destructif de création d’enregistrements dans la base de données
+{
+  name: "create_record",
+  description: "Créer un nouvel enregistrement dans la base de données",
+  inputSchema: {
+    type: "object",
+    properties: {
+      table: { type: "string" },
+      data: { type: "object" }
+    },
+    required: ["table", "data"]
+  },
+  annotations: {
+    title: "Créer un enregistrement de base de données",
+    readOnlyHint: false,
+    destructiveHint: false,
+    idempotentHint: false,
+    openWorldHint: false
+  }
+}
+```
+
+<div id="integrating-annotations-in-server-implementation">
+  ### Intégration des annotations dans l’implémentation du serveur
+</div>
+
+<CodeGroup>
+  ```typescript TypeScript
+  server.setRequestHandler(ListToolsRequestSchema, async () => {
+    return {
+      tools: [
+        {
+          name: "calculate_sum",
+          description: "Additionne deux nombres",
+          inputSchema: {
+            type: "object",
+            properties: {
+              a: { type: "number" },
+              b: { type: "number" },
+            },
+            required: ["a", "b"],
+          },
+          annotations: {
+            title: "Calculate Sum",
+            readOnlyHint: true,
+            openWorldHint: false,
+          },
+        },
+      ],
+    };
+  });
+  ```
+
+  ```python Python
+  from mcp.server.fastmcp import FastMCP
+
+  mcp = FastMCP("example-server")
+
+  @mcp.tool(
+      annotations={
+          "title": "Calculate Sum",
+          "readOnlyHint": True,
+          "openWorldHint": False
+      }
+  )
+  async def calculate_sum(a: float, b: float) -> str:
+      """Additionne deux nombres.
+
+      Args:
+          a: Premier nombre à additionner
+          b: Deuxième nombre à additionner
+      """
+      result = a + b
+      return str(result)
+  ```
+</CodeGroup>
+
+<div id="best-practices-for-tool-annotations">
+  ### Bonnes pratiques pour les annotations d’outils
+</div>
+
+1. **Soyez précis quant aux effets de bord** : Indiquez clairement si un outil modifie son environnement et si ces modifications sont destructrices.
+
+2. **Utilisez des titres explicites** : Fournissez des intitulés clairs et lisibles qui décrivent précisément la finalité de l’outil.
+
+3. **Indiquez correctement l’idempotence** : Marquez les outils comme idempotents uniquement si des appels répétés avec les mêmes arguments n’ont véritablement aucun effet supplémentaire.
+
+4. **Définissez des indications de monde ouvert/fermé appropriées** : Indiquez si un outil interagit avec un système fermé (comme une base de données) ou un système ouvert (comme le Web).
+
+5. **Gardez à l’esprit que les annotations sont des indications** : Toutes les propriétés de ToolAnnotations sont des indications et ne garantissent pas une description fidèle du comportement de l’outil. Les clients ne doivent jamais prendre de décisions critiques pour la sécurité uniquement sur la base d’annotations.
+
+<div id="testing-tools">
+  ## Tests des Outils
+</div>
+
+Une stratégie de test complète pour les Outils MCP devrait couvrir :
+
+* **Tests fonctionnels** : vérifier que les Outils s’exécutent correctement avec des entrées valides et gèrent correctement les entrées invalides
+* **Tests d’intégration** : tester l’interaction des Outils avec des systèmes externes en utilisant à la fois des dépendances réelles et simulées
+* **Tests de sécurité** : valider l’authentification, l’autorisation, l’assainissement des entrées et la limitation de débit
+* **Tests de performance** : vérifier le comportement sous charge, la gestion des délais d’expiration et le nettoyage des ressources
+* **Gestion des erreurs** : s’assurer que les Outils signalent correctement les erreurs via le protocole MCP et nettoient les Ressources

@@ -1,0 +1,474 @@
+<Tab title="Node">
+  ## Requisitos del sistema
+
+  Antes de comenzar, asegúrate de que tu sistema cumpla estos requisitos:
+
+  * Computadora Mac o Windows
+  * Node.js versión 16 o superior instalado
+  * npm (incluido con Node.js)
+
+  ## Configuración del entorno
+
+  Primero, crea un proyecto nuevo de Node.js:
+
+  ```bash
+  # Crear el directorio del proyecto
+  mkdir mcp-client
+  cd mcp-client
+
+  # Inicializar el proyecto de npm
+  npm init -y
+
+  # Instalar dependencias
+  npm install @modelcontextprotocol/sdk @anthropic-ai/sdk dotenv
+  npm install -D typescript @types/node
+
+  # Crear la configuración de TypeScript
+  npx tsc --init
+
+  # Crear los archivos necesarios
+  mkdir src
+  touch src/client.ts
+  touch .env
+  ```
+
+  Actualiza tu `package.json` para agregar la configuración necesaria:
+
+  ```json
+  {
+    "type": "module",
+    "scripts": {
+      "build": "tsc",
+      "start": "node build/client.js"
+    }
+  }
+  ```
+
+  Actualiza tu `tsconfig.json` con la configuración adecuada:
+
+  ```json
+  {
+    "compilerOptions": {
+      "target": "ES2022",
+      "module": "Node16",
+      "moduleResolution": "Node16",
+      "outDir": "./build",
+      "rootDir": "./src",
+      "strict": true,
+      "esModuleInterop": true,
+      "skipLibCheck": true,
+      "forceConsistentCasingInFileNames": true
+    },
+    "include": ["src/**/*"]
+  }
+  ```
+
+  ## Configurar tu clave de API
+
+  Necesitarás una clave de la API de Anthropic desde la [Anthropic Console](https://console.anthropic.com/settings/keys).
+
+  Crea un archivo `.env`:
+
+  ```bash
+  ANTHROPIC_API_KEY=tu_clave_aquí
+  ```
+
+  Añade `.env` a tu `.gitignore`:
+
+  ```bash
+  echo ".env" >> .gitignore
+  ```
+
+  ## Creación del cliente
+
+  Primero, configuremos las importaciones y creemos la clase básica del cliente en `src/client.ts`:
+
+  ```typescript
+  import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+  import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+  import Anthropic from "@anthropic-ai/sdk";
+  import dotenv from "dotenv";
+  import {
+    CallToolResultSchema,
+    ListToolsResultSchema,
+  } from "@modelcontextprotocol/sdk/types.js";
+  import * as readline from "node:readline";
+
+  dotenv.config();
+
+  interface MCPClientConfig {
+    name?: string;
+    version?: string;
+  }
+
+  class MCPClient {
+    private client: Client | null = null;
+    private anthropic: Anthropic;
+    private transport: StdioClientTransport | null = null;
+
+    constructor(config: MCPClientConfig = {}) {
+      this.anthropic = new Anthropic();
+    }
+
+    // Aquí irán los métodos
+  }
+  ```
+
+  ## Gestión de la conexión del servidor
+
+  A continuación, implementa el método para conectarte a un Servidor MCP:
+
+  ```typescript
+  async connectToServer(serverScriptPath: string): Promise<void> {
+      const isPython = serverScriptPath.endsWith(".py");
+      const isJs = serverScriptPath.endsWith(".js");
+
+      if (!isPython && !isJs) {
+        throw new Error("El script del servidor debe ser un archivo .py o .js");
+      }
+
+      const command = isPython ? "python" : "node";
+
+      this.transport = new StdioClientTransport({
+        command,
+        args: [serverScriptPath],
+      });
+
+      this.client = new Client(
+        {
+          name: "mcp-client",
+          version: "1.0.0",
+        },
+        {
+          capabilities: {},
+        }
+      );
+
+      await this.client.connect(this.transport);
+
+      // List available tools
+      const response = await this.client.request(
+        { method: "tools/list" },
+        ListToolsResultSchema
+      );
+
+      console.log(
+        "\nConectado al servidor con herramientas:",
+        response.tools.map((tool: any) => tool.name)
+      );
+    }
+  ```
+
+  ## Lógica de procesamiento de consultas
+
+  Ahora añade la funcionalidad principal para procesar consultas y gestionar llamadas a Herramientas:
+
+  ```typescript
+  async processQuery(query: string): Promise<string> {
+      if (!this.client) {
+        throw new Error("Cliente no conectado");
+      }
+
+      // Inicializa el arreglo de mensajes con la consulta del usuario
+      let messages: Anthropic.MessageParam[] = [
+        {
+          role: "user",
+          content: query,
+        },
+      ];
+
+      // Obtén las herramientas disponibles
+      const toolsResponse = await this.client.request(
+        { method: "tools/list" },
+        ListToolsResultSchema
+      );
+
+      const availableTools = toolsResponse.tools.map((tool: any) => ({
+        name: tool.name,
+        description: tool.description,
+        input_schema: tool.inputSchema,
+      }));
+
+      const finalText: string[] = [];
+      let currentResponse = await this.anthropic.messages.create({
+        model: "claude-3-5-sonnet-20241022",
+        max_tokens: 1000,
+        messages,
+        tools: availableTools,
+      });
+
+      // Process the response and any tool calls
+      while (true) {
+        // Agrega la respuesta de Claude al texto final y a los mensajes
+        for (const content of currentResponse.content) {
+          if (content.type === "text") {
+            finalText.push(content.text);
+          } else if (content.type === "tool_use") {
+            const toolName = content.name;
+            const toolArgs = content.input;
+
+            // Ejecuta la llamada a la herramienta
+            const result = await this.client.request(
+              {
+                method: "tools/call",
+                params: {
+                  name: toolName,
+                  arguments: toolArgs,
+                },
+              },
+              CallToolResultSchema
+            );
+
+            finalText.push(
+              `[Llamando a la herramienta ${toolName} con argumentos ${JSON.stringify(toolArgs)}]`
+            );
+
+            // Agrega la respuesta de Claude (incluido el uso de la herramienta) a los mensajes
+            messages.push({
+              role: "assistant",
+              content: currentResponse.content,
+            });
+
+            // Agrega el resultado de la herramienta a los mensajes
+            messages.push({
+              role: "user",
+              content: [
+                {
+                  type: "tool_result",
+                  tool_use_id: content.id,
+                  content: [
+                    { type: "text", text: JSON.stringify(result.content) },
+                  ],
+                },
+              ],
+            });
+
+            // Obtén la siguiente respuesta de Claude con los resultados de la herramienta
+            currentResponse = await this.anthropic.messages.create({
+              model: "claude-3-5-sonnet-20241022",
+              max_tokens: 1000,
+              messages,
+              tools: availableTools,
+            });
+
+            // Agrega la interpretación de Claude sobre los resultados de la herramienta al texto final
+            if (currentResponse.content[0]?.type === "text") {
+              finalText.push(currentResponse.content[0].text);
+            }
+
+            // Continúa el ciclo para procesar llamadas adicionales a herramientas
+            continue;
+          }
+        }
+
+        // Si llegamos aquí, no hubo llamadas a herramientas en la respuesta
+        break;
+      }
+
+      return finalText.join("\n");
+    }
+  ```
+
+  ## Interfaz de chat interactiva
+
+  Añade el ciclo de chat y la funcionalidad de limpieza:
+
+  ```typescript
+  async chatLoop(): Promise<void> {
+      console.log("\n¡Cliente MCP iniciado!");
+      console.log("Escribe tus consultas o 'quit' para salir.");
+
+      // Uso de readline de Node para la entrada por consola
+      const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout,
+      });
+
+      const askQuestion = () => {
+        rl.question("\nConsulta: ", async (query: string) => {
+          try {
+            if (query.toLowerCase() === "quit") {
+              await this.cleanup();
+              rl.close();
+              return;
+            }
+
+            const response = await this.processQuery(query);
+            console.log("\n" + response);
+            askQuestion();
+          } catch (error) {
+            console.error("\nError:", error);
+            askQuestion();
+          }
+        });
+      };
+
+      askQuestion();
+    }
+
+    async cleanup(): Promise<void> {
+      if (this.transport) {
+        await this.transport.close();
+      }
+    }
+  ```
+
+  ## Punto de entrada principal
+
+  Por último, agrega la lógica de ejecución principal fuera de la clase:
+
+  ```typescript
+  // Ejecución principal
+  async function main() {
+    if (process.argv.length < 3) {
+      console.log("Uso: ts-node client.ts <ruta_al_script_del_servidor>");
+      process.exit(1);
+    }
+
+    const client = new MCPClient();
+    try {
+      await client.connectToServer(process.argv[2]);
+      await client.chatLoop();
+    } catch (error) {
+      console.error("Error:", error);
+      await client.cleanup();
+      process.exit(1);
+    }
+  }
+
+  // Ejecutar main si este es el módulo principal
+  if (import.meta.url === new URL(process.argv[1], "file:").href) {
+    main();
+  }
+
+  export default MCPClient;
+  ```
+
+  ## Ejecutar el cliente
+
+  Para ejecutar tu cliente con cualquier Servidor MCP:
+
+  ```bash
+  # Compila el código TypeScript. ¡Asegúrate de volver a ejecutar esto cada vez que actualices `client.ts`!
+  npm run build
+
+  # Ejecuta el cliente
+  node build/client.js path/to/server.py  # para servidores de Python
+  node build/client.js path/to/server.js  # para servidores de Node.js
+  ```
+
+  El cliente:
+
+  1. Conectar con el servidor especificado
+  2. Listar las herramientas disponibles
+  3. Inicia una sesión de chat interactiva en la que puedes:
+     * Introducir consultas
+     * Ver ejecuciones de Herramientas
+     * Obtener respuestas de Claude
+
+  ## Componentes clave: explicación
+
+  #### 1. Inicialización del Cliente
+
+  * La clase `MCPClient` se inicializa con la gestión de sesiones y clientes de API
+  * Configura el Cliente MCP con capacidades básicas
+  * Configura el cliente de Anthropic para las interacciones con Claude
+
+  #### 2. Conexión con el servidor
+
+  * Compatible con servidores tanto de Python como de Node.js
+  * Valida el tipo de script del servidor
+  * Configura los canales de comunicación adecuados
+  * Enumera las Herramientas disponibles al conectarse
+
+  #### 3. Procesamiento de consultas
+
+  * Mantiene el contexto conversacional
+  * Gestiona las respuestas de Claude y las llamadas a herramientas
+  * Gestiona el flujo de mensajes entre Claude y las Herramientas
+  * Combina los resultados en una respuesta coherente
+
+  #### 4. Interfaz interactiva
+
+  * Ofrece una interfaz de línea de comandos sencilla
+  * Gestiona la entrada del usuario y muestra las respuestas
+  * Incluye gestión básica de errores
+  * Permite una salida ordenada
+
+  #### 5. Gestión de Recursos
+
+  * Limpieza adecuada de recursos
+  * Gestión de errores ante problemas de conexión
+  * Procedimientos de apagado ordenado
+
+  ### Puntos de personalización comunes
+
+  1. **Gestión de Herramientas**
+     * Modificar `processQuery()` para manejar tipos específicos de Herramientas
+     * Agregar manejo de errores personalizado para llamadas de Herramientas
+     * Implementar un formato de respuesta específico de Herramienta
+
+  2. **Procesamiento de respuestas**
+     * Personaliza el formato de los resultados de las Herramientas
+     * Añade filtrado o transformación de respuestas
+     * Implementa un registro personalizado
+
+  3. **Interfaz de usuario**
+     * Agregar una interfaz gráfica o una interfaz web
+     * Implementar una salida de consola avanzada
+     * Agregar historial de comandos o autocompletado
+
+  ### Mejores prácticas
+
+  1. **Gestión de errores**
+     * Envuelve siempre las llamadas a Herramientas en bloques try-catch
+     * Proporciona mensajes de error informativos
+     * Gestiona los problemas de conexión de forma adecuada
+
+  2. **Gestión de recursos**
+     * Usa métodos de limpieza adecuados
+     * Cierra las conexiones cuando termines
+     * Maneja las desconexiones del servidor
+
+  3. **Seguridad**
+     * Guarda las claves de API de forma segura en `.env`
+     * Valida las respuestas del servidor
+     * Ten cuidado con los permisos de las Herramientas
+
+  ### Solución de problemas
+
+  #### Problemas con la ruta del servidor
+
+  * Verifica de nuevo la ruta a tu script de servidor
+  * Usa rutas absolutas si las rutas relativas no funcionan
+  * Para usuarios de Windows, use barras diagonales (/) o barras invertidas escapadas (\\)
+  * Verifica que el archivo del servidor tenga la extensión correcta (.py o .js)
+
+  Ejemplo de uso correcto de la ruta de acceso:
+
+  ```bash
+  # Ruta relativa
+  node build/client.js ./server/weather.js
+
+  # Ruta absoluta
+  node build/client.js /Users/username/projects/mcp-server/weather.js
+
+  # Ruta en Windows (cualquiera de los dos formatos funciona)
+  node build/client.js C:/projects/mcp-server/weather.js
+  node build/client.js C:\\projects\\mcp-server\\weather.js
+  ```
+
+  #### Problemas de conexión
+
+  * Verifica que el script del servidor exista y tenga los permisos adecuados
+  * Comprueba que el script del servidor sea ejecutable
+  * Asegúrate de que las dependencias del script del servidor estén instaladas
+  * Prueba ejecutar el script del servidor directamente para comprobar si hay errores
+
+  #### Problemas al ejecutar Herramientas
+
+  * Revisa los registros del servidor para ver si hay mensajes de error
+  * Verifica que los argumentos de entrada de la Herramienta coincidan con el esquema
+  * Asegúrate de que las dependencias de las herramientas estén disponibles
+  * Agrega registros de depuración para rastrear el flujo de ejecución
+</Tab>

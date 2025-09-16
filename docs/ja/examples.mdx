@@ -1,0 +1,145 @@
+---
+title: サンプルサーバー
+description: "サンプルサーバーと実装の一覧"
+---
+
+このページでは、Model Context Protocol (MCP) の多様なサーバーを紹介し、プロトコルの機能と柔軟性を示します。これらのサーバーにより、Large Language Models (LLMs) はツールやデータソースに安全にアクセスできます。
+
+<div id="reference-implementations">
+  ## リファレンス実装
+</div>
+
+これらの公式リファレンスサーバーは、MCPのコア機能とSDKの使い方を示すものです。
+
+<div id="current-reference-servers">
+  ### 現在のリファレンスサーバー
+</div>
+
+- **[Everything](https://github.com/modelcontextprotocol/servers/tree/main/src/everything)** - プロンプト、リソース、ツールを備えたリファレンス／テストサーバー
+- **[Fetch](https://github.com/modelcontextprotocol/servers/tree/main/src/fetch)** - LLMの効率的な活用のためのWebコンテンツ取得と変換
+- **[Filesystem](https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem)** - アクセス制御を設定可能な安全なファイル操作
+- **[Git](https://github.com/modelcontextprotocol/servers/tree/main/src/git)** - Gitリポジトリの読み取り・検索・操作のためのツール
+- **[Memory](https://github.com/modelcontextprotocol/servers/tree/main/src/memory)** - ナレッジグラフに基づく永続的メモリシステム
+- **[Sequential Thinking](https://github.com/modelcontextprotocol/servers/tree/main/src/sequentialthinking)** - 思考の連なりによる動的かつ内省的な問題解決
+- **[Time](https://github.com/modelcontextprotocol/servers/tree/main/src/time)** - 時刻およびタイムゾーンの変換機能
+
+<div id="archived-servers-historical-reference">
+  ### アーカイブ済みサーバー（過去資料）
+</div>
+
+⚠️ **注意**: 次のサーバーは [servers-archived リポジトリ](https://github.com/modelcontextprotocol/servers-archived) に移動され、現在はメンテナンスされていません。歴史的な参照目的でのみ提供されています。
+
+<div id="data-and-file-systems">
+  #### データとファイルシステム
+</div>
+
+- **[PostgreSQL](https://github.com/modelcontextprotocol/servers-archived/tree/main/src/postgres)** - スキーマ検査機能を備えた読み取り専用のデータベースアクセス
+- **[SQLite](https://github.com/modelcontextprotocol/servers-archived/tree/main/src/sqlite)** - データベース操作およびビジネスインテリジェンス機能
+- **[Google Drive](https://github.com/modelcontextprotocol/servers-archived/tree/main/src/gdrive)** - Google Driveのファイルアクセスおよび検索機能
+
+<div id="development-tools">
+  #### 開発ツール
+</div>
+
+- **[Git](https://github.com/modelcontextprotocol/servers-archived/tree/main/src/git)** - Gitリポジトリの読み取り・検索・操作を行うツール
+- **[GitHub](https://github.com/modelcontextprotocol/servers-archived/tree/main/src/github)** - リポジトリ管理、ファイル操作、GitHub API連携
+- **[GitLab](https://github.com/modelcontextprotocol/servers-archived/tree/main/src/gitlab)** - プロジェクト管理を可能にするGitLab API連携
+- **[Sentry](https://github.com/modelcontextprotocol/servers-archived/tree/main/src/sentry)** - Sentry.io の課題を取得・分析
+
+<div id="web-and-browser-automation">
+  #### Web とブラウザの自動化
+</div>
+
+- **[Brave Search](https://github.com/modelcontextprotocol/servers-archived/tree/main/src/brave-search)** - Brave の Search API を用いたウェブおよびローカル検索
+- **[Puppeteer](https://github.com/modelcontextprotocol/servers-archived/tree/main/src/puppeteer)** - ブラウザ自動化とウェブスクレイピング機能
+
+<div id="productivity-and-communication">
+  #### 生産性とコミュニケーション
+</div>
+
+- **[Slack](https://github.com/modelcontextprotocol/servers-archived/tree/main/src/slack)** - チャンネル管理とメッセージ機能
+- **[Google Maps](https://github.com/modelcontextprotocol/servers-archived/tree/main/src/google-maps)** - 位置情報サービス、経路案内、スポットの詳細
+
+<div id="ai-and-specialized-tools">
+  #### AI と特化型ツール
+</div>
+
+- **[EverArt](https://github.com/modelcontextprotocol/servers-archived/tree/main/src/everart)** - 複数のモデルを用いた AI 画像生成
+- **[AWS KB Retrieval](https://github.com/modelcontextprotocol/servers-archived/tree/main/src/aws-kb-retrieval-server)** - Bedrock Agent Runtime を使用した AWS Knowledge Base からのリトリーバル
+
+<div id="official-integrations">
+  ## 公式インテグレーション
+</div>
+
+各プラットフォーム向けに企業が保守しているMCPサーバーの一覧は、[MCP Servers リポジトリ（Official Integrations セクション）](https://github.com/modelcontextprotocol/servers?tab=readme-ov-file#%EF%B8%8F-official-integrations)をご覧ください。
+
+<div id="community-implementations">
+  ## コミュニティ実装
+</div>
+
+コミュニティメンバーが保守しているMCPサーバーの一覧は、[MCP Servers リポジトリ（Community セクション）](https://github.com/modelcontextprotocol/servers?tab=readme-ov-file#-community-servers)をご覧ください。
+
+<div id="getting-started">
+  ## はじめに
+</div>
+
+<div id="using-reference-servers">
+  ### リファレンスサーバーの利用
+</div>
+
+TypeScript ベースのサーバーは `npx` で直接実行できます:
+
+```bash
+npx -y @modelcontextprotocol/server-memory
+```
+
+Python ベースのサーバーは `uvx`（推奨）または `pip` で利用できます:
+
+```bash
+# uvx を使用
+uvx mcp-server-git
+
+# pip を使用
+pip install mcp-server-git
+python -m mcp_server_git
+```
+
+<div id="configuring-with-claude">
+  ### Claudeでの設定
+</div>
+
+ClaudeでMCPサーバーを利用するには、設定に次の内容を追加します：
+
+```json
+{
+  "mcpServers": {
+    "memory": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"]
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/path/to/allowed/files"
+      ]
+    },
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "<YOUR_TOKEN>"
+      }
+    }
+  }
+}
+```
+
+<div id="additional-resources">
+  ## 追加のリソース
+</div>
+
+[MCP Servers Repository（Resources セクション）](https://github.com/modelcontextprotocol/servers?tab=readme-ov-file#-resources)では、MCP に関連するその他のリソースやプロジェクトのコレクションを参照できます。
+
+MCP コミュニティと交流するには、[GitHub Discussions](https://github.com/orgs/modelcontextprotocol/discussions)をご覧ください。

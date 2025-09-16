@@ -1,0 +1,91 @@
+---
+title: "Raíces"
+description: "Entender las Raíces en MCP"
+---
+
+Las Raíces son un concepto de MCP que define los límites donde los servidores pueden operar. Ofrecen una manera para que los clientes informen a los servidores sobre los Recursos relevantes y sus ubicaciones.
+
+<div id="what-are-roots">
+  ## ¿Qué son las Raíces?
+</div>
+
+Una raíz es un URI que un cliente sugiere como enfoque para un servidor. Cuando un cliente se conecta a un servidor, declara con qué raíces debe trabajar el servidor. Aunque se usan principalmente para rutas del sistema de archivos, las raíces pueden ser cualquier URI válido, incluidas las URL HTTP.
+
+Por ejemplo, las raíces podrían ser:
+
+```
+file:///home/user/projects/myapp
+https://api.example.com/v1
+```
+
+<div id="why-use-roots">
+  ## ¿Por qué usar Raíces?
+</div>
+
+Las Raíces cumplen varios propósitos importantes:
+
+1. **Guía**: Informan a los servidores sobre los recursos y ubicaciones relevantes
+2. **Claridad**: Las Raíces dejan claro qué recursos forman parte de tu espacio de trabajo
+3. **Organización**: Varias Raíces te permiten trabajar con diferentes recursos simultáneamente
+
+<div id="how-roots-work">
+  ## Cómo funcionan las Raíces
+</div>
+
+Cuando un cliente admite Raíces, este:
+
+1. Declara la capacidad `roots` durante la conexión
+2. Proporciona una lista de Raíces sugeridas al servidor
+3. Notifica al servidor cuando las Raíces cambian (si es compatible)
+
+Aunque las Raíces son informativas y no se aplican estrictamente, los servidores deberían:
+
+1. Respetar las Raíces proporcionadas
+2. Utilizar los URI de raíz para localizar y acceder a Recursos
+3. Priorizar las operaciones dentro de los límites de las Raíces
+
+<div id="common-use-cases">
+  ## Casos de uso comunes
+</div>
+
+Las Raíces se usan comúnmente para definir:
+
+- Directorios de proyectos
+- Ubicaciones de repositorios
+- Puntos de acceso de API
+- Ubicaciones de configuración
+- Límites de Recursos
+
+<div id="best-practices">
+  ## Mejores prácticas
+</div>
+
+Al trabajar con Raíces:
+
+1. Sugiere solo los Recursos necesarios
+2. Usa nombres claros y descriptivos para las Raíces
+3. Supervisa la accesibilidad de las Raíces
+4. Gestiona los cambios en las Raíces con cuidado
+
+<div id="example">
+  ## Ejemplo
+</div>
+
+Así es como un cliente MCP típico podría exponer raíces:
+
+```json
+{
+  "roots": [
+    {
+      "uri": "file:///home/user/projects/frontend",
+      "name": "Repositorio de frontend"
+    },
+    {
+      "uri": "https://api.example.com/v1",
+      "name": "Punto de acceso de API"
+    }
+  ]
+}
+```
+
+Esta configuración sugiere que el servidor se centre tanto en un repositorio local como en un punto de acceso de API, manteniéndolos lógicamente separados.

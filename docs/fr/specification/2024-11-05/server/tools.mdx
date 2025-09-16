@@ -1,0 +1,311 @@
+---
+title: Outils
+type: docs
+weight: 40
+---
+
+<Info>**Révision du protocole** : 2024-11-05</Info>
+
+Le Protocole de contexte de modèle (MCP) permet aux serveurs d’exposer des outils que les modèles de langage peuvent invoquer. Les outils permettent aux modèles d’interagir avec des systèmes externes, par exemple en interrogeant des bases de données, en appelant des API ou en effectuant des calculs. Chaque outil est identifié de façon unique par un nom et inclut des métadonnées décrivant son schéma.
+
+<div id="user-interaction-model">
+  ## Modèle d'interaction utilisateur
+</div>
+
+Les Outils dans le Protocole de contexte de modèle (MCP) sont conçus pour être **contrôlés par le modèle**, ce qui signifie que le modèle de langage peut
+découvrir et appeler des outils automatiquement en fonction de sa compréhension contextuelle et des
+invites de l’utilisateur.
+
+Cependant, les implémentations sont libres d’exposer des outils via n’importe quel modèle d’interface qui
+répond à leurs besoins—le protocole en lui-même n’impose aucun modèle d’interaction
+utilisateur spécifique.
+
+<Warning>
+  Pour des raisons de confiance, de sûreté et de sécurité, il **FAUT** toujours
+  qu’un humain reste dans la boucle, avec la possibilité de refuser l’appel d’outils.
+
+  Les applications **DOIVENT** :
+
+  * Fournir une interface utilisateur indiquant clairement quels outils sont exposés au modèle d’IA
+  * Afficher des indicateurs visuels clairs lorsque des outils sont appelés
+  * Présenter des invites de confirmation à l’utilisateur pour les opérations, afin de garantir la présence d’un humain
+    dans la boucle
+</Warning>
+
+<div id="capabilities">
+  ## Capacités
+</div>
+
+Les serveurs qui prennent en charge les Outils **DOIVENT** déclarer la capacité `tools` :
+
+```json
+{
+  "capabilities": {
+    "tools": {
+      "listChanged": true
+    }
+  }
+}
+```
+
+`listChanged` indique si le serveur émettra des notifications lorsque la liste des Outils disponibles change.
+
+<div id="protocol-messages">
+  ## Messages du protocole
+</div>
+
+<div id="listing-tools">
+  ### Répertorier les Outils
+</div>
+
+Pour découvrir les outils disponibles, les clients envoient une requête `tools/list`. Cette opération prend en charge la
+[pagination](/fr/specification/2024-11-05/server/utilities/pagination).
+
+**Requête :**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/list",
+  "params": {
+    "cursor": "optional-cursor-value"
+  }
+}
+```
+
+**Réponse :**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "tools": [
+      {
+        "name": "get_weather",
+        "description": "Obtenir la météo actuelle pour un lieu",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "location": {
+              "type": "string",
+              "description": "Nom de ville ou code postal"
+            }
+          },
+          "required": ["location"]
+        }
+      }
+    ],
+    "nextCursor": "next-page-cursor"
+  }
+}
+```
+
+<div id="calling-tools">
+  ### Appel d’outils
+</div>
+
+Pour appeler un outil, les clients envoient une requête `tools/call` :
+
+**Requête :**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/call",
+  "params": {
+    "name": "get_weather",
+    "arguments": {
+      "location": "New York"
+    }
+  }
+}
+```
+
+**Réponse :**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Météo actuelle à New York :\nTempérature : 72 °F\nConditions : Partiellement nuageux"
+      }
+    ],
+    "isError": false
+  }
+}
+```
+
+<div id="list-changed-notification">
+  ### Notification de modification de la liste
+</div>
+
+Lorsque la liste des outils disponibles change, les serveurs qui ont déclaré la capacité `listChanged` **DEVRAIENT** envoyer une notification :
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/tools/list_changed"
+}
+```
+
+<div id="message-flow">
+  ## Flux des messages
+</div>
+
+```mermaid
+sequenceDiagram
+    participant LLM
+    participant Client
+    participant Server
+
+    Note over Client,Server: Découverte
+    Client->>Server: tools/list
+    Server-->>Client: Liste des outils
+
+    Note over Client,LLM: Sélection de l’outil
+    LLM->>Client: Sélectionner l’outil à utiliser
+
+    Note over Client,Server: Appel
+    Client->>Server: tools/call
+    Server-->>Client: Résultat de l’outil
+    Client->>LLM: Traiter le résultat
+
+    Note over Client,Server: Mises à jour
+    Server--)Client: tools/list_changed
+    Client->>Server: tools/list
+    Server-->>Client: Outils mis à jour
+```
+
+<div id="data-types">
+  ## Types de données
+</div>
+
+<div id="tool">
+  ### Outil
+</div>
+
+Une définition d’outil comprend :
+
+* `name` : Identifiant unique de l’outil
+* `description` : Description compréhensible par l’humain de sa fonctionnalité
+* `inputSchema` : Schéma JSON définissant les paramètres attendus
+
+<div id="tool-result">
+  ### Résultat d’outil
+</div>
+
+Les résultats d’outil peuvent contenir plusieurs éléments de contenu de différents types :
+
+<div id="text-content">
+  #### Contenu textuel
+</div>
+
+```json
+{
+  "type": "text",
+  "text": "Texte du résultat de l’outil"
+}
+```
+
+<div id="image-content">
+  #### Contenu de l’image
+</div>
+
+```json
+{
+  "type": "image",
+  "data": "base64-encoded-data",
+  "mimeType": "image/png"
+}
+```
+
+<div id="embedded-resources">
+  #### Ressources intégrées
+</div>
+
+Les [Ressources](/fr/specification/2024-11-05/server/resources) **PEUVENT** être
+intégrées afin de fournir un contexte ou des données supplémentaires, derrière un URI auquel le client peut s’abonner
+ou qu’il pourra à nouveau récupérer ultérieurement :
+
+```json
+{
+  "type": "resource",
+  "resource": {
+    "uri": "resource://example",
+    "mimeType": "text/plain",
+    "text": "Resource content"
+  }
+}
+```
+
+<div id="error-handling">
+  ## Gestion des erreurs
+</div>
+
+Les Outils utilisent deux mécanismes de signalement des erreurs :
+
+1. **Erreurs de protocole** : erreurs JSON-RPC standard pour des problèmes tels que :
+   * Outils inconnus
+   * Arguments invalides
+   * Erreurs serveur
+
+2. **Erreurs d’exécution d’outil** : signalées dans les résultats d’outil avec `isError: true` :
+   * Pannes d’API
+   * Données d’entrée invalides
+   * Erreurs de logique métier
+
+Exemple d’erreur de protocole :
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "error": {
+    "code": -32602,
+    "message": "Unknown tool: invalid_tool_name"
+  }
+}
+```
+
+Exemple d’erreur d’exécution d’outil :
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 4,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Failed to fetch weather data: API rate limit exceeded"
+      }
+    ],
+    "isError": true
+  }
+}
+```
+
+<div id="security-considerations">
+  ## Considérations de sécurité
+</div>
+
+1. Les serveurs **DOIVENT** :
+   * Valider toutes les entrées des Outils
+   * Mettre en place des contrôles d’accès appropriés
+   * Limiter le débit des appels aux Outils
+   * Assainir les sorties des Outils
+
+2. Les clients **DEVRAIENT** :
+   * Demander la confirmation de l’utilisateur pour les opérations sensibles
+   * Afficher les entrées des Outils à l’utilisateur avant d’appeler le serveur, afin d’éviter toute exfiltration de données
+     malveillante ou accidentelle
+   * Valider les résultats des Outils avant de les transmettre au LLM
+   * Mettre en place des délais d’expiration pour les appels aux Outils
+   * Consigner l’usage des Outils à des fins d’audit

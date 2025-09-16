@@ -1,0 +1,76 @@
+---
+title: Messages
+type: docs
+weight: 20
+---
+
+<Info>**Révision du protocole** : 2024-11-05</Info>
+
+Tous les messages du MCP **DOIVENT** respecter la spécification
+[JSON-RPC 2.0](https://www.jsonrpc.org/specification). Le protocole définit
+trois types de messages :
+
+<div id="requests">
+  ## Requêtes
+</div>
+
+Les requêtes sont envoyées du client au serveur ou inversement.
+
+```typescript
+{
+  jsonrpc: "2.0";
+  id: string | number;
+  method: string;
+  params?: {
+    [key: string]: unknown;
+  };
+}
+```
+
+- Les requêtes **DOIVENT** inclure un identifiant de type chaîne ou entier.
+- Contrairement à JSON-RPC de base, l’identifiant **NE DOIT PAS** être `null`.
+- L’identifiant de la requête **NE DOIT PAS** avoir déjà été utilisé par l’émetteur au cours de la même session.
+
+<div id="responses">
+  ## Réponses
+</div>
+
+Les réponses sont envoyées en réponse aux requêtes.
+
+```typescript
+{
+  jsonrpc: "2.0";
+  id: string | number;
+  result?: {
+    [key: string]: unknown;
+  }
+  error?: {
+    code: number;
+    message: string;
+    data?: unknown;
+  }
+}
+```
+
+- Les réponses **DOIVENT** inclure le même ID que la requête correspondante.
+- Un `result` ou une `error` **DOIT** être défini. Une réponse **NE DOIT PAS** définir les deux.
+- Les codes d’erreur **DOIVENT** être des entiers.
+
+<div id="notifications">
+  ## Notifications
+</div>
+
+Les notifications sont envoyées du client au serveur ou inversement. Elles n’attendent pas de
+réponse.
+
+```typescript
+{
+  jsonrpc: "2.0";
+  method: string;
+  params?: {
+    [key: string]: unknown;
+  };
+}
+```
+
+- Les notifications **NE DOIVENT PAS** inclure d’identifiant.

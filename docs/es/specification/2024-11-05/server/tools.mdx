@@ -1,0 +1,309 @@
+---
+title: Herramientas
+type: docs
+weight: 40
+---
+
+<Info>**Revisión del protocolo**: 2024-11-05</Info>
+
+El Protocolo de Contexto de Modelo (MCP) permite que los servidores expongan Herramientas que puedan ser invocadas por modelos de lenguaje. Las Herramientas permiten que los modelos interactúen con sistemas externos, como consultar bases de datos, llamar a API o realizar cálculos. Cada Herramienta se identifica de manera única por un nombre e incluye metadatos que describen su esquema.
+
+<div id="user-interaction-model">
+  ## Modelo de interacción con el usuario
+</div>
+
+Las Herramientas en el MCP están diseñadas para estar **controladas por el modelo**, lo que significa que el modelo de lenguaje puede
+descubrir e invocar herramientas automáticamente según su comprensión contextual y las
+indicaciones del usuario.
+
+Sin embargo, las implementaciones pueden exponer herramientas mediante cualquier patrón de interfaz que
+se ajuste a sus necesidades; el protocolo en sí no impone ningún modelo específico de
+interacción con el usuario.
+
+<Warning>
+  Por motivos de confianza y seguridad, **DEBERÍA** haber siempre
+  una persona en el ciclo con la capacidad de denegar invocaciones de herramientas.
+
+  Las aplicaciones **DEBERÍAN**:
+
+  * Proporcionar una interfaz que deje claro qué herramientas se exponen al modelo de IA
+  * Insertar indicadores visuales claros cuando se invoquen herramientas
+  * Presentar indicaciones de confirmación al usuario para las operaciones, a fin de garantizar que haya una persona en el
+    ciclo
+</Warning>
+
+<div id="capabilities">
+  ## Capacidades
+</div>
+
+Los servidores que admiten Herramientas **DEBEN** declarar la capacidad `tools`:
+
+```json
+{
+  "capabilities": {
+    "tools": {
+      "listChanged": true
+    }
+  }
+}
+```
+
+`listChanged` indica si el servidor emitirá notificaciones cuando cambie la lista de Herramientas disponibles.
+
+<div id="protocol-messages">
+  ## Mensajes del protocolo
+</div>
+
+<div id="listing-tools">
+  ### Listar Herramientas
+</div>
+
+Para descubrir las Herramientas disponibles, los clientes envían una solicitud `tools/list`. Esta operación admite
+[paginación](/es/specification/2024-11-05/server/utilities/pagination).
+
+**Solicitud:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/list",
+  "params": {
+    "cursor": "valor-de-cursor-opcional"
+  }
+}
+```
+
+**Respuesta:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "tools": [
+      {
+        "name": "get_weather",
+        "description": "Obtener la información meteorológica actual de una ubicación",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "location": {
+              "type": "string",
+              "description": "Nombre de la ciudad o código postal"
+            }
+          },
+          "required": ["location"]
+        }
+      }
+    ],
+    "nextCursor": "cursor-de-siguiente-página"
+  }
+}
+```
+
+<div id="calling-tools">
+  ### Ejecución de Herramientas
+</div>
+
+Para invocar una herramienta, los clientes envían una solicitud `tools/call`:
+
+**Solicitud:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/call",
+  "params": {
+    "name": "get_weather",
+    "arguments": {
+      "location": "New York"
+    }
+  }
+}
+```
+
+**Respuesta:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Clima actual en New York:\nTemperatura: 72°F\nCondiciones: Parcialmente nublado"
+      }
+    ],
+    "isError": false
+  }
+}
+```
+
+<div id="list-changed-notification">
+  ### Notificación de cambio en la lista
+</div>
+
+Cuando cambie la lista de Herramientas disponibles, los servidores que hayan declarado la capacidad `listChanged` **DEBERÍAN** enviar una notificación:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/tools/list_changed"
+}
+```
+
+<div id="message-flow">
+  ## Flujo de mensajes
+</div>
+
+```mermaid
+sequenceDiagram
+    participant LLM
+    participant Client
+    participant Server
+
+    Note over Client,Server: Descubrimiento
+    Client->>Server: tools/list
+    Server-->>Client: Lista de herramientas
+
+    Note over Client,LLM: Selección de herramientas
+    LLM->>Client: Seleccionar la herramienta a usar
+
+    Note over Client,Server: Invocación
+    Client->>Server: tools/call
+    Server-->>Client: Resultado de la herramienta
+    Client->>LLM: Procesar el resultado
+
+    Note over Client,Server: Actualizaciones
+    Server--)Client: tools/list_changed
+    Client->>Server: tools/list
+    Server-->>Client: Herramientas actualizadas
+```
+
+<div id="data-types">
+  ## Tipos de datos
+</div>
+
+<div id="tool">
+  ### Herramienta
+</div>
+
+Una definición de herramienta incluye:
+
+* `name`: Identificador único de la herramienta
+* `description`: Descripción de la funcionalidad en lenguaje natural
+* `inputSchema`: JSON Schema que define los parámetros esperados
+
+<div id="tool-result">
+  ### Resultado de la herramienta
+</div>
+
+Los resultados de la herramienta pueden contener varios elementos de contenido de distintos tipos:
+
+<div id="text-content">
+  #### Contenido de texto
+</div>
+
+```json
+{
+  "type": "text",
+  "text": "Texto del resultado de la herramienta"
+}
+```
+
+<div id="image-content">
+  #### Contenido de la imagen
+</div>
+
+```json
+{
+  "type": "image",
+  "data": "base64-encoded-data",
+  "mimeType": "image/png"
+}
+```
+
+<div id="embedded-resources">
+  #### Recursos integrados
+</div>
+
+[Recursos](/es/specification/2024-11-05/server/resources) **PUEDEN** integrarse para proporcionar contexto o datos adicionales, detrás de un URI al que el cliente pueda suscribirse o que pueda volver a solicitar más adelante:
+
+```json
+{
+  "type": "resource",
+  "resource": {
+    "uri": "resource://example",
+    "mimeType": "text/plain",
+    "text": "Resource content"
+  }
+}
+```
+
+<div id="error-handling">
+  ## Manejo de errores
+</div>
+
+Las Herramientas utilizan dos mecanismos para reportar errores:
+
+1. **Errores de protocolo**: Errores estándar de JSON-RPC para problemas como:
+   * Herramientas desconocidas
+   * Argumentos no válidos
+   * Errores del servidor
+
+2. **Errores de ejecución de herramientas**: Informados en los resultados de la herramienta con `isError: true`:
+   * Fallas de API
+   * Datos de entrada no válidos
+   * Errores de lógica empresarial
+
+Ejemplo de error de protocolo:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "error": {
+    "code": -32602,
+    "message": "Unknown tool: invalid_tool_name"
+  }
+}
+```
+
+Ejemplo de error de ejecución de la herramienta:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 4,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Failed to fetch weather data: API rate limit exceeded"
+      }
+    ],
+    "isError": true
+  }
+}
+```
+
+<div id="security-considerations">
+  ## Consideraciones de seguridad
+</div>
+
+1. Los servidores **DEBEN**:
+   * Validar todas las entradas de las Herramientas
+   * Implementar controles de acceso adecuados
+   * Limitar la frecuencia de invocación de Herramientas
+   * Depurar/sanitizar las salidas de las Herramientas
+
+2. Los clientes **DEBERÍAN**:
+   * Solicitar confirmación del usuario para operaciones confidenciales
+   * Mostrar las entradas de las Herramientas al usuario antes de llamar al servidor, para evitar la exfiltración de datos maliciosa o
+     accidental
+   * Validar los resultados de las Herramientas antes de pasarlos al LLM
+   * Implementar tiempos de espera para las llamadas a Herramientas
+   * Registrar el uso de las Herramientas para fines de auditoría

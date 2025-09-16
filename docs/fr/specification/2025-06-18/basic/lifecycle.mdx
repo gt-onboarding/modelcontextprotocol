@@ -1,0 +1,250 @@
+---
+title: Cycle de vie
+---
+
+<div id="enable-section-numbers" />
+
+<Info>**Révision du protocole** : 2025-06-18</Info>
+
+Le Protocole de contexte de modèle (MCP) définit un cycle de vie rigoureux pour les connexions client-serveur, garantissant une négociation adéquate des capacités et une gestion correcte de l’état.
+
+1. **Initialisation** : Négociation des capacités et accord sur la version du protocole
+2. **Fonctionnement** : Communication normale du protocole
+3. **Arrêt** : Fin de connexion en douceur
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Server
+
+    Note over Client,Server: Phase d’initialisation
+    activate Client
+    Client->>+Server: initialize request
+    Server-->>Client: initialize response
+    Client--)Server: initialized notification
+
+    Note over Client,Server: Phase de fonctionnement
+    rect rgb(200, 220, 250)
+        note over Client,Server: Opérations normales du protocole
+    end
+
+    Note over Client,Server: Arrêt
+    Client--)-Server: Déconnexion
+    deactivate Server
+    Note over Client,Server: Connexion fermée
+```
+
+<div id="lifecycle-phases">
+  ## Phases du cycle de vie
+</div>
+
+<div id="initialization">
+  ### Initialisation
+</div>
+
+La phase d’initialisation DOIT être la première interaction entre le client et le serveur.
+Pendant cette phase, le client et le serveur :
+
+* Établissent la compatibilité des versions du protocole
+* Échangent et négocient les capacités
+* Partagent des détails d’implémentation
+
+Le client DOIT initier cette phase en envoyant une requête `initialize` contenant :
+
+* Version du protocole prise en charge
+* Capacités du client
+* Informations sur l’implémentation du client
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "initialize",
+  "params": {
+    "protocolVersion": "2024-11-05",
+    "capabilities": {
+      "roots": {
+        "listChanged": true
+      },
+      "sampling": {},
+      "elicitation": {}
+    },
+    "clientInfo": {
+      "name": "ExampleClient",
+      "title": "Example Client Display Name",
+      "version": "1.0.0"
+    }
+  }
+}
+```
+
+Le serveur DOIT répondre avec ses propres capacités et informations :
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "protocolVersion": "2024-11-05",
+    "capabilities": {
+      "logging": {},
+      "prompts": {
+        "listChanged": true
+      },
+      "resources": {
+        "subscribe": true,
+        "listChanged": true
+      },
+      "tools": {
+        "listChanged": true
+      }
+    },
+    "serverInfo": {
+      "name": "ExampleServer",
+      "title": "Example Server Display Name",
+      "version": "1.0.0"
+    },
+    "instructions": "Instructions optionnelles pour le client"
+  }
+}
+```
+
+Après une initialisation réussie, le client DOIT envoyer une notification `initialized`
+pour indiquer qu’il est prêt à commencer les opérations normales :
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/initialized"
+}
+```
+
+* Le client NE DOIT PAS envoyer d’autres requêtes que des
+  [pings](/fr/specification/2025-06-18/basic/utilities/ping) avant que le serveur n’ait répondu à la requête
+  `initialize`.
+* Le serveur NE DOIT PAS envoyer d’autres requêtes que des
+  [pings](/fr/specification/2025-06-18/basic/utilities/ping) et
+  [journaux](/fr/specification/2025-06-18/server/utilities/logging) avant de recevoir la notification
+  `initialized`.
+
+<div id="version-negotiation">
+  #### Négociation de version
+</div>
+
+Dans la requête `initialize`, le client DOIT envoyer une version du protocole qu’il prend en charge.
+Il DEVRAIT s’agir de la dernière version prise en charge par le client.
+
+Si le serveur prend en charge la version de protocole demandée, il DOIT répondre avec la même
+version. Sinon, le serveur DOIT répondre avec une autre version du protocole qu’il
+prend en charge. Il DEVRAIT s’agir de la dernière version prise en charge par le serveur.
+
+Si le client ne prend pas en charge la version indiquée dans la réponse du serveur, il DEVRAIT
+se déconnecter.
+
+<Note>
+  Si vous utilisez HTTP, le client DOIT inclure l’en-tête HTTP `MCP-Protocol-Version: <protocol-version>` dans toutes les requêtes suivantes adressées au
+  serveur MCP.
+  Pour plus de détails, voir [la section En-tête de version du protocole dans Transports](/fr/specification/2025-06-18/basic/transports#protocol-version-header).
+</Note>
+
+<div id="capability-negotiation">
+  #### Négociation des capacités
+</div>
+
+Les capacités du client et du serveur déterminent quelles fonctionnalités optionnelles du protocole seront disponibles durant la session.
+
+Capacités clés :
+
+| Catégorie | Capacité      | Description                                                                                       |
+| --------- | -------------- | ------------------------------------------------------------------------------------------------- |
+| Client    | `roots`        | Possibilité de fournir des [Racines](/fr/specification/2025-06-18/client/roots) du système de fichiers |
+| Client    | `sampling`     | Prise en charge des requêtes d’[Échantillonnage](/fr/specification/2025-06-18/client/sampling) LLM   |
+| Client    | `elicitation`  | Prise en charge des requêtes d’[Élicitation](/fr/specification/2025-06-18/client/elicitation) par le serveur |
+| Client    | `experimental` | Décrit la prise en charge de fonctionnalités expérimentales non standard                         |
+| Serveur   | `prompts`      | Propose des [Invites](/fr/specification/2025-06-18/server/prompts)                                   |
+| Serveur   | `resources`    | Fournit des [Ressources](/fr/specification/2025-06-18/server/resources) lisibles                    |
+| Serveur   | `tools`        | Expose des [Outils](/fr/specification/2025-06-18/server/tools) invoquables                          |
+| Serveur   | `logging`      | Émet des [messages de journal](/fr/specification/2025-06-18/server/utilities/logging) structurés     |
+| Serveur   | `completions`  | Prend en charge l’[autocomplétion](/fr/specification/2025-06-18/server/utilities/completion) des arguments |
+| Serveur   | `experimental` | Décrit la prise en charge de fonctionnalités expérimentales non standard                         |
+
+Les objets de capacité peuvent décrire des sous-capacités telles que :
+
+* `listChanged` : prise en charge des notifications de modification de liste (pour les Invites, Ressources et Outils)
+* `subscribe` : prise en charge de l’abonnement aux modifications d’éléments individuels (Ressources uniquement)
+
+<div id="operation">
+  ### Opération
+</div>
+
+Pendant la phase d’opération, le client et le serveur échangent des messages conformément aux
+capacités négociées.
+
+Les deux parties DOIVENT :
+
+* Respecter la version du protocole négociée
+* N’utiliser que les capacités effectivement négociées
+
+<div id="shutdown">
+  ### Arrêt
+</div>
+
+Pendant la phase d’arrêt, l’une des parties (généralement le client) met fin proprement à la connexion du protocole. Aucun message d’arrêt spécifique n’est défini ; il faut plutôt utiliser le mécanisme de transport sous-jacent pour signaler la terminaison de la connexion :
+
+<div id="stdio">
+  #### stdio
+</div>
+
+Pour le [transport](/fr/specification/2025-06-18/basic/transports) stdio, le client **DOIT** initier
+l’arrêt en :
+
+1. Fermant d’abord le flux d’entrée vers le processus enfant (le serveur)
+2. Attendant que le serveur se termine, ou en envoyant `SIGTERM` si le serveur ne se termine pas
+   dans un délai raisonnable
+3. Envoyant `SIGKILL` si le serveur ne se termine pas dans un délai raisonnable après `SIGTERM`
+
+Le serveur **PEUT** initier l’arrêt en fermant son flux de sortie vers le client et
+en quittant.
+
+<div id="http">
+  #### HTTP
+</div>
+
+Pour les [transports](/fr/specification/2025-06-18/basic/transports) HTTP, l’arrêt est signalé par la fermeture de la ou des connexions HTTP associées.
+
+<div id="timeouts">
+  ## Délais d’expiration
+</div>
+
+Les implémentations **DEVRAIENT** définir des délais d’expiration pour toutes les requêtes envoyées, afin d’éviter les connexions bloquées et l’épuisement des ressources. Lorsque la requête n’a pas reçu de réponse de succès ou d’erreur dans le délai imparti, l’expéditeur **DEVRAIT** émettre une [notification d’annulation](/fr/specification/2025-06-18/basic/utilities/cancellation) pour cette requête et cesser d’attendre une réponse.
+
+Les SDK et autres intergiciels **DEVRAIENT** permettre de configurer ces délais d’expiration au cas par cas, pour chaque requête.
+
+Les implémentations **PEUVENT** choisir de réinitialiser le compteur du délai d’expiration à la réception d’une [notification de progression](/fr/specification/2025-06-18/basic/utilities/progress) correspondant à la requête, car cela indique qu’un travail est effectivement en cours. Cependant, les implémentations **DEVRAIENT** toujours imposer un délai d’expiration maximal, indépendamment des notifications de progression, afin de limiter l’impact d’un client ou d’un serveur défaillant.
+
+<div id="error-handling">
+  ## Gestion des erreurs
+</div>
+
+Les implémentations **DEVRAIENT** être prêtes à gérer les cas d’erreur suivants :
+
+* Incompatibilité de version du protocole
+* Échec de la négociation des capacités requises
+* [Expiration](#timeouts) de requête
+
+Exemple d’erreur à l’initialisation :
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "error": {
+    "code": -32602,
+    "message": "Unsupported protocol version",
+    "data": {
+      "supported": ["2024-11-05"],
+      "requested": "1.0.0"
+    }
+  }
+}
+```

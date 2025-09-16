@@ -1,0 +1,739 @@
+---
+title: "トランスポート"
+description: "MCPの通信メカニズムを学ぶ"
+---
+
+Model Context Protocol（MCP）におけるトランスポートは、クライアントとサーバー間の通信の土台となる仕組みです。メッセージの送受信をどのように行うか、その根幹の処理を担います。
+
+<div id="message-format">
+  ## メッセージ形式
+</div>
+
+MCPはワイヤフォーマットとして[JSON-RPC](https://www.jsonrpc.org/) 2.0を使用します。トランスポート層は、送信用にMCPプロトコルのメッセージをJSON-RPC形式へ変換し、受信したJSON-RPCメッセージをMCPプロトコルのメッセージに戻す役割を担います。
+
+使用されるJSON-RPCメッセージは3種類あります：
+
+<div id="requests">
+  ### リクエスト
+</div>
+
+```typescript
+{
+  jsonrpc: "2.0",
+  id: number | string,
+  method: string,
+  params?: object
+}
+```
+
+<div id="responses">
+  ### レスポンス
+</div>
+
+```typescript
+{
+  jsonrpc: "2.0",
+  id: number | string,
+  result?: object,
+  error?: {
+    code: number,
+    message: string,
+    data?: unknown
+  }
+}
+```
+
+<div id="notifications">
+  ### 通知
+</div>
+
+```typescript
+{
+  jsonrpc: "2.0",
+  method: string,
+  params?: object
+}
+```
+
+<div id="built-in-transport-types">
+  ## 組み込みのトランスポートの種類
+</div>
+
+MCPは現在、標準のトランスポートを2種類定義しています。
+
+<div id="standard-inputoutput-stdio">
+  ### 標準入出力（stdio）
+</div>
+
+stdio のトランスポートは、標準入力・標準出力ストリーム経由の通信を可能にします。ローカル統合やコマンドラインツールで特に有用です。
+
+次のような場合は stdio を使用してください:
+
+- コマンドラインツールを構築する場合
+- ローカル統合を実装する場合
+- シンプルなプロセス間通信が必要な場合
+- シェルスクリプトを扱う場合
+
+<div id="server">
+  #### サーバ
+</div>
+
+<CodeGroup>
+
+```typescript TypeScript
+const server = new Server(
+  {
+    name: "example-server",
+    version: "1.0.0",
+  },
+  {
+    capabilities: {},
+  },
+);
+
+const transport = new StdioServerTransport();
+await server.connect(transport);
+```
+
+```python Python
+app = Server("example-server")
+
+async with stdio_server() as streams:
+    await app.run(
+        streams[0],
+        streams[1],
+        app.create_initialization_options()
+    )
+```
+
+</CodeGroup>
+
+<div id="client">
+  #### クライアント
+</div>
+
+<CodeGroup>
+
+```typescript TypeScript
+const client = new Client(
+  {
+    name: "example-client",
+    version: "1.0.0",
+  },
+  {
+    capabilities: {},
+  },
+);
+
+const transport = new StdioClientTransport({
+  command: "./server",
+  args: ["--option", "value"],
+});
+await client.connect(transport);
+```
+
+```python Python
+params = StdioServerParameters(
+    command="./server",
+    args=["--option", "value"]
+)
+
+async with stdio_client(params) as streams:
+    async with ClientSession(streams[0], streams[1]) as session:
+        await session.initialize()
+```
+
+</CodeGroup>
+
+<div id="streamable-http">
+  ### ストリーム対応HTTP
+</div>
+
+ストリーム対応HTTPのトランスポートは、クライアントからサーバーへの通信にHTTP POSTリクエストを使用し、サーバーからクライアントへの通信にはオプションでサーバー送信イベント（SSE）のストリームを使用します。
+
+次のような場合にストリーム対応HTTPを使用します:
+
+- Webベースの連携を構築する場合
+- HTTP経由のクライアント-サーバー通信が必要な場合
+- 状態を保持するセッションが必要な場合
+- 複数の同時クライアントをサポートする必要がある場合
+- 再開可能な接続を実装する場合
+
+<div id="how-it-works">
+  #### 仕組み
+</div>
+
+1. **クライアントからサーバーへの通信**: クライアントからサーバーへのすべてのJSON-RPCメッセージは、個別のHTTP POSTリクエストとしてMCPエンドポイントに送信されます
+2. **サーバーの応答**: サーバーは次のいずれかで応答できます:
+   - 単一のJSONレスポンス（`Content-Type: application/json`）
+   - 複数メッセージ用のSSEストリーム（`Content-Type: text/event-stream`）
+3. **サーバーからクライアントへの通信**: サーバーは次の方法でクライアントにリクエスト／通知を送信できます:
+   - クライアントのリクエストで開始されるSSEストリーム
+   - MCPエンドポイントへのHTTP GETリクエストで開始されるSSEストリーム
+
+<div id="server">
+  #### サーバー
+</div>
+
+<CodeGroup>
+
+```typescript TypeScript
+import express from "express";
+
+const app = express();
+
+const server = new Server(
+  {
+    name: "example-server",
+    version: "1.0.0",
+  },
+  {
+    capabilities: {},
+  },
+);
+
+// MCP エンドポイントは POST と GET の両方に対応
+app.post("/mcp", async (req, res) => {
+  // JSON-RPC リクエストを処理
+  const response = await server.handleRequest(req.body);
+
+  // 単一のレスポンスまたは SSE ストリームを返す
+  if (needsStreaming) {
+    res.setHeader("Content-Type", "text/event-stream");
+    // SSE イベントを送信...
+  } else {
+    res.json(response);
+  }
+});
+
+app.get("/mcp", (req, res) => {
+  // 任意: サーバー発信の SSE ストリームに対応
+  res.setHeader("Content-Type", "text/event-stream");
+  // サーバーからの通知・リクエストを送信...
+});
+
+app.listen(3000);
+```
+
+```python Python
+from mcp.server.http import HttpServerTransport
+from starlette.applications import Starlette
+from starlette.routing import Route
+
+app = Server("example-server")
+
+async def handle_mcp(scope, receive, send):
+    if scope["method"] == "POST":
+        # JSON-RPC リクエストを処理
+        response = await app.handle_request(request_body)
+
+        if needs_streaming:
+            # SSE ストリームを返す
+            await send_sse_response(send, response)
+        else:
+            # JSON レスポンスを返す
+            await send_json_response(send, response)
+
+    elif scope["method"] == "GET":
+        # 任意: サーバー発信の SSE ストリームに対応
+        await send_sse_stream(send)
+
+starlette_app = Starlette(
+    routes=[
+        Route("/mcp", endpoint=handle_mcp, methods=["POST", "GET"]),
+    ]
+)
+```
+
+</CodeGroup>
+
+<div id="client">
+  #### クライアント
+</div>
+
+<CodeGroup>
+
+```typescript TypeScript
+const client = new Client(
+  {
+    name: "example-client",
+    version: "1.0.0",
+  },
+  {
+    capabilities: {},
+  },
+);
+
+const transport = new HttpClientTransport(new URL("http://localhost:3000/mcp"));
+await client.connect(transport);
+```
+
+```python Python
+async with http_client("http://localhost:8000/mcp") as transport:
+    async with ClientSession(transport[0], transport[1]) as session:
+        await session.initialize()
+```
+
+</CodeGroup>
+
+<div id="session-management">
+  #### セッション管理
+</div>
+
+ストリーム対応HTTPは、複数のリクエスト間でコンテキストを維持するためのステートフルなセッションをサポートします。
+
+1. **セッションの初期化**: サーバーは初期化時に、`Mcp-Session-Id` ヘッダーに含めてセッションIDを割り当てる場合があります
+2. **セッションの永続化**: クライアントは、以降のすべてのリクエストで `Mcp-Session-Id` ヘッダーを用いてセッションIDを必ず含める必要があります
+3. **セッションの終了**: セッションは、セッションIDを含む HTTP DELETE リクエストを送信することで明示的に終了できます
+
+セッションフローの例:
+
+```typescript
+// サーバーは初期化時にセッションIDを割り当てる
+app.post("/mcp", (req, res) => {
+  if (req.body.method === "initialize") {
+    const sessionId = generateSecureId();
+    res.setHeader("Mcp-Session-Id", sessionId);
+    // セッション状態を保存...
+  }
+  // リクエストを処理...
+});
+
+// クライアントは以降のリクエストにセッションIDを含める
+fetch("/mcp", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Mcp-Session-Id": sessionId,
+  },
+  body: JSON.stringify(request),
+});
+```
+
+<div id="resumability-and-redelivery">
+  #### 再開性と再配信
+</div>
+
+切断された接続の再開をサポートするために、ストリーム対応HTTPは次の機能を提供します：
+
+1. **イベントID**: サーバーは追跡のためにSSEイベントに一意のIDを付与できます
+2. **最後のイベントからの再開**: クライアントは `Last-Event-ID` ヘッダーを送信して再開できます
+3. **メッセージの再送**: サーバーは切断時点から見逃されたメッセージを再送できます
+
+これにより、ネットワーク接続が不安定な場合でも、メッセージ配信の信頼性が確保されます。
+
+<div id="security-considerations">
+  #### セキュリティ上の考慮事項
+</div>
+
+ストリーム対応HTTPトランスポートを実装する際は、次のセキュリティベストプラクティスに従ってください。
+
+1. **Originヘッダーの検証**: DNSリバインディング攻撃を防ぐため、すべての受信接続で `Origin` ヘッダーを必ず検証する
+2. **localhostへのバインド**: ローカルで実行する場合は、すべてのネットワークインターフェース（0.0.0.0）ではなく localhost（127.0.0.1）のみにバインドする
+3. **認証の実装**: すべての接続で適切な認証を用いる
+4. **HTTPSの使用**: 本番環境へのデプロイでは常に TLS/HTTPS を使用する
+5. **セッションIDの検証**: セッションIDが暗号学的に安全であり、適切に検証されていることを確認する
+
+これらの対策がない場合、攻撃者はDNSリバインディングを悪用して、リモートのウェブサイト経由でローカルのMCPサーバーとやり取りできてしまいます。
+
+<div id="server-sent-events-sse-deprecated">
+  ### サーバー送信イベント（SSE） - 非推奨
+</div>
+
+<Note>
+  単独のトランスポートとしてのSSEは、プロトコルのバージョン2024-11-05で非推奨となりました。
+  現在はストリーム対応HTTPに置き換えられており、SSEはオプションの
+  ストリーミング機構として組み込まれています。後方互換性に関する情報は、下記の
+  [後方互換性](#backwards-compatibility) セクションをご覧ください。
+</Note>
+
+従来のSSEトランスポートは、クライアントからサーバーへの通信にHTTP POSTリクエストを用いつつ、サーバーからクライアントへのストリーミングを可能にしていました。
+
+以前は次のような場合に使用されていました：
+
+- サーバーからクライアントへのストリーミングのみが必要な場合
+- 制限のあるネットワークでの利用
+- シンプルな更新の実装
+
+<div id="legacy-security-considerations">
+  #### レガシーなセキュリティに関する考慮事項
+</div>
+
+非推奨となったサーバー送信イベント（SSE）トランスポートには、特にDNSリバインディング攻撃に関して、ストリーム対応HTTPと同様のセキュリティ上の考慮事項がありました。ストリーム対応HTTPトランスポート内でSSEストリームを使用する場合も、同様の保護を適用する必要があります。
+
+<div id="server">
+  #### サーバー
+</div>
+
+<CodeGroup>
+
+```typescript TypeScript
+import express from "express";
+
+const app = express();
+
+const server = new Server(
+  {
+    name: "example-server",
+    version: "1.0.0",
+  },
+  {
+    capabilities: {},
+  },
+);
+
+let transport: SSEServerTransport | null = null;
+
+app.get("/sse", (req, res) => {
+  transport = new SSEServerTransport("/messages", res);
+  server.connect(transport);
+});
+
+app.post("/messages", (req, res) => {
+  if (transport) {
+    transport.handlePostMessage(req, res);
+  }
+});
+
+app.listen(3000);
+```
+
+```python Python
+from mcp.server.sse import SseServerTransport
+from starlette.applications import Starlette
+from starlette.routing import Route
+
+app = Server("example-server")
+sse = SseServerTransport("/messages")
+
+async def handle_sse(scope, receive, send):
+    async with sse.connect_sse(scope, receive, send) as streams:
+        await app.run(streams[0], streams[1], app.create_initialization_options())
+
+async def handle_messages(scope, receive, send):
+    await sse.handle_post_message(scope, receive, send)
+
+starlette_app = Starlette(
+    routes=[
+        Route("/sse", endpoint=handle_sse),
+        Route("/messages", endpoint=handle_messages, methods=["POST"]),
+    ]
+)
+```
+
+</CodeGroup>
+
+<div id="client">
+  #### クライアント
+</div>
+
+<CodeGroup>
+
+```typescript TypeScript
+const client = new Client(
+  {
+    name: "example-client",
+    version: "1.0.0",
+  },
+  {
+    capabilities: {},
+  },
+);
+
+const transport = new SSEClientTransport(new URL("http://localhost:3000/sse"));
+await client.connect(transport);
+```
+
+```python Python
+async with sse_client("http://localhost:8000/sse") as streams:
+    async with ClientSession(streams[0], streams[1]) as session:
+        await session.initialize()
+```
+
+</CodeGroup>
+
+<div id="custom-transports">
+  ## カスタムトランスポート
+</div>
+
+MCP は、特定のニーズに合わせたカスタムトランスポートを容易に実装できるように設計されています。どのトランスポート実装でも、Transport インターフェースに準拠していれば問題ありません。
+
+カスタムトランスポートは次のような用途に実装できます:
+
+- 独自のネットワークプロトコル
+- 特化した通信チャネル
+- 既存システムとの統合
+- パフォーマンスの最適化
+
+<CodeGroup>
+
+```typescript TypeScript
+interface Transport {
+  // メッセージ処理を開始する
+  start(): Promise<void>;
+
+  // JSON-RPC メッセージを送信する
+  send(message: JSONRPCMessage): Promise<void>;
+
+  // 接続を閉じる
+  close(): Promise<void>;
+
+  // コールバック
+  onclose?: () => void;
+  onerror?: (error: Error) => void;
+  onmessage?: (message: JSONRPCMessage) => void;
+}
+```
+
+```python Python
+# MCP サーバーはしばしば asyncio で実装されますが、より広い互換性のために、
+# トランスポートのような低レベルインターフェースは `anyio` で実装することを推奨します。
+
+@contextmanager
+async def create_transport(
+    read_stream: MemoryObjectReceiveStream[JSONRPCMessage | Exception],
+    write_stream: MemoryObjectSendStream[JSONRPCMessage]
+):
+    """
+    MCP のトランスポートインターフェース。
+
+    Args:
+        read_stream: 受信メッセージを読み取るストリーム
+        write_stream: 送信メッセージを書き込むストリーム
+    """
+    async with anyio.create_task_group() as tg:
+        try:
+            # メッセージ処理を開始
+            tg.start_soon(lambda: process_messages(read_stream))
+
+            # メッセージ送信
+            async with write_stream:
+                yield write_stream
+
+        except Exception as exc:
+            # エラー処理
+            raise exc
+        finally:
+            # 後始末
+            tg.cancel_scope.cancel()
+            await write_stream.aclose()
+            await read_stream.aclose()
+```
+
+</CodeGroup>
+
+<div id="error-handling">
+  ## エラー処理
+</div>
+
+トランスポート実装は、さまざまなエラーシナリオに対応する必要があります:
+
+1. 接続エラー
+2. メッセージのパースエラー
+3. プロトコルエラー
+4. ネットワークのタイムアウト
+5. リソースのクリーンアップ
+
+エラー処理の例:
+
+<CodeGroup>
+
+```typescript TypeScript
+class ExampleTransport implements Transport {
+  async start() {
+    try {
+      // 接続ロジック
+    } catch (error) {
+      this.onerror?.(new Error(`Failed to connect: ${error}`));
+      throw error;
+    }
+  }
+
+  async send(message: JSONRPCMessage) {
+    try {
+      // 送信ロジック
+    } catch (error) {
+      this.onerror?.(new Error(`Failed to send message: ${error}`));
+      throw error;
+    }
+  }
+}
+```
+
+```python Python
+# MCPサーバーは多くの場合asyncioで実装されていますが、より広い互換性のために、
+# トランスポートのような低レベルのインターフェースは `anyio` で実装することを推奨します。
+
+@contextmanager
+async def example_transport(scope: Scope, receive: Receive, send: Send):
+    try:
+        # 双方向通信のためのストリームを作成
+        read_stream_writer, read_stream = anyio.create_memory_object_stream(0)
+        write_stream, write_stream_reader = anyio.create_memory_object_stream(0)
+
+        async def message_handler():
+            try:
+                async with read_stream_writer:
+                    # メッセージ処理ロジック
+                    pass
+            except Exception as exc:
+                logger.error(f"Failed to handle message: {exc}")
+                raise exc
+
+        async with anyio.create_task_group() as tg:
+            tg.start_soon(message_handler)
+            try:
+                # 通信用にストリームを引き渡す
+                yield read_stream, write_stream
+            except Exception as exc:
+                logger.error(f"Transport error: {exc}")
+                raise exc
+            finally:
+                tg.cancel_scope.cancel()
+                await write_stream.aclose()
+                await read_stream.aclose()
+    except Exception as exc:
+        logger.error(f"Failed to initialize transport: {exc}")
+        raise exc
+```
+
+</CodeGroup>
+
+<div id="best-practices">
+  ## ベストプラクティス
+</div>
+
+MCPのトランスポートを実装または使用する際は、以下を徹底してください。
+
+1. 接続のライフサイクルを適切に管理する
+2. 適切なエラー処理を実装する
+3. 接続終了時にリソースを解放・クリーンアップする
+4. 適切なタイムアウトを設定する
+5. 送信前にメッセージを検証する
+6. デバッグのためにトランスポートのイベントを記録する
+7. 必要に応じて再接続ロジックを実装する
+8. メッセージキューのバックプレッシャーに対応する
+9. 接続のヘルスを監視する
+10. 適切なセキュリティ対策を実装する
+
+<div id="security-considerations">
+  ## セキュリティに関する考慮事項
+</div>
+
+トランスポートを実装する際は、次の点に留意してください：
+
+<div id="authentication-and-authorization">
+  ### 認証と認可
+</div>
+
+- 適切な認証方式を実装する
+- クライアントの認証情報を検証する
+- トークンを安全に取り扱う
+- 適切な権限チェックを実装する
+
+<div id="data-security">
+  ### データセキュリティ
+</div>
+
+- ネットワークのトランスポートには TLS を使用する
+- 機密データを暗号化する
+- メッセージの完全性を検証する
+- メッセージサイズの上限を設ける
+- 入力データをサニタイズする
+
+<div id="network-security">
+  ### ネットワークセキュリティ
+</div>
+
+- レート制限を実装する
+- 適切なタイムアウトを設定する
+- DoS（サービス拒否）に対処する
+- 異常な挙動を監視する
+- 適切なファイアウォールルールを設定する
+- HTTPベースのトランスポート（ストリーム対応HTTPを含む）の場合、DNSリバインディング攻撃を防ぐためにOriginヘッダーを検証する
+- ローカルサーバーは、すべてのインターフェース（0.0.0.0）ではなくlocalhost（127.0.0.1）のみにバインドする
+
+<div id="debugging-transport">
+  ## トランスポートのデバッグ
+</div>
+
+トランスポートの問題をデバッグするためのヒント:
+
+1. デバッグログを有効にする
+2. メッセージの流れを監視する
+3. 接続の状態を確認する
+4. メッセージ形式を検証する
+5. エラーシナリオをテストする
+6. ネットワーク解析ツールを使う
+7. ヘルスチェックを実装する
+8. リソース使用状況を監視する
+9. 端（は）ケースをテストする
+10. 適切にエラーをトラッキングする
+
+<div id="backwards-compatibility">
+  ## 後方互換性
+</div>
+
+異なるプロトコルバージョン間の互換性を維持するために:
+
+<div id="for-servers-supporting-older-clients">
+  ### 旧クライアントをサポートするサーバー向け
+</div>
+
+非推奨のHTTP+SSEトランスポートを使用するクライアントをサポートしたいサーバーは、以下を行う必要があります。
+
+1. 旧SSEエンドポイントとPOSTエンドポイントの両方を、新しいMCPエンドポイントと併せてホストする
+2. 両方のエンドポイントで初期化リクエストを処理する
+3. 各トランスポート種別ごとに個別の処理ロジックを維持する
+
+<div id="for-clients-supporting-older-servers">
+  ### 旧バージョンのサーバーをサポートするクライアント向け
+</div>
+
+非推奨のトランスポートを使用するサーバーをサポートしたいクライアントは、次を行うべきです:
+
+1. いずれのトランスポートも使用し得るサーバーURLを受け入れる
+2. 適切な `Accept` ヘッダーを付けて `InitializeRequest` を POST で送ってみる:
+   - 成功した場合はストリーム対応HTTPトランスポートを使用する
+   - 4xx ステータスで失敗した場合はレガシーSSEトランスポートへフォールバックする
+3. レガシーサーバー向けに、`endpoint` イベントを含む SSE ストリームを期待して GET リクエストを送る
+
+互換性検出の例:
+
+```typescript
+async function detectTransport(serverUrl: string): Promise<TransportType> {
+  try {
+    // まずはストリーム対応HTTPを試す
+    const response = await fetch(serverUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json, text/event-stream",
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "initialize",
+        params: {
+          /* ... */
+        },
+      }),
+    });
+
+    if (response.ok) {
+      return "streamable-http";
+    }
+  } catch (error) {
+    // レガシーSSEへフォールバック
+    const sseResponse = await fetch(serverUrl, {
+      method: "GET",
+      headers: { Accept: "text/event-stream" },
+    });
+
+    if (sseResponse.ok) {
+      return "legacy-sse";
+    }
+  }
+
+  throw new Error("Unsupported transport");
+}
+```

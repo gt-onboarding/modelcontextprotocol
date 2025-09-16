@@ -1,0 +1,32 @@
+---
+title: Descripción general
+---
+
+<Info>**Revisión del protocolo**: 2025-06-18</Info>
+
+Los servidores proporcionan los bloques fundamentales para agregar contexto a los modelos de lenguaje mediante
+MCP. Estos primitivos habilitan interacciones enriquecidas entre clientes, servidores y modelos de lenguaje:
+
+* **Indicaciones**: Plantillas o instrucciones predefinidas que guían las
+  interacciones del modelo de lenguaje
+* **Recursos**: Datos o contenido estructurado que aporta contexto adicional al modelo
+* **Herramientas**: Funciones ejecutables que permiten a los modelos realizar acciones o obtener
+  información
+
+Cada primitivo puede resumirse en la siguiente jerarquía de control:
+
+| Primitivo | Control                | Descripción                                        | Ejemplo                         |
+| --------- | ---------------------- | -------------------------------------------------- | ------------------------------- |
+| Indicaciones | Control del usuario        | Plantillas interactivas invocadas por elección del usuario       | Comandos con barra, opciones de menú    |
+| Recursos   | Control de la aplicación | Datos contextuales adjuntos y gestionados por el cliente | Contenido de archivos, historial de Git      |
+| Herramientas | Control del modelo       | Funciones expuestas al LLM para ejecutar acciones       | Solicitudes POST a API, escritura de archivos |
+
+Explora estos primitivos clave en más detalle a continuación:
+
+<CardGroup cols={3}>
+  <Card title="Indicaciones" icon="message" href="/es/specification/2025-06-18/server/prompts" />
+
+  <Card title="Recursos" icon="file-lines" href="/es/specification/2025-06-18/server/resources" />
+
+  <Card title="Herramientas" icon="wrench" href="/es/specification/2025-06-18/server/tools" />
+</CardGroup>

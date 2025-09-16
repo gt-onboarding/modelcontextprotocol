@@ -1,0 +1,50 @@
+---
+title: 关键更改
+---
+
+<div id="enable-section-numbers" />
+
+本文档列出了自上一版 [2025-03-26](/zh/specification/2025-03-26) 起对模型上下文协议（MCP）规范所做的更改。
+
+<div id="major-changes">
+  ## 重大变更
+</div>
+
+1. 移除对 JSON-RPC **[批处理](https://www.jsonrpc.org/specification#batch)** 的支持
+   （PR [#416](https://github.com/modelcontextprotocol/specification/pull/416)）
+2. 新增对[结构化工具输出](/zh/specification/2025-06-18/server/tools#structured-content)的支持
+   （PR [#371](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/371)）
+3. 将 MCP 服务器归类为 [OAuth 资源服务器](/zh/specification/2025-06-18/basic/authorization#authorization-server-discovery)，
+   并添加受保护资源的元数据，以便发现对应的授权服务器。
+   （PR [#338](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/338)）
+4. 要求 MCP 客户端按照 [RFC 8707](https://www.rfc-editor.org/rfc/rfc8707.html) 实现资源指示器，以防止
+   恶意服务器获取访问令牌。
+   （PR [#734](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/734)）
+5. 在授权规范以及新的[安全最佳实践页面](/zh/specification/2025-06-18/basic/security_best_practices)中
+   明确[安全注意事项](/zh/specification/2025-06-18/basic/authorization#security-considerations)与最佳实践。
+6. 新增对**[信息征询](/zh/specification/2025-06-18/client/elicitation)**的支持，使服务器能够在交互过程中
+   向用户请求更多信息。
+   （PR [#382](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/382)）
+7. 在工具调用结果中新增对**[资源链接](/zh/specification/2025-06-18/server/tools#resource-links)**的支持。
+   （PR [#603](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/603)）
+8. 使用 HTTP 时，要求在后续请求中通过 `MCP-Protocol-Version` 头部
+   [指定协商的协议版本](/zh/specification/2025-06-18/basic/transports#protocol-version-header)（PR [#548](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/548)）。
+9. 在[生命周期操作](/zh/specification/2025-06-18/basic/lifecycle#operation)中将 **SHOULD** 改为 **MUST**
+
+<div id="other-schema-changes">
+  ## 其他模式更改
+</div>
+
+1. 为更多接口类型添加 `_meta` 字段（PR [#710](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/710)），
+   并指定[正确用法](/zh/specification/2025-06-18/basic#meta)。
+2. 在 `CompletionRequest` 中添加 `context` 字段，使补全请求能够包含
+   之前已解析的变量（PR [#598](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/598)）。
+3. 添加用于更友好显示名称的 `title` 字段，从而将 `name` 用作程序化
+   标识符（PR [#663](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/663)）
+
+<div id="full-changelog">
+  ## 完整更新日志
+</div>
+
+要查看自上次协议修订以来的全部更改列表，
+[请访问 GitHub](https://github.com/modelcontextprotocol/specification/compare/2025-03-26...2025-06-18)。

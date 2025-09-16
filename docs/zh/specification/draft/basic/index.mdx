@@ -1,0 +1,204 @@
+---
+title: 概览
+---
+
+<div id="enable-section-numbers" />
+
+<Info>**协议修订**：草案</Info>
+
+模型上下文协议（MCP）由若干关键组件组成，它们协同运作：
+
+* **基础协议**：核心 JSON-RPC 消息类型
+* **生命周期管理**：连接初始化、能力协商与会话控制
+* **授权**：适用于可流式 HTTP 等传输方式的身份验证与授权框架
+* **服务器功能**：由 MCP 服务器暴露的资源、提示模板和工具
+* **客户端功能**：由 MCP 客户端提供的采样与根路径列表
+* **通用工具**：跨领域关注点，如日志记录与参数补全
+
+所有实现**必须**支持基础协议和生命周期管理组件。其他组件**可以**根据应用的具体需求选择性实现。
+
+这些协议层在实现丰富的客户端与服务器交互的同时，确立了清晰的关注点分离。模块化设计使实现能够准确支持所需的功能。
+
+<div id="messages">
+  ## 消息
+</div>
+
+MCP 客户端与服务器之间的所有消息**必须**遵循
+[JSON-RPC 2.0](https://www.jsonrpc.org/specification) 规范。该协议定义了以下几类消息：
+
+<div id="requests">
+  ### 请求
+</div>
+
+请求由客户端发送给服务器，或由服务器发送给客户端，用于启动一个操作。
+
+```typescript
+{
+  jsonrpc: "2.0";
+  id: string | number;
+  method: string;
+  params?: {
+    [key: string]: unknown;
+  };
+}
+```
+
+* 请求**必须**包含字符串或整数类型的 ID。
+* 与基础 JSON-RPC 不同，ID **不得**为 `null`。
+* 在同一会话内，请求发起方**不得**重复使用请求 ID。
+
+<div id="responses">
+  ### Responses
+</div>
+
+响应作为对请求的回复发送，包含操作的结果或错误。
+
+```typescript
+{
+  jsonrpc: "2.0";
+  id: string | number;
+  result?: {
+    [key: string]: unknown;
+  }
+  error?: {
+    code: number;
+    message: string;
+    data?: unknown;
+  }
+}
+```
+
+* 响应**必须**包含与其对应请求相同的 ID。
+* **响应**进一步分为**成功结果**或**错误**。必须设置 `result` 或 `error` 之一。响应**不得**同时设置二者。
+* 结果**可以**采用任意 JSON 对象结构，而错误**必须**至少包含错误代码和消息。
+* 错误代码**必须**为整数。
+
+<div id="notifications">
+  ### 通知
+</div>
+
+通知可以由客户端发送给服务器，或由服务器发送给客户端，属于单向消息。
+接收方**不得**发送响应。
+
+```typescript
+{
+  jsonrpc: "2.0";
+  method: string;
+  params?: {
+    [key: string]: unknown;
+  };
+}
+```
+
+* 通知**不得**包含 ID。
+
+<div id="auth">
+  ## 授权
+</div>
+
+MCP 提供了一个可与 HTTP 搭配使用的[授权](/zh/specification/draft/basic/authorization)框架。
+使用基于 HTTP 的传输方式的实现**应当**遵循该规范，
+而使用 STDIO 传输方式的实现**不应当**遵循该规范，
+而应改为从环境中获取凭据。
+
+此外，客户端和服务器**可以**协商各自的自定义身份验证与
+授权策略。
+
+如需进一步讨论并为 MCP 授权机制的演进做出贡献，欢迎加入
+[GitHub Discussions](https://github.com/modelcontextprotocol/specification/discussions)
+共同塑造该协议的未来！
+
+<div id="schema">
+  ## 架构
+</div>
+
+该协议的完整规范定义为
+[TypeScript 模式](https://github.com/modelcontextprotocol/specification/blob/main/schema/draft/schema.ts)。
+这是所有协议消息和结构的权威来源。
+
+此外还有一个
+[JSON Schema](https://github.com/modelcontextprotocol/specification/blob/main/schema/draft/schema.json)，
+它是根据上述 TypeScript 权威来源自动生成的，供各类自动化工具使用。
+
+<div id="general-fields">
+  ### 通用字段
+</div>
+
+<div id="_meta">
+  #### `_meta`
+</div>
+
+`_meta` 属性/参数由 MCP 保留，用于让客户端和服务器在交互中附加额外的元数据。
+
+某些键名由 MCP 保留用于协议级元数据，如下所述；实现不得对这些键上的值作出任何假设。
+
+此外，[schema](https://github.com/modelcontextprotocol/specification/blob/main/schema/draft/schema.ts) 中的定义
+可能会为特定用途的元数据保留特定名称，具体以这些定义中的声明为准。
+
+**键名格式：** 有效的 `_meta` 键名包含两个部分：可选的**前缀**和**名称**。
+
+**前缀：**
+
+* 如有指定，必须是由点（`.`）分隔的一系列标签，后跟斜杠（`/`）。
+  * 标签必须以字母开头，并以字母或数字结尾；中间字符可以是字母、数字或连字符（`-`）。
+* 任何以前零个或多个有效标签开头，紧接 `modelcontextprotocol` 或 `mcp`，再紧接任意有效标签的前缀，
+  均为 MCP 保留。
+  * 例如：`modelcontextprotocol.io/`、`mcp.dev/`、`api.modelcontextprotocol.org/` 和 `tools.mcp.com/` 都是保留的。
+
+**名称：**
+
+* 非空时，必须以字母数字字符（`[a-z0-9A-Z]`）开头并以字母数字字符结尾。
+* 中间可以包含连字符（`-`）、下划线（`_`）、点（`.`）以及字母数字字符。
+
+<div id="icons">
+  #### `icons`
+</div>
+
+`icons` 属性为服务器提供了一种标准化方式，用于为其资源、工具、提示模板和实现公开可视化标识。图标通过提供视觉上下文并提升可用功能的可发现性，从而增强用户界面。
+
+图标表示为由 `Icon` 对象组成的数组，其中每个图标包含：
+
+* `src`: 指向图标资源的 URI（必填）。可以是：
+  * 指向图像文件的 HTTP/HTTPS URL
+  * 包含 base64 编码图像数据的 data URI
+* `mimeType`: 可选的 MIME 类型，当服务器提供的类型缺失或过于笼统时可补充
+* `sizes`: 可选的尺寸说明（例如 &quot;48x48&quot;、用于可缩放格式（如 SVG）的 &quot;any&quot;，或用于多尺寸的 &quot;48x48 96x96&quot;）
+
+**必需的 MIME 类型支持：**
+
+支持渲染图标的客户端**必须**至少支持以下 MIME 类型：
+
+* `image/png` - PNG 图像（安全、兼容性广）
+* `image/jpeg`（以及 `image/jpg`）- JPEG 图像（安全、兼容性广）
+
+支持渲染图标的客户端**应当**同时支持：
+
+* `image/svg+xml` - SVG 图像（可缩放，但需采取下文所述的安全防护措施）
+* `image/webp` - WebP 图像（现代且高效的格式）
+
+**安全注意事项：**
+
+在处理图标时，图标元数据的使用方**必须**采取适当的安全防护措施以防止受损：
+
+* 将图标元数据和图标字节视为不受信任的输入，并防范网络、隐私与解析相关风险。
+* 确保图标 URI 为 HTTPS 或 `data:`。客户端**必须**拒绝使用不安全方案及重定向的图标 URI，例如 `javascript:`、`file:`、`ftp:`、`ws:`，或本地应用的 URI 方案。
+  * 禁止更改方案以及重定向到不同源的主机。
+* 对因图像体积过大、尺寸过大或帧数过多（例如 GIF）导致的资源耗尽攻击保持韧性。
+  * 使用方**可以**为图像与内容大小设置上限。
+* 在无凭证的情况下获取图标。不要发送 cookies、`Authorization` 头或客户端凭证。
+* 验证图标 URI 是否与服务器同源。这样可最大限度降低将数据或跟踪信息暴露给第三方的风险。
+* 获取和渲染图标时需谨慎，因为载荷**可能**包含可执行内容（例如包含[嵌入式 JavaScript](https://www.w3.org/TR/SVG11/script.html)或[扩展能力](https://www.w3.org/TR/SVG11/extend.html)的 SVG）。
+  * 使用方**可以**选择禁用特定文件类型，或在渲染前对图标文件进行安全清理。
+* 在渲染前验证 MIME 类型与文件内容。将 MIME 类型信息视为参考。通过魔数检测内容类型；在不匹配或未知类型时拒绝。
+  * 维护严格的图像类型允许列表。
+
+**用法：**
+
+图标可附加到：
+
+* `Implementation`: MCP 服务器/客户端实现的可视化标识
+* `Tool`: 工具功能的可视化呈现
+* `Prompt`: 显示在提示模板旁的图标
+* `Resource`: 不同资源类型的可视化指示
+
+可提供多个图标以适配不同的显示场景和分辨率。客户端应根据其 UI 需求选择最合适的图标。

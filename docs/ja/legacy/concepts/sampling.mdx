@@ -1,0 +1,288 @@
+---
+title: "サンプリング"
+description: "サーバーがクライアント経由でLLMの補完をリクエストできるようにする"
+---
+
+サンプリングは強力なMCPの機能で、サーバーがクライアントを介してLLMの補完をリクエストできるようにし、セキュリティとプライバシーを担保しつつ高度なエージェント的な振る舞いを実現します。
+
+<Info>
+
+このMCPの機能は、現時点ではClaude Desktopのクライアントではサポートされていません。
+
+</Info>
+
+<div id="how-sampling-works">
+  ## サンプリングの仕組み
+</div>
+
+サンプリングのフローは次の手順で進みます。
+
+1. サーバーがクライアントに `sampling/createMessage` リクエストを送る
+2. クライアントがリクエストを確認し、必要に応じて調整する
+3. クライアントが LLM に対してサンプリングを行う
+4. クライアントが生成結果を見直す
+5. クライアントが結果をサーバーに返す
+
+この人間が介在する設計により、ユーザーは LLM が参照・生成する内容を継続的に管理できます。
+
+<div id="message-format">
+  ## メッセージ形式
+</div>
+
+サンプリングのリクエストは標準化されたメッセージ形式を使用します:
+
+```typescript
+{
+  messages: [
+    {
+      role: "user" | "assistant",
+      content: {
+        type: "text" | "image",
+
+        // テキストの場合:
+        text?: string,
+
+        // 画像の場合:
+        data?: string,             // base64 エンコード
+        mimeType?: string
+      }
+    }
+  ],
+  modelPreferences?: {
+    hints?: [{
+      name?: string                // 推奨モデル名/ファミリー
+    }],
+    costPriority?: number,         // 0-1、コスト最小化の優先度
+    speedPriority?: number,        // 0-1、低レイテンシの優先度
+    intelligencePriority?: number  // 0-1、能力の優先度
+  },
+  systemPrompt?: string,
+  includeContext?: "none" | "thisServer" | "allServers",
+  temperature?: number,
+  maxTokens: number,
+  stopSequences?: string[],
+  metadata?: Record<string, unknown>
+}
+```
+
+<div id="request-parameters">
+  ## リクエスト パラメータ
+</div>
+
+<div id="messages">
+  ### メッセージ
+</div>
+
+`messages` 配列には、LLM に送信する会話履歴が含まれます。各メッセージには次の項目があります:
+
+- `role`: "user" または "assistant"
+- `content`: メッセージの内容。次のいずれかです:
+  - `text` フィールドを持つテキストコンテンツ
+  - `data`（base64）と `mimeType` フィールドを持つ画像コンテンツ
+
+<div id="model-preferences">
+  ### モデルの優先設定
+</div>
+
+`modelPreferences` オブジェクトは、サーバーがモデル選択に関する優先設定を指定できるようにします。
+
+- `hints`: クライアントが適切なモデルを選ぶ際に使えるモデル名の候補配列:
+  - `name`: モデル名の完全一致または部分一致に使える文字列（例：「claude-3」「sonnet」）
+  - クライアントは、異なるプロバイダーの同等モデルへヒントを対応付ける場合があります
+  - 複数のヒントは優先順に評価されます
+
+- 優先度の値（0〜1に正規化）:
+  - `costPriority`: コスト最小化の重要度
+  - `speedPriority`: 低レイテンシ応答の重要度
+  - `intelligencePriority`: 高度なモデル能力の重要度
+
+クライアントは、これらの優先設定と利用可能なモデルに基づいて最終的なモデルを選定します。
+
+<div id="system-prompt">
+  ### システムプロンプト
+</div>
+
+任意の `systemPrompt` フィールドにより、サーバーは特定のシステムプロンプトを要求できます。クライアントはこれを変更したり、無視したりしてもかまいません。
+
+<div id="context-inclusion">
+  ### コンテキストの取り込み
+</div>
+
+`includeContext` パラメータは、どの MCP コンテキストを取り込むかを指定します:
+
+- `"none"`: 追加のコンテキストはなし
+- `"thisServer"`: リクエスト元サーバーのコンテキストを取り込む
+- `"allServers"`: 接続中のすべての MCP サーバーのコンテキストを取り込む
+
+実際にどのコンテキストを含めるかはクライアントが制御します。
+
+<div id="sampling-parameters">
+  ### サンプリングのパラメータ
+</div>
+
+LLM のサンプリングは次の項目で調整できます:
+
+- `temperature`: ランダム性を制御（0.0〜1.0）
+- `maxTokens`: 生成するトークンの上限
+- `stopSequences`: 生成を停止するシーケンスの配列
+- `metadata`: プロバイダー固有の追加パラメータ
+
+<div id="response-format">
+  ## レスポンス形式
+</div>
+
+クライアントは補完結果を返します:
+
+```typescript
+{
+  model: string,  // 使用したモデル名
+  stopReason?: "endTurn" | "stopSequence" | "maxTokens" | string,
+  role: "user" | "assistant",
+  content: {
+    type: "text" | "image",
+    text?: string,
+    data?: string,
+    mimeType?: string
+  }
+}
+```
+
+<div id="example-request">
+  ## リクエスト例
+</div>
+
+以下は、クライアントからサンプリングを要求する例です：
+
+```json
+{
+  "method": "sampling/createMessage",
+  "params": {
+    "messages": [
+      {
+        "role": "user",
+        "content": {
+          "type": "text",
+          "text": "What files are in the current directory?"
+        }
+      }
+    ],
+    "systemPrompt": "You are a helpful file system assistant.",
+    "includeContext": "thisServer",
+    "maxTokens": 100
+  }
+}
+```
+
+<div id="best-practices">
+  ## ベストプラクティス
+</div>
+
+サンプリングを実装する際は、次の点に留意してください:
+
+1. 明確で適切に構造化されたプロンプトを常に用意する
+2. テキストと画像の両方を適切に扱う
+3. 妥当なトークン上限を設定する
+4. `includeContext` で関連コンテキストを含める
+5. 応答は利用前に検証する
+6. エラーを適切に処理する
+7. サンプリング要求のレート制限を検討する
+8. 期待されるサンプリング動作を文書化する
+9. さまざまなモデルパラメータでテストする
+10. サンプリングのコストを監視する
+
+<div id="human-in-the-loop-controls">
+  ## Human-in-the-loop コントロール
+</div>
+
+サンプリングは人による関与と監督を前提に設計されています。
+
+<div id="for-prompts">
+  ### プロンプトについて
+</div>
+
+- クライアントは、提案されたプロンプトをユーザーに表示するべき
+- ユーザーはプロンプトを編集または却下できるべき
+- システムプロンプトはフィルタリングや変更が可能
+- コンテキストの含有はクライアントが制御する
+
+<div id="for-completions">
+  ### 完了結果について
+</div>
+
+- MCPクライアントはユーザーに完了結果を表示するべき
+- ユーザーは完了結果を編集または却下できるべき
+- MCPクライアントは完了結果をフィルタリングまたは変更できる
+- 使用するモデルはユーザーが選択・管理する
+
+<div id="security-considerations">
+  ## セキュリティに関する考慮事項
+</div>
+
+サンプリングを実装する際は、次の点に留意してください:
+
+- すべてのメッセージ内容を検証する
+- 機微情報をマスキング／サニタイズする
+- 適切なレート制限を実装する
+- サンプリングの利用状況を監視する
+- 送信中のデータを暗号化する
+- ユーザーデータのプライバシーを適切に取り扱う
+- サンプリングリクエストを監査可能にする
+- コスト露出を管理・抑制する
+- タイムアウトを実装する
+- モデルのエラーを丁寧に処理する
+
+<div id="common-patterns">
+  ## 一般的なパターン
+</div>
+
+<div id="agentic-workflows">
+  ### エージェント型ワークフロー
+</div>
+
+サンプリングにより、次のようなエージェント型のパターンが可能になります：
+
+- リソースの読解・分析
+- 文脈に基づく意思決定
+- 構造化データの生成
+- 複数ステップのタスク処理
+- 互动的な支援の提供
+
+<div id="context-management">
+  ### コンテキスト管理
+</div>
+
+コンテキストに関するベストプラクティス:
+
+- 必要最小限のコンテキストのみをリクエストする
+- コンテキストを明確に構造化する
+- コンテキストのサイズ上限に対応する
+- 必要に応じてコンテキストを更新する
+- 期限切れ／陳腐化したコンテキストを整理する
+
+<div id="error-handling">
+  ### エラー処理
+</div>
+
+堅牢なエラー処理は次を満たすべきです:
+
+- サンプリングの失敗を検知する
+- タイムアウトエラーを適切に処理する
+- レート制限を適切に管理する
+- レスポンスを検証する
+- フォールバック動作を用意する
+- エラーを適切にログ出力する
+
+<div id="limitations">
+  ## 制限事項
+</div>
+
+次の制限事項にご留意ください:
+
+- サンプリングはMCPクライアントの機能に依存します
+- サンプリングの動作はユーザーが制御します
+- コンテキストのサイズには上限があります
+- レート制限が適用される場合があります
+- コストの考慮が必要です
+- モデルの提供状況は変動します
+- 応答時間は変動します
+- すべてのコンテンツタイプがサポートされるわけではありません

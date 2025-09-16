@@ -1,0 +1,94 @@
+---
+title: 进度
+---
+
+<Info>**协议修订**：2025-03-26</Info>
+
+模型上下文协议（MCP）支持通过通知消息为长时运行的操作提供可选的进度跟踪。任一方均可发送进度通知，提供操作状态更新。
+
+<div id="progress-flow">
+  ## 进度流程
+</div>
+
+当一方希望接收某个请求的进度更新时，应在请求的元数据中包含
+`progressToken`。
+
+- 进度令牌**必须**为字符串或整数值
+- 进度令牌可以由发送方以任意方式选择，但在所有活动请求中**必须**唯一
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "some_method",
+  "params": {
+    "_meta": {
+      "progressToken": "abc123"
+    }
+  }
+}
+```
+
+接收方**可以**随后发送进度通知，内容包括：
+
+- 原始进度令牌
+- 当前进度值
+- 可选的 "total" 值
+- 可选的 "message" 值
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/progress",
+  "params": {
+    "progressToken": "abc123",
+    "progress": 50,
+    "total": 100,
+    "message": "Reticulating splines..."
+  }
+}
+```
+
+- 即使总量未知，`progress` 值在每条通知中**必须**递增
+- `progress` 和 `total` 的值**可以**为浮点数
+- `message` 字段**应**提供相关且可读的进度信息
+
+<div id="behavior-requirements">
+  ## 行为要求
+</div>
+
+1. 进度通知**必须**只引用以下令牌：
+   - 来自一个处于活动状态的请求
+   - 与正在进行的操作相关联
+
+2. 进度请求的接收方**可以**：
+   - 选择不发送任何进度通知
+   - 以其认为合适的任意频率发送通知
+   - 如未知总量，可省略总量值
+
+```mermaid
+sequenceDiagram
+    participant Sender
+    participant Receiver
+
+    Note over Sender,Receiver: 带有进度令牌的请求
+    Sender->>Receiver: 带有 progressToken 的方法请求
+
+    Note over Sender,Receiver: 进度更新
+    loop 进度更新
+        Receiver-->>Sender: 进度通知 (0.2/1.0)
+        Receiver-->>Sender: 进度通知 (0.6/1.0)
+        Receiver-->>Sender: 进度通知 (1.0/1.0)
+    end
+
+    Note over Sender,Receiver: 操作完成
+    Receiver->>Sender: 方法响应
+```
+
+<div id="implementation-notes">
+  ## 实施说明
+</div>
+
+- 发送方和接收方**应当**跟踪活跃的进度令牌
+- 双方**应当**实施速率限制以防止消息泛滥
+- 完成后**必须**停止发送进度通知

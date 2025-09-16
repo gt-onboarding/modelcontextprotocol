@@ -1,0 +1,57 @@
+---
+title: Model Context Protocol（MCP）とは？
+sidebarTitle: MCPとは？
+---
+
+Model Context Protocol（MCP）は、AIアプリケーションを外部システムに接続するためのオープンな標準です。
+
+MCPを使うと、Claude や ChatGPT などのAIアプリケーションが、データソース（例：ローカルファイル、データベース）、ツール（例：検索エンジン、電卓）、ワークフロー（例：特化したプロンプト）に接続でき、重要な情報へのアクセスやタスクの実行が可能になります。
+
+MCPは、AIアプリケーションのためのUSB-Cポートのようなものです。USB-Cが電子機器を接続する標準的な方法を提供するのと同じように、MCPはAIアプリケーションを外部システムに接続する標準的な方法を提供します。
+
+<Frame>
+  <img src="/images/mcp-simple-diagram.png" />
+</Frame>
+
+<div id="what-can-mcp-enable">
+  ## MCPは何を実現できるのか？
+</div>
+
+* エージェントがGoogleカレンダーやNotionにアクセスし、よりパーソナライズされたAIアシスタントとして動作します。
+* Claude CodeがFigmaのデザインからWebアプリ一式を生成します。
+* エンタープライズ向けチャットボットが組織内の複数のデータベースに接続し、ユーザーがチャットでデータを分析できるようにします。
+* AIモデルがBlenderで3Dデザインを作成し、3Dプリンターで出力できます。
+
+<div id="why-does-mcp-matter">
+  ## なぜMCPは重要なのか？
+</div>
+
+エコシステム内での立場によって、MCPの恩恵はさまざまです。
+
+* **開発者**: MCPは、AIアプリケーションやエージェントの構築・統合にかかる開発時間と複雑さを削減します。
+* **AIアプリケーションやエージェント**: MCPは、機能を強化しエンドユーザー体験を向上させるデータソース、ツール、アプリのエコシステムへのアクセスを提供します。
+* **エンドユーザー**: MCPにより、必要に応じてあなたのデータにアクセスし、あなたに代わってアクションを実行できる、より高機能なAIアプリケーションやエージェントが実現します。
+
+<div id="start-building">
+  ## 開発を始めよう
+</div>
+
+<CardGroup cols={2}>
+  <Card title="サーバーを構築する" icon="server" href="/ja/docs/develop/build-server">
+    データとツールを公開するMCPサーバーを構築する
+  </Card>
+
+  <Card title="クライアントを構築する" icon="computer" href="/ja/docs/develop/build-client">
+    MCPサーバーに接続するアプリケーションを開発する
+  </Card>
+</CardGroup>
+
+<div id="learn-more">
+  ## 詳しく見る
+</div>
+
+<CardGroup cols={2}>
+  <Card title="概念を理解する" icon="book" href="/ja/docs/learn/architecture">
+    MCPの主要な概念とアーキテクチャを学ぶ
+  </Card>
+</CardGroup>

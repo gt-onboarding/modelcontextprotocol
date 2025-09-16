@@ -1,0 +1,312 @@
+---
+title: 认识 MCP 服务器
+sidebarTitle: 服务器
+---
+
+MCP 服务器是通过标准化协议接口向 AI 应用暴露特定能力的程序。
+
+常见示例包括用于文档访问的文件系统服务器、用于数据查询的数据库服务器、用于代码管理的 GitHub 服务器、用于团队沟通的 Slack 服务器，以及用于日程安排的日历服务器。
+
+<div id="core-server-features">
+  ## 核心服务器功能
+</div>
+
+服务器通过三大基础模块提供能力：
+
+| 功能         | 说明                                                                                                                                                                                      | 示例                                                               | 控制方         |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | --------------- |
+| **工具**     | 模型可主动调用的函数，会根据用户请求自行决定何时使用。工具可写入数据库、调用外部 API、修改文件或触发其他逻辑。                                                                             | 搜索航班<br />发送消息<br />创建日历事件                           | 模型           |
+| **资源**     | 被动的数据源，提供只读的信息以供上下文使用，例如文件内容、数据库架构或 API 文档。                                                                                                         | 检索文档<br />访问知识库<br />读取日历                             | 应用           |
+| **提示模板** | 预先构建的指令模板，用于引导模型与特定工具和资源配合完成任务。                                                                                                                            | 规划假期<br />总结我的会议<br />撰写电子邮件                       | 用户           |
+
+我们将通过一个假设场景来演示这些功能各自的作用，并展示它们如何协同工作。
+
+<div id="tools">
+  ### 工具
+</div>
+
+工具让 AI 模型能够执行动作。每个工具都定义了具有类型化输入和输出的特定操作。模型会根据上下文请求调用工具。
+
+<div id="how-tools-work">
+  #### 工具的工作原理
+</div>
+
+工具是由模式定义的接口，可由 LLM 调用。MCP 使用 JSON Schema 进行校验。每个工具只执行一个操作，并具有明确定义的输入与输出。工具在执行前可能需要用户同意，从而确保用户始终掌控由模型发起的操作。
+
+**协议操作：**
+
+| 方法         | 目的                     | 返回值                                  |
+| ------------ | ------------------------ | --------------------------------------- |
+| `tools/list` | 发现可用的工具           | 带有模式的工具定义数组                  |
+| `tools/call` | 执行特定工具             | 工具执行结果                            |
+
+**示例工具定义：**
+
+```typescript
+{
+  name: "searchFlights",
+  description: "Search for available flights",
+  inputSchema: {
+    type: "object",
+    properties: {
+      origin: { type: "string", description: "Departure city" },
+      destination: { type: "string", description: "Arrival city" },
+      date: { type: "string", format: "date", description: "Travel date" }
+    },
+    required: ["origin", "destination", "date"]
+  }
+}
+```
+
+<div id="example-travel-booking">
+  #### 示例：旅行预订
+</div>
+
+工具使 AI 应用能够代表用户执行操作。在旅行规划场景中，AI 应用可能会使用多种工具来帮助预订假期：
+
+**航班搜索**
+
+```
+searchFlights(origin: "NYC", destination: "Barcelona", date: "2024-06-15")
+```
+
+查询多家航空公司并返回结构化的航班选项。
+
+**日历占位**
+
+```
+createCalendarEvent(title: "Barcelona Trip", startDate: "2024-06-15", endDate: "2024-06-22")
+```
+
+在用户的日历中标注出行日期。
+
+**邮件通知**
+
+```
+sendEmail(to: "team@work.com", subject: "Out of Office", body: "...")
+```
+
+向同事自动发送外出（不在办公室）通知。
+
+<div id="user-interaction-model">
+  #### 用户交互模型
+</div>
+
+工具由模型控制，这意味着 AI 模型可以自动发现并调用它们。不过，MCP 通过多种机制强调人工监督。
+
+为确保信任与安全，应用可以通过多种机制实现用户控制，例如：
+
+- 在 UI 中显示可用的工具，让用户决定某个工具是否应在特定交互中可用
+- 针对单次工具执行的审批对话框
+- 用于预先批准特定安全操作的权限设置
+- 展示所有工具执行及其结果的活动日志
+
+<div id="resources">
+  ### 资源
+</div>
+
+资源为 AI 应用提供对信息的结构化访问，便于检索并作为上下文提供给模型。
+
+<div id="how-resources-work">
+  #### 资源的工作方式
+</div>
+
+资源用于暴露来自文件、API、数据库或其他任何 AI 需要用来理解上下文的来源的数据。应用可以直接访问这些信息并决定如何使用——无论是选择相关片段、用嵌入进行搜索，还是将其全部传递给模型。
+
+每个资源都有一个唯一的 URI（如 `file:///path/to/document.md`），并声明其 MIME 类型以便进行适当的内容处理。资源支持两种发现模式：
+
+- **直接资源** - 指向特定数据的固定 URI。示例：`calendar://events/2024` - 返回 2024 年的日历可用时段
+- **资源模板** - 带参数的动态 URI，用于灵活查询。示例：
+  - `travel://activities/{city}/{category}` - 按城市和类别返回活动
+  - `travel://activities/barcelona/museums` - 返回巴塞罗那的所有博物馆
+
+资源模板包含诸如标题、描述和预期 MIME 类型等元数据，使其可被发现并自带文档说明。
+
+**协议操作：**
+
+| 方法                       | 目的                           | 返回值                                  |
+| -------------------------- | ------------------------------ | --------------------------------------- |
+| `resources/list`           | 列出可用的直接资源             | 资源描述符数组                          |
+| `resources/templates/list` | 发现资源模板                   | 资源模板定义数组                        |
+| `resources/read`           | 获取资源内容                   | 带元数据的资源数据                      |
+| `resources/subscribe`      | 监控资源变更                   | 订阅确认                                |
+
+<div id="example-getting-travel-planning-context">
+  #### 示例：获取旅行规划上下文
+</div>
+
+延续旅行规划示例，资源为 AI 应用提供访问相关信息的能力：
+
+- **日历数据** (`calendar://events/2024`) - 检查用户可用时间
+- **旅行证件** (`file:///Documents/Travel/passport.pdf`) - 访问重要文件
+- **历史行程** (`trips://history/barcelona-2023`) - 参考过往行程与偏好
+
+AI 应用会检索这些资源并决定如何处理：可通过嵌入或关键词搜索选择数据子集，或将原始数据直接传给模型。
+
+在本例中，它向模型提供日历数据、天气信息和旅行偏好，使其能够检查可用时间、查询天气趋势并参考过往旅行偏好。
+
+**资源模板示例：**
+
+```json
+{
+  "uriTemplate": "weather://forecast/{city}/{date}",
+  "name": "weather-forecast",
+  "title": "Weather Forecast",
+  "description": "Get weather forecast for any city and date",
+  "mimeType": "application/json"
+}
+
+{
+  "uriTemplate": "travel://flights/{origin}/{destination}",
+  "name": "flight-search",
+  "title": "Flight Search",
+  "description": "Search available flights between cities",
+  "mimeType": "application/json"
+}
+```
+
+这些模板支持灵活查询。对于天气数据，用户可以获取任意城市与日期组合的预报。对于航班，用户可以搜索任意两座机场之间的航线。当用户将 `origin` 机场输入为“NYC”，并开始将 `destination` 机场输入为“Bar”时，系统可以建议“Barcelona (BCN)”或“Barbados (BGI)”。
+
+<div id="parameter-completion">
+  #### 参数补全
+</div>
+
+动态资源支持参数补全。例如：
+
+- 在 `weather://forecast/{city}` 中输入“Par”时，可能会建议“Paris”或“Park City”
+- 在 `flights://search/{airport}` 中输入“JFK”时，可能会建议“JFK - John F. Kennedy International”
+
+系统可在无需掌握精确格式的情况下帮助你发现有效取值。
+
+<div id="user-interaction-model">
+  #### 用户交互模型
+</div>
+
+资源由应用驱动，因此在检索、处理和呈现可用上下文方面具有灵活性。常见的交互模式包括：
+
+- 以树状或列表视图浏览资源，类似熟悉的文件夹结构
+- 用于查找特定资源的搜索与筛选界面
+- 基于启发式或 AI 选择的自动上下文纳入或智能建议
+- 支持单选或多选的手动/批量选择界面
+
+应用可自由采用任意适合自身需求的界面模式来实现资源发现。协议不强制任何特定 UI 模式，这使得实现带有预览功能的资源选择器、依据当前会话上下文的智能建议、用于一次性纳入多个资源的批量选择，或与现有文件浏览器与数据浏览器的集成成为可能。
+
+<div id="prompts">
+  ### 提示模板
+</div>
+
+提示模板是可复用的模版。它使 MCP 服务器作者能够为特定领域提供参数化的提示模板，或示范如何最佳地使用该 MCP 服务器。
+
+<div id="how-prompts-work">
+  #### 提示模板的工作原理
+</div>
+
+提示模板是用于定义预期输入和交互模式的结构化模板。它们由用户控制，需要明确调用，而非自动触发。提示模板可以具备上下文感知能力，引用可用的资源和工具，以构建完整的工作流。与资源类似，提示模板支持参数补全，帮助用户发现并填写有效的参数值。
+
+**协议操作：**
+
+| 方法           | 目的                 | 返回值                         |
+| -------------- | -------------------- | ------------------------------ |
+| `prompts/list` | 发现可用的提示模板   | 提示模板描述符数组             |
+| `prompts/get`  | 获取提示模板详细信息 | 含参数的完整提示模板定义       |
+
+<div id="example-streamlined-workflows">
+  #### 示例：流程更简洁
+</div>
+
+提示模板为常见任务提供结构化模板。在旅行规划场景中：
+
+**“规划假期”提示模板：**
+
+```json
+{
+  "name": "plan-vacation",
+  "title": "Plan a vacation",
+  "description": "Guide through vacation planning process",
+  "arguments": [
+    { "name": "destination", "type": "string", "required": true },
+    { "name": "duration", "type": "number", "description": "days" },
+    { "name": "budget", "type": "number", "required": false },
+    { "name": "interests", "type": "array", "items": { "type": "string" } }
+  ]
+}
+```
+
+相较于非结构化的自然语言输入，提示模板系统可以实现：
+
+1. 选择“规划假期”模板
+2. 结构化输入：Barcelona，7 天，$3000，["beaches", "architecture", "food"]
+3. 基于该模板一致地执行工作流
+
+<div id="user-interaction-model">
+  #### 用户交互模型
+</div>
+
+提示模板由用户掌控，需由用户显式触发。该协议为实现者提供灵活性，可在其应用中设计顺畅自然的界面。关键原则包括：
+
+- 便于发现可用的提示模板
+- 清晰说明每个提示模板的功能
+- 自然的参数输入并提供校验
+- 透明展示提示模板的底层模板
+
+应用通常通过多种 UI 模式来提供提示模板，例如：
+
+- 斜杠命令（输入“/”以查看可用的提示模板，如 /plan-vacation）
+- 可搜索的命令面板
+- 为常用提示模板提供的专用 UI 按钮
+- 在上下文菜单中推荐相关的提示模板
+
+<div id="bringing-servers-together">
+  ## 汇聚服务器的力量
+</div>
+
+当多个服务器通过统一接口协同工作、整合各自的专长能力时，MCP 的真正威力便会显现。
+
+<div id="example-multi-server-travel-planning">
+  ### 示例：多服务器旅行规划
+</div>
+
+设想一个个性化的 AI 旅行规划应用，连接了三个服务器：
+
+- **Travel Server** - 处理机票预订、酒店与行程安排
+- **Weather Server** - 提供气候数据与天气预报
+- **Calendar/Email Server** - 管理日程与邮件沟通
+
+<div id="the-complete-flow">
+  #### 完整流程
+</div>
+
+1. **用户携带参数调用提示模板：**
+
+   ```json
+   {
+     "prompt": "plan-vacation",
+     "arguments": {
+       "destination": "Barcelona",
+       "departure_date": "2024-06-15",
+       "return_date": "2024-06-22",
+       "budget": 3000,
+       "travelers": 2
+     }
+   }
+   ```
+
+2. **用户选择要包含的资源：**
+   - `calendar://my-calendar/June-2024`（来自 Calendar 服务器）
+   - `travel://preferences/europe`（来自 Travel 服务器）
+   - `travel://past-trips/Spain-2023`（来自 Travel 服务器）
+
+3. **AI 使用工具处理请求：**
+
+   AI 会先读取所有选定的资源以获取上下文——从日历中识别可用日期，从旅行偏好中了解常用航空公司与偏好酒店类型，并从过往行程中发现曾经喜欢的地点。
+
+   基于这些上下文，AI 随后执行一系列工具：
+   - `searchFlights()` - 查询从 NYC 到 Barcelona 的航班
+   - `checkWeather()` - 获取出行日期的气候预报
+
+   随后 AI 利用这些信息创建预订并推进后续步骤，在必要时请求用户批准：
+   - `bookHotel()` - 查找符合指定预算的酒店
+   - `createCalendarEvent()` - 将行程添加到用户的日历
+   - `sendEmail()` - 发送包含行程详情的确认邮件
+
+**结果：** 借助多个 MCP 服务器，用户完成了针对其日程量身定制的 Barcelona 行程的调研与预订。“Plan a Vacation” 提示模板引导 AI 跨不同服务器将资源（日历可用性与旅行历史）与工具（搜索航班、预订酒店、更新日历）相结合——既汇集上下文又执行预订。一个本可能耗时数小时的任务，通过 MCP 在数分钟内即可完成。

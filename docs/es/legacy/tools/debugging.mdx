@@ -1,0 +1,326 @@
+---
+title: Depuración
+description: Una guía completa para depurar integraciones del Protocolo de Contexto de Modelo (MCP)
+---
+
+La depuración eficaz es esencial al desarrollar servidores MCP o al integrarlos en aplicaciones. Esta guía cubre las herramientas y enfoques de depuración disponibles en el ecosistema de MCP.
+
+<Info>
+  Esta guía es para macOS. Próximamente habrá guías para otras plataformas.
+</Info>
+
+<div id="debugging-tools-overview">
+  ## Descripción general de las herramientas de depuración
+</div>
+
+MCP ofrece varias herramientas para depurar en diferentes niveles:
+
+1. **MCP Inspector**
+   * Interfaz de depuración interactiva
+   * Pruebas directas del servidor
+   * Consulta la [guía del Inspector](/es/legacy/tools/inspector) para más detalles
+
+2. **Claude Desktop Developer Tools**
+   * Pruebas de integración
+   * Recopilación de registros
+   * Integración con Chrome DevTools
+
+3. **Registro del servidor**
+   * Implementaciones de registro personalizadas
+   * Seguimiento de errores
+   * Supervisión del rendimiento
+
+<div id="debugging-in-claude-desktop">
+  ## Depuración en Claude Desktop
+</div>
+
+<div id="checking-server-status">
+  ### Comprobación del estado del servidor
+</div>
+
+La interfaz de Claude.app ofrece información básica sobre el estado del servidor:
+
+1. Haz clic en el icono <img src="/images/claude-desktop-mcp-plug-icon.svg" style={{display: 'inline', margin: 0, height: '1.3em'}} /> para ver:
+   * Servidores conectados
+   * Indicaciones y recursos disponibles
+
+2. Haz clic en el icono &quot;Search and tools&quot; <img src="/images/claude-desktop-mcp-slider.svg" style={{display: 'inline', margin: 0, height: '1.3em'}} /> para ver:
+   * Herramientas disponibles para el modelo
+
+<div id="viewing-logs">
+  ### Visualización de registros
+</div>
+
+Revisa los registros detallados de MCP desde Claude Desktop:
+
+```bash
+# Seguir los registros en tiempo real
+tail -n 20 -F ~/Library/Logs/Claude/mcp*.log
+```
+
+Los registros incluyen:
+
+* Eventos de conexión del servidor
+* Problemas de configuración
+* Errores de ejecución
+* Intercambios de mensajes
+
+<div id="using-chrome-devtools">
+  ### Uso de Chrome DevTools
+</div>
+
+Accede a las herramientas de desarrollador de Chrome dentro de Claude Desktop para investigar errores del lado del cliente:
+
+1. Crea un archivo `developer_settings.json` con `allowDevTools` en true:
+
+```bash
+echo '{"allowDevTools": true}' > ~/Library/Application\ Support/Claude/developer_settings.json
+```
+
+2. Abre DevTools: `Command-Option-Shift-i`
+
+Nota: Verás dos ventanas de DevTools:
+
+* Ventana del contenido principal
+* Ventana de la barra de título de la aplicación
+
+Usa el panel Console para inspeccionar errores del lado del cliente.
+
+Usa el panel Network para inspeccionar:
+
+* Cargas de mensajes
+* Tiempos de conexión
+
+<div id="common-issues">
+  ## Problemas comunes
+</div>
+
+<div id="working-directory">
+  ### Directorio de trabajo
+</div>
+
+Al usar servidores MCP con Claude Desktop:
+
+* El directorio de trabajo de los servidores iniciados mediante `claude_desktop_config.json` puede ser indefinido (como `/` en macOS), ya que Claude Desktop puede iniciarse desde cualquier ubicación
+* Usa siempre rutas absolutas en tu configuración y en los archivos `.env` para garantizar un funcionamiento confiable
+* Si pruebas los servidores directamente desde la línea de comandos, el directorio de trabajo será aquel desde el que ejecutes el comando
+
+Por ejemplo, en `claude_desktop_config.json`, usa:
+
+```json
+{
+  "command": "npx",
+  "args": [
+    "-y",
+    "@modelcontextprotocol/server-filesystem",
+    "/Users/username/data"
+  ]
+}
+```
+
+En lugar de rutas relativas como `./data`
+
+<div id="environment-variables">
+  ### Variables de entorno
+</div>
+
+Los servidores MCP heredan automáticamente solo un subconjunto de variables de entorno, como `USER`, `HOME` y `PATH`.
+
+Para sobrescribir las variables predeterminadas o proporcionar las tuyas propias, puedes especificar una clave `env` en `claude_desktop_config.json`:
+
+```json
+{
+  "myserver": {
+    "command": "mcp-server-myapp",
+    "env": {
+      "MYAPP_API_KEY": "some_key"
+    }
+  }
+}
+```
+
+<div id="server-initialization">
+  ### Inicialización del servidor
+</div>
+
+Problemas comunes durante la inicialización:
+
+1. **Problemas de ruta**
+   * Ruta incorrecta del ejecutable del servidor
+   * Archivos necesarios faltantes
+   * Problemas de permisos
+   * Prueba usar una ruta absoluta para `command`
+
+2. **Errores de configuración**
+   * Sintaxis JSON no válida
+   * Falta de campos obligatorios
+   * Incompatibilidad de tipos
+
+3. **Problemas de entorno**
+   * Variables de entorno faltantes
+   * Valores de variables incorrectos
+   * Restricciones de permisos
+
+<div id="connection-problems">
+  ### Problemas de conexión
+</div>
+
+Cuando no se pueda establecer la conexión con los servidores:
+
+1. Revisa los registros de Claude Desktop
+2. Verifica que el proceso del servidor esté en ejecución
+3. Prueba de forma independiente con [Inspector](/es/legacy/tools/inspector)
+4. Verifica la compatibilidad del protocolo
+
+<div id="implementing-logging">
+  ## Implementación de registros
+</div>
+
+<div id="server-side-logging">
+  ### Registro en el lado del servidor
+</div>
+
+Al crear un servidor que usa el [transporte](/es/legacy/concepts/transports) local STDIO, todos los mensajes registrados en stderr (error estándar) serán capturados automáticamente por la aplicación anfitriona (p. ej., Claude Desktop).
+
+<Warning>
+  Los servidores MCP locales no deben escribir mensajes en stdout (salida estándar), ya que esto interferirá con el funcionamiento del protocolo.
+</Warning>
+
+Para todos los [transportes](/es/legacy/concepts/transports), también puedes enviar registros al cliente mediante una notificación de mensaje de registro:
+
+<CodeGroup>
+  ```python Python
+  server.request_context.session.send_log_message(
+    level="info",
+    data="Server started successfully",
+  )
+  ```
+
+  ```typescript TypeScript
+  server.sendLoggingMessage({
+    level: "info",
+    data: "Server started successfully",
+  });
+  ```
+</CodeGroup>
+
+Eventos importantes para registrar:
+
+* Pasos de inicialización
+* Acceso a recursos
+* Ejecución de herramientas
+* Condiciones de error
+* Métricas de rendimiento
+
+<div id="client-side-logging">
+  ### Registro en el cliente
+</div>
+
+En las aplicaciones cliente:
+
+1. Activa el registro de depuración
+2. Supervisa el tráfico de red
+3. Rastrea los intercambios de mensajes
+4. Registra los estados de error
+
+<div id="debugging-workflow">
+  ## Flujo de trabajo de depuración
+</div>
+
+<div id="development-cycle">
+  ### Ciclo de desarrollo
+</div>
+
+1. Desarrollo inicial
+   * Usa [Inspector](/es/legacy/tools/inspector) para pruebas básicas
+   * Implementa la funcionalidad principal
+   * Añade puntos de registro
+
+2. Pruebas de integración
+   * Prueba en Claude Desktop
+   * Supervisa los registros
+   * Verifica el manejo de errores
+
+<div id="testing-changes">
+  ### Probar cambios
+</div>
+
+Para probar cambios de forma eficiente:
+
+* **Cambios de configuración**: Reinicia Claude Desktop
+* **Cambios en el código del servidor**: Usa Command-R para recargar
+* **Iteración rápida**: Usa [Inspector](/es/legacy/tools/inspector) durante el desarrollo
+
+<div id="best-practices">
+  ## Mejores prácticas
+</div>
+
+<div id="logging-strategy">
+  ### Estrategia de registro
+</div>
+
+1. **Registro estructurado**
+   * Usa formatos uniformes
+   * Incluye contexto
+   * Agrega marcas de tiempo
+   * Rastrea identificadores de solicitud
+
+2. **Gestión de errores**
+   * Registra trazas de pila
+   * Incluye contexto del error
+   * Rastrea patrones de error
+   * Supervisa la recuperación
+
+3. **Seguimiento del rendimiento**
+   * Registra el tiempo de las operaciones
+   * Supervisa el uso de recursos
+   * Rastrea el tamaño de los mensajes
+   * Mide la latencia
+
+<div id="security-considerations">
+  ### Consideraciones de seguridad
+</div>
+
+Al depurar:
+
+1. **Datos sensibles**
+   * Depura los registros
+   * Protege las credenciales
+   * Enmascara la información personal
+
+2. **Control de acceso**
+   * Verifica los permisos
+   * Comprueba la autenticación
+   * Supervisa los patrones de acceso
+
+<div id="getting-help">
+  ## Obtener ayuda
+</div>
+
+Si encuentras problemas:
+
+1. **Primeros pasos**
+   * Revisa los registros del servidor
+   * Prueba con [Inspector](/es/legacy/tools/inspector)
+   * Revisa la configuración
+   * Verifica el entorno
+
+2. **Canales de soporte**
+   * Incidencias en GitHub
+   * Debates en GitHub
+
+3. **Información a proporcionar**
+   * Fragmentos de registros
+   * Archivos de configuración
+   * Pasos para reproducir el problema
+   * Detalles del entorno
+
+<div id="next-steps">
+  ## Próximos pasos
+</div>
+
+<CardGroup cols={2}>
+  <Card title="MCP Inspector" icon="magnifying-glass" href="/es/legacy/tools/inspector">
+    Aprende a usar el MCP Inspector
+  </Card>
+</CardGroup>

@@ -1,0 +1,326 @@
+---
+title: 调试
+description: 面向模型上下文协议（MCP）集成的全面调试指南
+---
+
+在开发 MCP 服务器或将其集成到应用时，高效调试至关重要。本指南介绍 MCP 生态中可用的调试工具与方法。
+
+<Info>
+  本指南适用于 macOS。其他平台的指南即将推出。
+</Info>
+
+<div id="debugging-tools-overview">
+  ## 调试工具概览
+</div>
+
+MCP 在不同层面提供多种调试工具：
+
+1. **MCP Inspector**
+   * 交互式调试界面
+   * 直接进行服务器测试
+   * 详见 [Inspector 指南](/zh/legacy/tools/inspector)
+
+2. **Claude Desktop 开发者工具**
+   * 集成测试
+   * 日志采集
+   * 集成 Chrome DevTools
+
+3. **服务器日志**
+   * 自定义日志实现
+   * 错误追踪
+   * 性能监控
+
+<div id="debugging-in-claude-desktop">
+  ## 在 Claude Desktop 中调试
+</div>
+
+<div id="checking-server-status">
+  ### 检查服务器状态
+</div>
+
+Claude.app 界面提供基本的服务器状态信息：
+
+1. 点击 <img src="/images/claude-desktop-mcp-plug-icon.svg" style={{display: "inline", margin: 0, height: "1.3em"}} /> 图标可查看：
+   * 已连接的服务器
+   * 可用的提示模板和资源
+
+2. 点击 “Search and tools” <img src="/images/claude-desktop-mcp-slider.svg" style={{display: "inline", margin: 0, height: "1.3em"}} /> 图标可查看：
+   * 提供给模型的工具
+
+<div id="viewing-logs">
+  ### 查看日志
+</div>
+
+在 Claude Desktop 中查看详细的 MCP 日志：
+
+```bash
+# 实时查看最新日志
+tail -n 20 -F ~/Library/Logs/Claude/mcp*.log
+```
+
+日志包括：
+
+* 服务器连接事件
+* 配置问题
+* 运行时错误
+* 消息收发
+
+<div id="using-chrome-devtools">
+  ### 使用 Chrome 开发者工具
+</div>
+
+在 Claude Desktop 中使用 Chrome 开发者工具排查客户端错误：
+
+1. 创建 `developer_settings.json` 文件，并将 `allowDevTools` 设置为 true：
+
+```bash
+echo '{"allowDevTools": true}' > ~/Library/Application\ Support/Claude/developer_settings.json
+```
+
+2. 打开 DevTools：`Command-Option-Shift-I`
+
+注意：你会看到两个 DevTools 窗口：
+
+* 主内容窗口
+* 应用标题栏窗口
+
+使用 Console 面板查看客户端错误。
+
+使用 Network 面板查看：
+
+* 消息负载
+* 连接时序
+
+<div id="common-issues">
+  ## 常见问题
+</div>
+
+<div id="working-directory">
+  ### 工作目录
+</div>
+
+在将 MCP 服务器与 Claude Desktop 搭配使用时：
+
+* 通过 `claude_desktop_config.json` 启动的服务器，其工作目录可能未定义（在 macOS 上类似为 `/`），因为 Claude Desktop 可能从任意位置启动
+* 始终在配置和 `.env` 文件中使用绝对路径，以确保可靠运行
+* 通过命令行直接测试服务器时，工作目录即为你执行该命令的目录
+
+例如，在 `claude_desktop_config.json` 中使用：
+
+```json
+{
+  "command": "npx",
+  "args": [
+    "-y",
+    "@modelcontextprotocol/server-filesystem",
+    "/Users/username/data"
+  ]
+}
+```
+
+而不要使用像 `./data` 这样的相对路径
+
+<div id="environment-variables">
+  ### 环境变量
+</div>
+
+MCP 服务器只会自动继承一部分环境变量，例如 `USER`、`HOME` 和 `PATH`。
+
+要覆盖默认变量或提供自定义变量，可以在 `claude_desktop_config.json` 中指定 `env` 键：
+
+```json
+{
+  "myserver": {
+    "command": "mcp-server-myapp",
+    "env": {
+      "MYAPP_API_KEY": "some_key"
+    }
+  }
+}
+```
+
+<div id="server-initialization">
+  ### 服务器初始化
+</div>
+
+常见的初始化问题：
+
+1. **路径问题**
+   * 服务器可执行文件路径错误
+   * 缺少必需文件
+   * 权限不足
+   * 尝试为 `command` 使用绝对路径
+
+2. **配置错误**
+   * JSON 语法无效
+   * 缺少必填字段
+   * 类型不匹配
+
+3. **环境问题**
+   * 缺少环境变量
+   * 环境变量取值错误
+   * 权限受限
+
+<div id="connection-problems">
+  ### 连接问题
+</div>
+
+如果服务器无法建立连接：
+
+1. 检查 Claude Desktop 日志
+2. 确认服务器进程正在运行
+3. 使用 [Inspector](/zh/legacy/tools/inspector) 进行独立测试
+4. 核实协议兼容性
+
+<div id="implementing-logging">
+  ## 实现日志功能
+</div>
+
+<div id="server-side-logging">
+  ### 服务器端日志记录
+</div>
+
+在构建使用本地 stdio [传输方式](/zh/legacy/concepts/transports)的服务器时，记录到 stderr（标准错误）的所有消息都会被主机应用（例如 Claude Desktop）自动捕获。
+
+<Warning>
+  本地 MCP 服务器不应将消息写入 stdout（标准输出），否则会干扰协议的正常运行。
+</Warning>
+
+对于所有[传输方式](/zh/legacy/concepts/transports)，你也可以通过发送日志消息通知向客户端提供日志：
+
+<CodeGroup>
+  ```python Python
+  server.request_context.session.send_log_message(
+    level="info",
+    data="Server started successfully",
+  )
+  ```
+
+  ```typescript TypeScript
+  server.sendLoggingMessage({
+    level: "info",
+    data: "Server started successfully",
+  });
+  ```
+</CodeGroup>
+
+建议记录的重要事件：
+
+* 初始化步骤
+* 资源访问
+* 工具执行
+* 错误情况
+* 性能指标
+
+<div id="client-side-logging">
+  ### 客户端日志
+</div>
+
+在客户端应用中：
+
+1. 启用调试日志
+2. 监控网络流量
+3. 跟踪消息交互
+4. 记录错误状态
+
+<div id="debugging-workflow">
+  ## 调试流程
+</div>
+
+<div id="development-cycle">
+  ### 开发周期
+</div>
+
+1. 初始开发
+   * 使用 [Inspector](/zh/legacy/tools/inspector) 进行基础测试
+   * 实现核心功能
+   * 添加日志记录点
+
+2. 集成测试
+   * 在 Claude Desktop 中进行测试
+   * 监控日志
+   * 检查错误处理机制
+
+<div id="testing-changes">
+  ### 测试变更
+</div>
+
+要高效测试变更：
+
+* **配置变更**：重启 Claude Desktop
+* **服务器代码变更**：按 Command-R 重新加载
+* **快速迭代**：开发过程中使用 [Inspector](/zh/legacy/tools/inspector)
+
+<div id="best-practices">
+  ## 最佳实践
+</div>
+
+<div id="logging-strategy">
+  ### 日志策略
+</div>
+
+1. **结构化日志**
+   * 使用统一格式
+   * 包含上下文信息
+   * 添加时间戳
+   * 跟踪请求 ID
+
+2. **错误处理**
+   * 记录堆栈信息
+   * 包含错误上下文
+   * 跟踪错误模式
+   * 监控恢复情况
+
+3. **性能监测**
+   * 记录操作耗时
+   * 监控资源使用
+   * 跟踪消息大小
+   * 测量延迟
+
+<div id="security-considerations">
+  ### 安全注意事项
+</div>
+
+在调试时：
+
+1. **敏感数据**
+   * 清理/脱敏日志
+   * 保护凭证
+   * 对个人信息做脱敏处理
+
+2. **访问控制**
+   * 验证权限
+   * 检查身份认证
+   * 监控访问模式
+
+<div id="getting-help">
+  ## 获取帮助
+</div>
+
+遇到问题时：
+
+1. **第一步**
+   * 检查服务器日志
+   * 使用 [Inspector](/zh/legacy/tools/inspector) 进行测试
+   * 检查配置
+   * 确认运行环境
+
+2. **支持渠道**
+   * GitHub Issues
+   * GitHub Discussions
+
+3. **提供信息**
+   * 日志片段
+   * 配置文件
+   * 复现步骤
+   * 环境信息
+
+<div id="next-steps">
+  ## 后续步骤
+</div>
+
+<CardGroup cols={2}>
+  <Card title="MCP Inspector" icon="magnifying-glass" href="/zh/legacy/tools/inspector">
+    了解如何使用 MCP Inspector
+  </Card>
+</CardGroup>

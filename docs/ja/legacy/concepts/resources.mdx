@@ -1,0 +1,287 @@
+---
+title: "リソース"
+description: "サーバーのデータやコンテンツをLLMに公開する"
+---
+
+リソースは、Model Context Protocol（MCP）における中核的なプリミティブで、サーバーがデータやコンテンツを公開し、クライアントがそれを読み取り、LLMとの対話のコンテキストとして利用できるようにします。
+
+<Note>
+  リソースは**アプリケーション制御**を前提として設計されており、クライアントアプリケーションが、いつ・どのように利用するかを決定します。
+  MCPクライアントによって、リソースの扱いは異なる場合があります。例えば:
+
+  * Claude Desktop では現在、ユーザーがリソースを明示的に選択しないと利用できません
+  * ほかのクライアントはヒューリスティックに基づいてリソースを自動選択することがあります
+  * 実装によっては、AIモデル自体が使用するリソースを判断できる場合もあります
+
+  サーバーの作者は、リソース対応を実装する際に、これらのいずれのインタラクションパターンにも対応できるよう備える必要があります。モデルにデータを自動的に公開するには、[ツール](ja/./tools) のような**モデル制御**のプリミティブを使用してください。
+</Note>
+
+<div id="overview">
+  ## 概要
+</div>
+
+リソースは、MCPサーバーがクライアントに提供したいあらゆる種類のデータを表します。たとえば次のようなものがあります:
+
+* ファイルの内容
+* データベースのレコード
+* APIレスポンス
+* ライブなシステムデータ
+* スクリーンショットや画像
+* ログファイル
+* など
+
+各リソースは固有のURIで識別され、テキストまたはバイナリデータを含む場合があります。
+
+<div id="resource-uris">
+  ## リソースのURI
+</div>
+
+リソースは次の形式のURIで識別されます：
+
+```
+[protocol]://[host]/[path]
+```
+
+例：
+
+* `file:///home/user/documents/report.pdf`
+* `postgres://database/customers/schema`
+* `screen://localhost/display1`
+
+プロトコルとパスの構造はMCPサーバーの実装によって定義されます。サーバーは独自のURIスキームを定義できます。
+
+<div id="resource-types">
+  ## リソースの種類
+</div>
+
+リソースには、次の2種類のコンテンツを含められます：
+
+<div id="text-resources">
+  ### テキストリソース
+</div>
+
+テキストリソースには、UTF-8 でエンコードされたテキストデータが含まれます。次の用途に適しています：
+
+* ソースコード
+* 設定ファイル
+* ログファイル
+* JSON/XML データ
+* プレーンテキスト
+
+<div id="binary-resources">
+  ### バイナリリソース
+</div>
+
+バイナリリソースには、base64でエンコードされた生のバイナリデータが含まれます。これらは次の用途に適しています：
+
+* 画像
+* PDF
+* 音声ファイル
+* 動画ファイル
+* その他の非テキスト形式
+
+<div id="resource-discovery">
+  ## リソースの検出
+</div>
+
+クライアントは、主に次の2つの方法で利用可能なリソースを把握できます。
+
+<div id="direct-resources">
+  ### 直接リソース
+</div>
+
+サーバーは `resources/list` リクエストでリソースの一覧を公開します。各リソースには以下が含まれます:
+
+```typescript
+{
+  uri: string;           // リソースの固有識別子
+  name: string;          // 人間が読める名称
+  description?: string;  // 任意の説明
+  mimeType?: string;     // 任意のMIMEタイプ
+  size?: number;         // 任意（バイト単位）のサイズ
+}
+```
+
+<div id="resource-templates">
+  ### リソーステンプレート
+</div>
+
+動的なリソースに対して、サーバーはクライアントが有効なリソースURIを構築するために利用できる[URIテンプレート](https://datatracker.ietf.org/doc/html/rfc6570)を公開できます：
+
+```typescript
+{
+  uriTemplate: string;   // RFC 6570に準拠したURIテンプレート
+  name: string;          // このタイプの人間可読な名前
+  description?: string;  // 任意の説明
+  mimeType?: string;     // すべての該当リソースに共通の任意のMIMEタイプ
+}
+```
+
+<div id="reading-resources">
+  ## リソースの読み取り
+</div>
+
+リソースを読み取るには、クライアントは対象リソースのURIを指定して `resources/read` リクエストを送信します。
+
+サーバーはリソース内容のリストで応答します:
+
+```typescript
+{
+  contents: [
+    {
+      uri: string;        // リソースのURI
+      mimeType?: string;  // 任意のMIMEタイプ
+
+      // いずれか一方:
+      text?: string;      // テキストリソース用
+      blob?: string;      // バイナリリソース用（base64エンコード）
+    }
+  ]
+}
+```
+
+<Tip>
+  サーバーは1つの `resources/read` リクエストに対して複数のリソースを返す場合があります。例えば、ディレクトリを読み取ると、そのディレクトリ内のファイル一覧を返すといった使い方が可能です。
+</Tip>
+
+<div id="resource-updates">
+  ## リソースの更新
+</div>
+
+MCPは、2つのメカニズムによってリソースのリアルタイム更新をサポートします。
+
+<div id="list-changes">
+  ### 変更一覧
+</div>
+
+サーバーは、利用可能なリソース一覧が変更された際に、`notifications/resources/list_changed` 通知でクライアントに知らせることができます。
+
+<div id="content-changes">
+  ### コンテンツの変更
+</div>
+
+クライアントは特定のリソースの更新を購読できます:
+
+1. クライアントはリソースURIを指定して `resources/subscribe` を送信する
+2. サーバーはリソースが変更されたときに `notifications/resources/updated` を送信する
+3. クライアントは `resources/read` で最新のコンテンツを取得できる
+4. クライアントは `resources/unsubscribe` で購読を解除できる
+
+<div id="example-implementation">
+  ## 実装例
+</div>
+
+MCPサーバーでリソースのサポートを実装する簡単な例を示します：
+
+<CodeGroup>
+  ```typescript TypeScript
+  const server = new Server(
+    {
+      name: "example-server",
+      version: "1.0.0",
+    },
+    {
+      capabilities: {
+        resources: {},
+      },
+    },
+  );
+
+  // 利用可能なリソースを一覧表示
+  server.setRequestHandler(ListResourcesRequestSchema, async () => {
+    return {
+      resources: [
+        {
+          uri: "file:///logs/app.log",
+          name: "Application Logs",
+          mimeType: "text/plain",
+        },
+      ],
+    };
+  });
+
+  // リソースの内容を読み取り
+  server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+    const uri = request.params.uri;
+
+    if (uri === "file:///logs/app.log") {
+      const logContents = await readLogFile();
+      return {
+        contents: [
+          {
+            uri,
+            mimeType: "text/plain",
+            text: logContents,
+          },
+        ],
+      };
+    }
+
+    throw new Error("Resource not found");
+  });
+  ```
+
+  ```python Python
+  app = Server("example-server")
+
+  @app.list_resources()
+  async def list_resources() -> list[types.Resource]:
+      return [
+          types.Resource(
+              uri="file:///logs/app.log",
+              name="Application Logs",
+              mimeType="text/plain"
+          )
+      ]
+
+  @app.read_resource()
+  async def read_resource(uri: AnyUrl) -> str:
+      if str(uri) == "file:///logs/app.log":
+          log_contents = await read_log_file()
+          return log_contents
+
+      raise ValueError("Resource not found")
+
+  # サーバーを起動
+  async with stdio_server() as streams:
+      await app.run(
+          streams[0],
+          streams[1],
+          app.create_initialization_options()
+      )
+  ```
+</CodeGroup>
+
+<div id="best-practices">
+  ## ベストプラクティス
+</div>
+
+リソース対応を実装する際は、次の点を推奨します:
+
+1. 明確で分かりやすいリソース名とURIを使用する
+2. LLMの理解を助ける有用な説明文を付ける
+3. 分かっている場合は適切なMIMEタイプを設定する
+4. 動的コンテンツ向けにリソーステンプレートを実装する
+5. 頻繁に更新されるリソースにはサブスクリプションを使用する
+6. わかりやすいエラーメッセージで丁寧にエラー処理を行う
+7. 大規模なリソース一覧にはページネーションを検討する
+8. 適切な場合はリソース内容をキャッシュする
+9. 処理前にURIを検証する
+10. カスタムURIスキームを文書化する
+
+<div id="security-considerations">
+  ## セキュリティの考慮事項
+</div>
+
+リソースを公開する際は、次の点を実施してください:
+
+* すべてのリソースURIを検証する
+* 適切なアクセス制御を実装する
+* ディレクトリトラバーサルを防ぐためにファイルパスを正規化・無毒化する
+* バイナリデータの取り扱いに注意する
+* リソースの読み取りに対するレート制限を検討する
+* リソースアクセスを監査する
+* 機微情報は転送中に暗号化する
+* MIMEタイプを検証する
+* 長時間に及ぶ読み取りにはタイムアウトを実装する
+* リソースのクリーンアップを適切に行う

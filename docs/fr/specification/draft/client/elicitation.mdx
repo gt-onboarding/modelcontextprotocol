@@ -1,0 +1,350 @@
+---
+title: Élicitation
+---
+
+<div id="enable-section-numbers" />
+
+<Info>**Révision du protocole** : brouillon</Info>
+
+<Note>
+  L’élicitation est introduite dans cette version de la spécification du Protocole de contexte de modèle (MCP) et sa conception pourrait évoluer dans de futures versions du protocole.
+</Note>
+
+Le Protocole de contexte de modèle (MCP) fournit un moyen standardisé pour les serveurs de demander des
+informations supplémentaires aux utilisateurs, via le client, au cours des interactions. Ce processus permet aux clients de
+conserver le contrôle des interactions utilisateur et du partage des données, tout en permettant aux serveurs de recueillir
+les informations nécessaires de façon dynamique.
+Les serveurs sollicitent des données structurées auprès des utilisateurs à l’aide de schémas JSON afin de valider les réponses.
+
+<div id="user-interaction-model">
+  ## Modèle d’interaction utilisateur
+</div>
+
+L’Élicitation dans le MCP permet aux serveurs de mettre en place des flux de travail interactifs en autorisant des demandes de saisie utilisateur à se produire de manière *imbriquée* au sein d’autres fonctionnalités du serveur MCP.
+
+Les implémentations sont libres d’exposer l’élicitation via tout modèle d’interface qui répond à leurs besoins—le protocole en lui-même n’impose aucun modèle d’interaction utilisateur spécifique.
+
+<Warning>
+  Pour la confiance, la sûreté et la sécurité :
+
+  * Les serveurs **NE DOIVENT PAS** utiliser l’élicitation pour demander des informations sensibles.
+
+  Les applications **DEVRAIENT** :
+
+  * Fournir une interface indiquant clairement quel serveur demande des informations
+  * Permettre aux utilisateurs de relire et de modifier leurs réponses avant envoi
+  * Respecter la vie privée des utilisateurs et proposer des options claires pour refuser ou annuler
+</Warning>
+
+<div id="capabilities">
+  ## Capacités
+</div>
+
+Les clients qui prennent en charge l’Élicitation **DOIVENT** déclarer la capacité `elicitation` lors de
+[l’initialisation](/fr/specification/draft/basic/lifecycle#initialization) :
+
+```json
+{
+  "capabilities": {
+    "elicitation": {}
+  }
+}
+```
+
+<div id="protocol-messages">
+  ## Messages du protocole
+</div>
+
+<div id="creating-elicitation-requests">
+  ### Création de demandes d’élicitation
+</div>
+
+Pour demander des informations à un utilisateur, les serveurs envoient une requête `elicitation/create` :
+
+<div id="simple-text-request">
+  #### Requête de texte simple
+</div>
+
+**Requête :**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "elicitation/create",
+  "params": {
+    "message": "Veuillez fournir votre nom d’utilisateur GitHub",
+    "requestedSchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": ["name"]
+    }
+  }
+}
+```
+
+**Réponse :**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "action": "accept",
+    "content": {
+      "name": "octocat"
+    }
+  }
+}
+```
+
+<div id="structured-data-request">
+  #### Demande de données structurées
+</div>
+
+**Demande :**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "elicitation/create",
+  "params": {
+    "message": "Veuillez fournir vos coordonnées",
+    "requestedSchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Votre nom complet"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Votre adresse e‑mail"
+        },
+        "age": {
+          "type": "number",
+          "minimum": 18,
+          "description": "Votre âge"
+        }
+      },
+      "required": ["name", "email"]
+    }
+  }
+}
+```
+
+**Réponse :**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "action": "accept",
+    "content": {
+      "name": "Monalisa Octocat",
+      "email": "octocat@github.com",
+      "age": 30
+    }
+  }
+}
+```
+
+**Exemple de réponse de refus :**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "action": "decline"
+  }
+}
+```
+
+**Exemple de réponse d’annulation :**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "action": "cancel"
+  }
+}
+```
+
+<div id="message-flow">
+  ## Flux des messages
+</div>
+
+```mermaid
+sequenceDiagram
+    participant Utilisateur
+    participant Client
+    participant Serveur
+
+    Note over Serveur,Client: Le serveur lance une élicitation
+    Serveur->>Client: elicitation/create
+
+    Note over Client,Utilisateur: Interaction humaine
+    Client->>Utilisateur: Afficher l'interface d'élicitation
+    Utilisateur-->>Client: Fournir les informations demandées
+
+    Note over Serveur,Client: Finaliser la requête
+    Client-->>Serveur: Retourner la réponse de l'utilisateur
+
+    Note over Serveur: Poursuivre le traitement avec les nouvelles informations
+```
+
+<div id="request-schema">
+  ## Schéma de requête
+</div>
+
+Le champ `requestedSchema` permet aux serveurs de définir la structure de la réponse attendue à l’aide d’un sous-ensemble restreint de JSON Schema. Pour simplifier l’expérience utilisateur côté client, les schémas d’élicitation sont limités à des objets plats ne contenant que des propriétés primitives :
+
+```json
+"requestedSchema": {
+  "type": "object",
+  "properties": {
+    "propertyName": {
+      "type": "string",
+      "title": "Display Name",
+      "description": "Description of the property"
+    },
+    "anotherProperty": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+    }
+  },
+  "required": ["propertyName"]
+}
+```
+
+<div id="supported-schema-types">
+  ### Types de schémas pris en charge
+</div>
+
+Le schéma est limité aux types primitifs suivants :
+
+1. **Schéma de chaîne (String)**
+
+   ```json
+   {
+     "type": "string",
+     "title": "Display Name",
+     "description": "Description text",
+     "minLength": 3,
+     "maxLength": 50,
+     "pattern": "^[A-Za-z]+$",
+     "format": "email",
+     "default": "user@example.com"
+   }
+   ```
+
+   Formats pris en charge : `email`, `uri`, `date`, `date-time`
+
+2. **Schéma numérique (Number)**
+
+   ```json
+   {
+     "type": "number", // or "integer"
+     "title": "Display Name",
+     "description": "Description text",
+     "minimum": 0,
+     "maximum": 100,
+     "default": 50
+   }
+   ```
+
+3. **Schéma booléen (Boolean)**
+
+   ```json
+   {
+     "type": "boolean",
+     "title": "Display Name",
+     "description": "Description text",
+     "default": false
+   }
+   ```
+
+4. **Schéma énumération (Enum)**
+   ```json
+   {
+     "type": "string",
+     "title": "Display Name",
+     "description": "Description text",
+     "enum": ["option1", "option2", "option3"],
+     "enumNames": ["Option 1", "Option 2", "Option 3"],
+     "default": "option1"
+   }
+   ```
+
+Les clients peuvent utiliser ce schéma pour :
+
+1. Générer des formulaires de saisie adaptés
+2. Valider la saisie utilisateur avant envoi
+3. Mieux guider les utilisateurs
+
+Tous les types primitifs prennent en charge des valeurs par défaut facultatives pour proposer des points de départ pertinents. Les clients qui prennent en charge les valeurs par défaut DOIVENT préremplir les champs de formulaire avec ces valeurs.
+
+Notez que les structures imbriquées complexes, les tableaux d’objets et d’autres fonctionnalités avancées de JSON Schema ne sont volontairement pas pris en charge afin de simplifier l’expérience utilisateur côté client.
+
+<div id="response-actions">
+  ## Actions de réponse
+</div>
+
+Les réponses d’Élicitation suivent un modèle à trois actions pour distinguer clairement les différentes actions de l’utilisateur :
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "action": "accept", // ou "decline" ou "cancel"
+    "content": {
+      "propertyName": "value",
+      "anotherProperty": 42
+    }
+  }
+}
+```
+
+Les trois actions de réponse sont :
+
+1. **Accepter** (`action: "accept"`): l’utilisateur a explicitement approuvé et soumis des données
+   * Le champ `content` contient les données soumises conformes au schéma demandé
+   * Exemple : l’utilisateur a cliqué sur « Submit », « OK », « Confirm », etc.
+
+2. **Refuser** (`action: "decline"`): l’utilisateur a explicitement refusé la demande
+   * Le champ `content` est généralement omis
+   * Exemple : l’utilisateur a cliqué sur « Reject », « Decline », « No », etc.
+
+3. **Annuler** (`action: "cancel"`): l’utilisateur a quitté sans faire de choix explicite
+   * Le champ `content` est généralement omis
+   * Exemple : l’utilisateur a fermé la boîte de dialogue, cliqué à l’extérieur, appuyé sur Échap, etc.
+
+Les serveurs doivent gérer chaque état de manière appropriée :
+
+* **Accepter** : traiter les données soumises
+* **Refuser** : gérer le refus explicite (p. ex., proposer des alternatives)
+* **Annuler** : gérer l’abandon (p. ex., relancer plus tard)
+
+<div id="security-considerations">
+  ## Considérations de sécurité
+</div>
+
+1. Les serveurs **NE DOIVENT PAS** demander d’informations sensibles via l’élicitation
+2. Les clients **DEVRAIENT** mettre en place des contrôles d’approbation par l’utilisateur
+3. Les deux parties **DEVRAIENT** valider le contenu d’élicitation par rapport au schéma fourni
+4. Les clients **DEVRAIENT** indiquer clairement quel serveur demande des informations
+5. Les clients **DEVRAIENT** permettre aux utilisateurs de refuser les demandes d’élicitation à tout moment
+6. Les clients **DEVRAIENT** mettre en place une limitation du débit
+7. Les clients **DEVRAIENT** présenter les demandes d’élicitation de manière à préciser quelles informations sont demandées et pourquoi

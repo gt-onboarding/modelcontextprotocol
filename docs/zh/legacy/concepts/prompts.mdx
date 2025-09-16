@@ -1,0 +1,453 @@
+---
+title: "提示模板"
+description: "创建可复用的提示模板与工作流"
+---
+
+提示模板使服务器能够定义可复用的提示模板与工作流，客户端可以轻松将其呈现给用户和 LLM。它为标准化和共享常见的 LLM 交互提供了一种强有力的方式。
+
+<Note>
+
+提示模板旨在由用户控制，这意味着它们由服务器暴露给客户端，目的是让用户能够主动、明确地选择使用。
+
+</Note>
+
+<div id="overview">
+  ## 概览
+</div>
+
+MCP 中的提示模板是预定义的模板，能够：
+
+- 接收动态参数
+- 引入资源上下文
+- 串联多次交互
+- 引导特定工作流程
+- 以 UI 元素形式呈现（如斜杠命令）
+
+<div id="prompt-structure">
+  ## 提示模板结构
+</div>
+
+每个提示模板的定义如下：
+
+```typescript
+{
+  name: string;              // 提示模板的唯一标识符
+  description?: string;      // 可读的描述
+  arguments?: [              // 可选的参数列表
+    {
+      name: string;          // 参数标识符
+      description?: string;  // 参数说明
+      required?: boolean;    // 是否为必填参数
+    }
+  ]
+}
+```
+
+<div id="discovering-prompts">
+  ## 发现提示模板
+</div>
+
+客户端可以通过发送 `prompts/list` 请求来获取可用的提示模板：
+
+```typescript
+// Request
+{
+  method: "prompts/list";
+}
+
+// Response
+{
+  prompts: [
+    {
+      name: "analyze-code",
+      description: "Analyze code for potential improvements",
+      arguments: [
+        {
+          name: "language",
+          description: "Programming language",
+          required: true,
+        },
+      ],
+    },
+  ];
+}
+```
+
+<div id="using-prompts">
+  ## 使用提示模板
+</div>
+
+要使用提示模板，客户端需要发起一个 `prompts/get` 请求：
+
+````typescript
+// Request
+{
+  method: "prompts/get",
+  params: {
+    name: "analyze-code",
+    arguments: {
+      language: "python"
+    }
+  }
+}
+
+// Response
+{
+  description: "分析 Python 代码中的潜在改进点",
+  messages: [
+    {
+      role: "user",
+      content: {
+        type: "text",
+        text: "请分析以下 Python 代码，找出可能的改进点：\n\n```python\ndef calculate_sum(numbers):\n    total = 0\n    for num in numbers:\n        total = total + num\n    return total\n\nresult = calculate_sum([1, 2, 3, 4, 5])\nprint(result)\n```"
+      }
+    }
+  ]
+}
+````
+
+<div id="dynamic-prompts">
+  ## 动态提示模板
+</div>
+
+提示模板可以是动态的，包含：
+
+<div id="embedded-resource-context">
+  ### 嵌入式资源上下文
+</div>
+
+```json
+{
+  "name": "analyze-project",
+  "description": "分析项目日志和代码",
+  "arguments": [
+    {
+      "name": "timeframe",
+      "description": "要分析日志的时间范围",
+      "required": true
+    },
+    {
+      "name": "fileUri",
+      "description": "待审查代码文件的 URI",
+      "required": true
+    }
+  ]
+}
+```
+
+在处理 `prompts/get` 请求时：
+
+```json
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": {
+        "type": "text",
+        "text": "请分析这些系统日志和该代码文件，查找任何问题："
+      }
+    },
+    {
+      "role": "user",
+      "content": {
+        "type": "resource",
+        "resource": {
+          "uri": "logs://recent?timeframe=1h",
+          "text": "[2024-03-14 15:32:11] ERROR: Connection timeout in network.py:127\n[2024-03-14 15:32:15] WARN: Retrying connection (attempt 2/3)\n[2024-03-14 15:32:20] ERROR: Max retries exceeded",
+          "mimeType": "text/plain"
+        }
+      }
+    },
+    {
+      "role": "user",
+      "content": {
+        "type": "resource",
+        "resource": {
+          "uri": "file:///path/to/code.py",
+          "text": "def connect_to_service(timeout=30):\n    retries = 3\n    for attempt in range(retries):\n        try:\n            return establish_connection(timeout)\n        except TimeoutError:\n            if attempt == retries - 1:\n                raise\n            time.sleep(5)\n\ndef establish_connection(timeout):\n    # Connection implementation\n    pass",
+          "mimeType": "text/x-python"
+        }
+      }
+    }
+  ]
+}
+```
+
+<div id="multi-step-workflows">
+  ### 多步工作流程
+</div>
+
+```typescript
+const debugWorkflow = {
+  name: "debug-error",
+  async getMessages(error: string) {
+    return [
+      {
+        role: "user",
+        content: {
+          type: "text",
+          text: `我遇到的错误是：${error}`,
+        },
+      },
+      {
+        role: "assistant",
+        content: {
+          type: "text",
+          text: "我来帮你分析这个错误。到目前为止你都尝试了哪些方法？",
+        },
+      },
+      {
+        role: "user",
+        content: {
+          type: "text",
+          text: "我试过重启服务，但问题仍然存在。",
+        },
+      },
+    ];
+  },
+};
+```
+
+<div id="example-implementation">
+  ## 示例实现
+</div>
+
+下面是在 MCP 服务器中实现提示模板的完整示例：
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Server } from "@modelcontextprotocol/sdk/server";
+import {
+  ListPromptsRequestSchema,
+  GetPromptRequestSchema,
+} from "@modelcontextprotocol/sdk/types";
+
+const PROMPTS = {
+  "git-commit": {
+    name: "git-commit",
+    description: "生成一条 Git 提交信息",
+    arguments: [
+      {
+        name: "changes",
+        description: "Git 差异（diff）或变更说明",
+        required: true,
+      },
+    ],
+  },
+  "explain-code": {
+    name: "explain-code",
+    description: "解释代码工作原理",
+    arguments: [
+      {
+        name: "code",
+        description: "需要解释的代码",
+        required: true,
+      },
+      {
+        name: "language",
+        description: "编程语言",
+        required: false,
+      },
+    ],
+  },
+};
+
+const server = new Server(
+  {
+    name: "example-prompts-server",
+    version: "1.0.0",
+  },
+  {
+    capabilities: {
+      prompts: {},
+    },
+  },
+);
+
+// 列出可用的提示模板
+server.setRequestHandler(ListPromptsRequestSchema, async () => {
+  return {
+    prompts: Object.values(PROMPTS),
+  };
+});
+
+// 获取指定的提示模板
+server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+  const prompt = PROMPTS[request.params.name];
+  if (!prompt) {
+    throw new Error(`未找到提示模板：${request.params.name}`);
+  }
+
+  if (request.params.name === "git-commit") {
+    return {
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: `请根据以下变更生成一条简洁但具描述性的提交信息：\n\n${request.params.arguments?.changes}`,
+          },
+        },
+      ],
+    };
+  }
+
+  if (request.params.name === "explain-code") {
+    const language = request.params.arguments?.language || "Unknown";
+    return {
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: `请解释这段 ${language} 代码的工作原理：\n\n${request.params.arguments?.code}`,
+          },
+        },
+      ],
+    };
+  }
+
+  throw new Error("未找到对应的提示模板实现");
+});
+```
+
+```python Python
+from mcp.server import Server
+import mcp.types as types
+
+# 定义可用的提示模板
+PROMPTS = {
+    "git-commit": types.Prompt(
+        name="git-commit",
+        description="生成一条 Git 提交信息",
+        arguments=[
+            types.PromptArgument(
+                name="changes",
+                description="Git 差异（diff）或变更说明",
+                required=True
+            )
+        ],
+    ),
+    "explain-code": types.Prompt(
+        name="explain-code",
+        description="解释代码工作原理",
+        arguments=[
+            types.PromptArgument(
+                name="code",
+                description="需要解释的代码",
+                required=True
+            ),
+            types.PromptArgument(
+                name="language",
+                description="编程语言",
+                required=False
+            )
+        ],
+    )
+}
+
+# 初始化服务器
+app = Server("example-prompts-server")
+
+@app.list_prompts()
+async def list_prompts() -> list[types.Prompt]:
+    return list(PROMPTS.values())
+
+@app.get_prompt()
+async def get_prompt(
+    name: str, arguments: dict[str, str] | None = None
+) -> types.GetPromptResult:
+    if name not in PROMPTS:
+        raise ValueError(f"未找到提示模板：{name}")
+
+    if name == "git-commit":
+        changes = arguments.get("changes") if arguments else ""
+        return types.GetPromptResult(
+            messages=[
+                types.PromptMessage(
+                    role="user",
+                    content=types.TextContent(
+                        type="text",
+                        text=f"请根据以下变更生成一条简洁但具描述性的提交信息：\n\n{changes}"
+                    )
+                )
+            ]
+        )
+
+    if name == "explain-code":
+        code = arguments.get("code") if arguments else ""
+        language = arguments.get("language", "Unknown") if arguments else "Unknown"
+        return types.GetPromptResult(
+            messages=[
+                types.PromptMessage(
+                    role="user",
+                    content=types.TextContent(
+                        type="text",
+                        text=f"请解释这段 {language} 代码的工作原理：\n\n{code}"
+                    )
+                )
+            ]
+        )
+
+    raise ValueError("未找到对应的提示模板实现")
+```
+
+</CodeGroup>
+
+<div id="best-practices">
+  ## 最佳实践
+</div>
+
+在实现提示模板时：
+
+1. 使用清晰、具有描述性的提示模板名称
+2. 为提示模板及其参数提供详细说明
+3. 校验所有必填参数
+4. 友好地处理缺失参数
+5. 为提示模板考虑版本管理
+6. 在合适情况下缓存动态内容
+7. 实现健全的错误处理
+8. 文档化预期的参数格式
+9. 考虑提示模板的可组合性
+10. 使用多种输入对提示模板进行测试
+
+<div id="ui-integration">
+  ## UI 集成
+</div>
+
+提示模板可以在客户端 UI 中以以下形式呈现：
+
+- 斜杠命令
+- 快捷操作
+- 右键菜单项
+- 命令面板项
+- 向导式工作流
+- 交互式表单
+
+<div id="updates-and-changes">
+  ## 更新与变更
+</div>
+
+服务器可以就提示模板的变更通知客户端：
+
+1. 服务器能力：`prompts.listChanged`
+2. 通知：`notifications/prompts/list_changed`
+3. 客户端重新拉取提示模板列表
+
+<div id="security-considerations">
+  ## 安全注意事项
+</div>
+
+在实现提示模板时：
+
+- 验证所有参数
+- 清洗并规范化用户输入
+- 考虑设置速率限制
+- 实施访问控制
+- 审计提示模板的使用情况
+- 妥善处理敏感数据
+- 校验生成内容
+- 实施超时机制
+- 评估并防范提示注入风险
+- 文档化安全要求

@@ -1,0 +1,469 @@
+---
+title: Herramientas
+---
+
+<div id="enable-section-numbers" />
+
+<Info>**Revisión del protocolo**: borrador</Info>
+
+El Protocolo de Contexto de Modelo (MCP) permite que los servidores expongan herramientas que los modelos de lenguaje puedan invocar. Las herramientas permiten que los modelos interactúen con sistemas externos, como consultar bases de datos, llamar a API o realizar cálculos. Cada herramienta se identifica de forma única por un nombre e incluye metadatos que describen su esquema.
+
+<div id="user-interaction-model">
+  ## Modelo de interacción con el usuario
+</div>
+
+Las Herramientas en el Protocolo de Contexto de Modelo (MCP) están diseñadas para ser **controladas por el modelo**, lo que significa que el modelo de lenguaje puede
+descubrir e invocar herramientas automáticamente según su comprensión contextual y las
+indicaciones del usuario.
+
+Sin embargo, las implementaciones son libres de exponer herramientas mediante cualquier patrón de interfaz que
+se ajuste a sus necesidades—el protocolo en sí no impone ningún modelo específico de
+interacción con el usuario.
+
+<Warning>
+  Por motivos de confianza y seguridad, **DEBERÍA** haber siempre
+  una persona en el circuito con la capacidad de denegar invocaciones de herramientas.
+
+  Las aplicaciones **DEBERÍAN**:
+
+  * Proporcionar una interfaz que deje claro qué herramientas se están exponiendo al modelo de IA
+  * Insertar indicadores visuales claros cuando se invoquen herramientas
+  * Presentar indicaciones de confirmación al usuario para las operaciones, para asegurar que haya una persona en el
+    circuito
+</Warning>
+
+<div id="capabilities">
+  ## Capacidades
+</div>
+
+Los servidores que admitan Herramientas **DEBEN** declarar la capacidad `tools`:
+
+```json
+{
+  "capabilities": {
+    "tools": {
+      "listChanged": true
+    }
+  }
+}
+```
+
+`listChanged` indica si el servidor emitirá notificaciones cuando cambie la lista de
+Herramientas disponibles.
+
+<div id="protocol-messages">
+  ## Mensajes del protocolo
+</div>
+
+<div id="listing-tools">
+  ### Listado de Herramientas
+</div>
+
+Para descubrir las Herramientas disponibles, los clientes envían una solicitud `tools/list`. Esta operación admite
+[paginación](/es/specification/draft/server/utilities/pagination).
+
+**Solicitud:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/list",
+  "params": {
+    "cursor": "optional-cursor-value"
+  }
+}
+```
+
+**Respuesta:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "tools": [
+      {
+        "name": "get_weather",
+        "title": "Proveedor de información meteorológica",
+        "description": "Obtiene la información meteorológica actual de una ubicación",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "location": {
+              "type": "string",
+              "description": "Nombre de la ciudad o código postal"
+            }
+          },
+          "required": ["location"]
+        },
+        "icons": [
+          {
+            "src": "https://example.com/weather-icon.png",
+            "mimeType": "image/png",
+            "sizes": "48x48"
+          }
+        ]
+      }
+    ],
+    "nextCursor": "next-page-cursor"
+  }
+}
+```
+
+<div id="calling-tools">
+  ### Llamar a Herramientas
+</div>
+
+Para invocar una herramienta, los clientes envían una solicitud `tools/call`:
+
+**Solicitud:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/call",
+  "params": {
+    "name": "get_weather",
+    "arguments": {
+      "location": "New York"
+    }
+  }
+}
+```
+
+**Respuesta:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Clima actual en New York:\nTemperatura: 72 °F\nCondiciones: Parcialmente nublado"
+      }
+    ],
+    "isError": false
+  }
+}
+```
+
+<div id="list-changed-notification">
+  ### Notificación de cambio de lista
+</div>
+
+Cuando cambie la lista de Herramientas disponibles, los Servidores que hayan declarado la capacidad `listChanged` **DEBERÍAN** enviar una notificación:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/tools/list_changed"
+}
+```
+
+<div id="message-flow">
+  ## Flujo de mensajes
+</div>
+
+```mermaid
+sequenceDiagram
+    participant LLM
+    participant Client
+    participant Server
+
+    Note over Client,Server: Descubrimiento
+    Client->>Server: tools/list
+    Server-->>Client: Lista de herramientas
+
+    Note over Client,LLM: Selección de herramienta
+    LLM->>Client: Seleccionar herramienta a usar
+
+    Note over Client,Server: Invocación
+    Client->>Server: tools/call
+    Server-->>Client: Resultado de la herramienta
+    Client->>LLM: Procesar el resultado
+
+    Note over Client,Server: Actualizaciones
+    Server--)Client: tools/list_changed
+    Client->>Server: tools/list
+    Server-->>Client: Herramientas actualizadas
+```
+
+<div id="data-types">
+  ## Tipos de datos
+</div>
+
+<div id="tool">
+  ### Herramienta
+</div>
+
+Una definición de herramienta incluye:
+
+* `name`: Identificador único de la herramienta
+* `title`: Nombre opcional, legible para personas, de la herramienta para fines de visualización
+* `description`: Descripción, legible para personas, de la funcionalidad
+* `inputSchema`: JSON Schema que define los parámetros esperados
+* `outputSchema`: JSON Schema opcional que define la estructura de salida esperada
+* `annotations`: Propiedades opcionales que describen el comportamiento de la herramienta
+
+<Warning>
+  Por motivos de confianza y seguridad, los clientes **DEBEN** considerar
+  las anotaciones de la herramienta como no confiables a menos que provengan de servidores de confianza.
+</Warning>
+
+<div id="tool-result">
+  ### Resultado de la herramienta
+</div>
+
+Los resultados de la herramienta pueden contener contenido [**estructurado**](#structured-content) o **no estructurado**.
+
+El contenido **no estructurado** se devuelve en el campo `content` de un resultado y puede incluir múltiples elementos de contenido de distintos tipos:
+
+<Note>
+  Todos los tipos de contenido (texto, imagen, audio, enlaces a recursos y recursos incrustados)
+  admiten
+  [anotaciones](/es/specification/draft/server/resources#annotations) opcionales que proporcionan
+  metadatos sobre la audiencia, la prioridad y los tiempos de modificación. Este es el mismo
+  formato de anotación utilizado por los recursos y las indicaciones.
+</Note>
+
+<div id="text-content">
+  #### Contenido de texto
+</div>
+
+```json
+{
+  "type": "text",
+  "text": "Texto de resultado de la herramienta"
+}
+```
+
+<div id="image-content">
+  #### Contenido de la imagen
+</div>
+
+```json
+{
+  "type": "image",
+  "data": "base64-encoded-data",
+  "mimeType": "image/png",
+  "annotations": {
+    "audience": ["user"],
+    "priority": 0.9
+  }
+}
+```
+
+<div id="audio-content">
+  #### Contenido de audio
+</div>
+
+```json
+{
+  "type": "audio",
+  "data": "base64-encoded-audio-data",
+  "mimeType": "audio/wav"
+}
+```
+
+<div id="resource-links">
+  #### Enlaces de recursos
+</div>
+
+Una herramienta **PUEDE** devolver enlaces a [recursos](/es/specification/draft/server/resources) para proporcionar contexto o datos adicionales. En este caso, la herramienta devolverá un URI al que el cliente puede suscribirse o del que puede obtener datos:
+
+```json
+{
+  "type": "resource_link",
+  "uri": "file:///project/src/main.rs",
+  "name": "main.rs",
+  "description": "Punto de entrada principal de la aplicación",
+  "mimeType": "text/x-rust"
+}
+```
+
+Los enlaces de recursos admiten las mismas [anotaciones de recursos](/es/specification/draft/server/resources#annotations) que los recursos normales para ayudar a los clientes a entender cómo utilizarlos.
+
+<Info>
+  No se garantiza que los enlaces de recursos devueltos por las herramientas aparezcan en los resultados
+  de una solicitud `resources/list`.
+</Info>
+
+<div id="embedded-resources">
+  #### Recursos integrados
+</div>
+
+Los [Recursos](/es/specification/draft/server/resources) **PUEDEN** integrarse para proporcionar contexto adicional
+o datos usando un [esquema de URI](es/./resources#common-uri-schemes) adecuado. Los servidores que utilicen recursos integrados **DEBERÍAN** implementar la capacidad `resources`:
+
+```json
+{
+  "type": "resource",
+  "resource": {
+    "uri": "file:///project/src/main.rs",
+    "title": "Archivo principal de Rust del proyecto",
+    "mimeType": "text/x-rust",
+    "text": "fn main() {\n    println!(\"Hello world!\");\n}",
+    "annotations": {
+      "audience": ["user", "assistant"],
+      "priority": 0.7,
+      "lastModified": "2025-05-03T14:30:00Z"
+    }
+  }
+}
+```
+
+Los recursos integrados admiten las mismas [anotaciones de Recursos](/es/specification/draft/server/resources#annotations) que los recursos normales para ayudar a los clientes a entender cómo usarlos.
+
+<div id="structured-content">
+  #### Contenido estructurado
+</div>
+
+El contenido **estructurado** se devuelve como un objeto JSON en el campo `structuredContent` de un resultado.
+
+Por compatibilidad con versiones anteriores, una herramienta que devuelva contenido estructurado también debería devolver el JSON serializado en un bloque TextContent.
+
+<div id="output-schema">
+  #### Esquema de salida
+</div>
+
+Las Herramientas también pueden proporcionar un esquema de salida para validar resultados estructurados.
+Si se proporciona un esquema de salida:
+
+* Los Servidores **DEBEN** proporcionar resultados estructurados que se ajusten a este esquema.
+* Los Clientes **DEBERÍAN** validar los resultados estructurados con este esquema.
+
+Ejemplo de herramienta con esquema de salida:
+
+```json
+{
+  "name": "get_weather_data",
+  "title": "Weather Data Retriever",
+  "description": "Get current weather data for a location",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "location": {
+        "type": "string",
+        "description": "City name or zip code"
+      }
+    },
+    "required": ["location"]
+  },
+  "outputSchema": {
+    "type": "object",
+    "properties": {
+      "temperature": {
+        "type": "number",
+        "description": "Temperature in celsius"
+      },
+      "conditions": {
+        "type": "string",
+        "description": "Weather conditions description"
+      },
+      "humidity": {
+        "type": "number",
+        "description": "Humidity percentage"
+      }
+    },
+    "required": ["temperature", "conditions", "humidity"]
+  }
+}
+```
+
+Ejemplo de respuesta válida para esta herramienta:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 5,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"temperature\": 22.5, \"conditions\": \"Partly cloudy\", \"humidity\": 65}"
+      }
+    ],
+    "structuredContent": {
+      "temperature": 22.5,
+      "conditions": "Partly cloudy",
+      "humidity": 65
+    }
+  }
+}
+```
+
+Proporcionar un esquema de salida ayuda a los Clientes y a los LLM a comprender y manejar correctamente las salidas estructuradas de las Herramientas al:
+
+* Permitir la validación estricta del esquema de las respuestas
+* Proporcionar información de tipos para una mejor integración con lenguajes de programación
+* Guiar a los Clientes y a los LLM para analizar y utilizar correctamente los datos devueltos
+* Mejorar la documentación y la experiencia de desarrollador
+
+<div id="error-handling">
+  ## Manejo de errores
+</div>
+
+Las Herramientas utilizan dos mecanismos para reportar errores:
+
+1. **Errores de protocolo**: Errores estándar de JSON-RPC para problemas como:
+   * Herramientas desconocidas
+   * Argumentos no válidos
+   * Errores del servidor
+
+2. **Errores de ejecución de la herramienta**: Se reportan en los resultados de la herramienta con `isError: true`:
+   * Fallos de API
+   * Datos de entrada no válidos
+   * Errores de lógica empresarial
+
+Ejemplo de error de protocolo:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "error": {
+    "code": -32602,
+    "message": "Unknown tool: invalid_tool_name"
+  }
+}
+```
+
+Ejemplo de error de ejecución de la herramienta:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 4,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Failed to fetch weather data: API rate limit exceeded"
+      }
+    ],
+    "isError": true
+  }
+}
+```
+
+<div id="security-considerations">
+  ## Consideraciones de seguridad
+</div>
+
+1. Los servidores **DEBEN**:
+   * Validar todas las entradas de las Herramientas
+   * Implementar controles de acceso adecuados
+   * Limitar la frecuencia de invocaciones de Herramientas
+   * Depurar/sanitizar las salidas de las Herramientas
+
+2. Los clientes **DEBERÍAN**:
+   * Solicitar confirmación del usuario para operaciones sensibles
+   * Mostrar las entradas de las Herramientas al usuario antes de llamar al servidor, para evitar la exfiltración de datos maliciosa o
+     accidental
+   * Validar los resultados de las Herramientas antes de pasarlos al LLM
+   * Implementar tiempos de espera para las llamadas a Herramientas
+   * Registrar el uso de las Herramientas con fines de auditoría

@@ -1,0 +1,91 @@
+---
+title: "Racines"
+description: "Comprendre les racines dans le MCP"
+---
+
+Les Racines sont un concept du MCP qui définissent les limites où les serveurs peuvent intervenir. Elles permettent aux clients d’indiquer aux serveurs les Ressources pertinentes et leur emplacement.
+
+<div id="what-are-roots">
+  ## Que sont les Racines ?
+</div>
+
+Une racine est un URI qu’un client propose à un serveur comme périmètre d’intérêt. Lorsqu’un client se connecte à un serveur, il déclare les racines avec lesquelles le serveur doit travailler. Bien qu’utilisées principalement pour des chemins de système de fichiers, les racines peuvent être n’importe quel URI valide, y compris des URL HTTP.
+
+Par exemple, les racines peuvent être :
+
+```
+file:///home/user/projects/myapp
+https://api.example.com/v1
+```
+
+<div id="why-use-roots">
+  ## Pourquoi utiliser les Racines ?
+</div>
+
+Les Racines remplissent plusieurs objectifs importants :
+
+1. **Orientation** : elles informent les serveurs des Ressources et des emplacements pertinents
+2. **Clarté** : les Racines précisent quelles Ressources font partie de votre espace de travail
+3. **Organisation** : plusieurs Racines vous permettent de travailler avec différentes Ressources simultanément
+
+<div id="how-roots-work">
+  ## Fonctionnement des Racines
+</div>
+
+Lorsqu’un client prend en charge les Racines, il :
+
+1. Déclare la capacité `roots` lors de la connexion
+2. Fournit au serveur une liste de Racines suggérées
+3. Informe le serveur lorsque les Racines changent (si pris en charge)
+
+Bien que les Racines soient informatives et non strictement contraignantes, les serveurs doivent :
+
+1. Respecter les Racines fournies
+2. Utiliser les URI de Racine pour localiser et accéder aux Ressources
+3. Prioriser les opérations à l’intérieur des limites des Racines
+
+<div id="common-use-cases">
+  ## Cas d’utilisation courants
+</div>
+
+Les Racines sont couramment utilisées pour définir :
+
+- Répertoires de projet
+- Emplacements de référentiel
+- Points de terminaison d’API
+- Emplacements de configuration
+- Limites de Ressources
+
+<div id="best-practices">
+  ## Bonnes pratiques
+</div>
+
+Lors de l’utilisation des Racines :
+
+1. Ne suggérez que les Ressources nécessaires
+2. Donnez aux Racines des noms clairs et descriptifs
+3. Surveillez l’accessibilité des Racines
+4. Gérez les modifications de Racines avec souplesse
+
+<div id="example">
+  ## Exemple
+</div>
+
+Voici comment un client MCP typique pourrait exposer des Racines :
+
+```json
+{
+  "roots": [
+    {
+      "uri": "file:///home/user/projects/frontend",
+      "name": "Dépôt Frontend"
+    },
+    {
+      "uri": "https://api.example.com/v1",
+      "name": "Point de terminaison de l’API"
+    }
+  ]
+}
+```
+
+Cette configuration indique au serveur de se focaliser à la fois sur un dépôt local et un point de terminaison de l’API, tout en les gardant logiquement séparés.

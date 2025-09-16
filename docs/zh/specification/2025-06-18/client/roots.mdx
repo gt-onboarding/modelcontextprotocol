@@ -1,0 +1,205 @@
+---
+title: 根路径
+---
+
+<div id="enable-section-numbers" />
+
+<Info>**协议修订**：2025-06-18</Info>
+
+模型上下文协议（MCP）为客户端向服务器公开文件系统“根路径”提供了标准化方式。根路径定义了服务器在文件系统中可操作的边界，便于其明确可访问的目录和文件。服务器可以从支持的客户端请求根路径列表，并在该列表发生变化时收到通知。
+
+<div id="user-interaction-model">
+  ## 用户交互模型
+</div>
+
+在 MCP 中，根路径通常通过工作区或项目配置界面进行暴露。
+
+例如，具体实现可以提供一个工作区/项目选择器，允许用户选择服务器应当访问的目录和文件。这也可以与基于版本控制系统或项目文件的自动工作区检测相结合。
+
+不过，各种实现都可以通过任何符合其需求的界面模式来暴露根路径——协议本身并不强制采用某种特定的用户交互模型。
+
+<div id="capabilities">
+  ## 功能
+</div>
+
+支持根路径的客户端在[初始化](/zh/specification/2025-06-18/basic/lifecycle#initialization)期间**必须**声明 `roots` 功能：
+
+```json
+{
+  "capabilities": {
+    "roots": {
+      "listChanged": true
+    }
+  }
+}
+```
+
+`listChanged` 表示当根路径列表发生变化时，客户端是否会发送通知。
+
+<div id="protocol-messages">
+  ## 协议消息
+</div>
+
+<div id="listing-roots">
+  ### 列出根路径
+</div>
+
+要获取根路径，服务器发送一个 `roots/list` 请求：
+
+**请求：**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "roots/list"
+}
+```
+
+**响应：**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "roots": [
+      {
+        "uri": "file:///home/user/projects/myproject",
+        "name": "My Project"
+      }
+    ]
+  }
+}
+```
+
+<div id="root-list-changes">
+  ### 根路径列表变更
+</div>
+
+当根路径发生变更时，支持 `listChanged` 的客户端**必须**发送通知：
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/roots/list_changed"
+}
+```
+
+<div id="message-flow">
+  ## 消息流
+</div>
+
+```mermaid
+sequenceDiagram
+    participant Server
+    participant Client
+
+    Note over Server,Client: 发现
+    Server->>Client: roots/list
+    Client-->>Server: 可用的根路径
+
+    Note over Server,Client: 变更
+    Client--)Server: notifications/roots/list_changed
+    Server->>Client: roots/list
+    Client-->>Server: 更新后的根路径
+```
+
+<div id="data-types">
+  ## 数据类型
+</div>
+
+<div id="root">
+  ### 根路径
+</div>
+
+一个根路径定义包括：
+
+* `uri`：根路径的唯一标识符。在当前规范中，这**必须**是一个 `file://` URI。
+* `name`：可选的人类可读名称，用于展示。
+
+不同用例的根路径示例：
+
+<div id="project-directory">
+  #### 项目目录
+</div>
+
+```json
+{
+  "uri": "file:///home/user/projects/myproject",
+  "name": "My Project"
+}
+```
+
+<div id="multiple-repositories">
+  #### 多个代码仓库
+</div>
+
+```json
+[
+  {
+    "uri": "file:///home/user/repos/frontend",
+    "name": "Frontend Repository"
+  },
+  {
+    "uri": "file:///home/user/repos/backend",
+    "name": "Backend Repository"
+  }
+]
+```
+
+<div id="error-handling">
+  ## 错误处理
+</div>
+
+客户端**应当**在常见失败情况下返回标准 JSON-RPC 错误：
+
+* 客户端不支持根路径：`-32601`（方法未找到）
+* 内部错误：`-32603`
+
+错误示例：
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "error": {
+    "code": -32601,
+    "message": "Roots not supported",
+    "data": {
+      "reason": "Client does not have roots capability"
+    }
+  }
+}
+```
+
+<div id="security-considerations">
+  ## 安全注意事项
+</div>
+
+1. 客户端**必须**：
+   * 仅暴露具备适当权限的根路径
+   * 验证所有根路径 URI，防止路径遍历
+   * 实施合理的访问控制
+   * 监测根路径的可达性
+
+2. 服务器**应当**：
+   * 处理根路径不可用的情况
+   * 在执行操作时遵守根路径边界
+   * 将所有访问路径与提供的根路径进行校验
+
+<div id="implementation-guidelines">
+  ## 实施指南
+</div>
+
+1. 客户端**应当**：
+   * 在向服务器暴露根路径之前征得用户同意
+   * 提供清晰易用的根路径管理界面
+   * 在暴露前验证根路径的可访问性
+   * 监测根路径的变更
+
+2. 服务器**应当**：
+   * 在使用前检查是否具备根路径相关能力
+   * 平稳处理根路径列表的变更
+   * 在操作中严格遵守根路径边界
+   * 适当缓存根路径信息
