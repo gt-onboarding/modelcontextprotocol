@@ -1,0 +1,40 @@
+---
+title: Gestion des versions
+type: docs
+weight: 10
+---
+
+Le Protocole Model Context (MCP) utilise des identifiants de version sous forme de chaîne au format
+`YYYY-MM-DD`, pour indiquer la date la plus récente à laquelle des changements rétro-incompatibles ont été apportés.
+
+<Info>
+  La version du protocole ne sera *pas* incrémentée lorsque le
+  protocole est mis à jour, tant que les changements demeurent rétrocompatibles. Cela permet
+  des améliorations progressives tout en préservant l’interopérabilité.
+</Info>
+
+<div id="revisions">
+  ## Révisions
+</div>
+
+Les révisions peuvent être marquées comme :
+
+* **Brouillon** : spécifications en cours d’élaboration, pas encore prêtes à être utilisées.
+* **Courante** : la version actuelle du protocole, prête à l’usage et susceptible de
+  recevoir des modifications rétrocompatibles.
+* **Finale** : spécifications complètes et antérieures qui ne seront pas modifiées.
+
+La version **courante** du protocole est [**2025-06-18**](/fr-CA/specification/2025-06-18/).
+
+<div id="negotiation">
+  ## Négociation
+</div>
+
+La négociation de versions a lieu lors de
+[l’initialisation](/fr-CA/specification/2025-06-18/basic/lifecycle#initialization). Les clients et
+les serveurs **PEUVENT** prendre en charge plusieurs versions du protocole simultanément, mais ils **DOIVENT**
+se mettre d’accord sur une seule version à utiliser pour la session.
+
+Le protocole prévoit une gestion d’erreurs appropriée si la négociation de versions échoue, ce qui permet
+aux clients de mettre fin aux connexions de manière ordonnée lorsqu’ils ne peuvent pas trouver une version compatible
+avec le serveur.

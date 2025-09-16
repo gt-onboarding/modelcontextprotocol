@@ -1,0 +1,84 @@
+---
+title: "Créer des composants MCP avec des LLM"
+description: "Accélérez votre développement MCP à l’aide de LLM comme Claude!"
+---
+
+Ce guide vous aidera à utiliser des LLM pour créer des Serveurs MCP et des Clients MCP personnalisés du Protocole de contexte de modèle (MCP). Nous nous concentrerons sur Claude pour ce tutoriel, mais vous pouvez le faire avec n’importe quel LLM de pointe.
+
+<div id="preparing-the-documentation">
+  ## Préparer la documentation
+</div>
+
+Avant de commencer, rassemblez la documentation nécessaire pour aider Claude à comprendre le Protocole de contexte de modèle (MCP) :
+
+1. Rendez-vous à l’adresse https://modelcontextprotocol.io/llms-full.txt et copiez l’intégralité du texte de la documentation
+2. Accédez au [SDK MCP pour TypeScript](https://github.com/modelcontextprotocol/typescript-sdk) ou au [dépôt du SDK Python](https://github.com/modelcontextprotocol/python-sdk)
+3. Copiez les fichiers README et toute autre documentation pertinente
+4. Collez ces documents dans votre conversation avec Claude
+
+<div id="describing-your-server">
+  ## Décrire votre serveur
+</div>
+
+Une fois que vous avez fourni la documentation, expliquez clairement à Claude quel type de serveur vous souhaitez créer. Soyez précis quant aux éléments suivants :
+
+- Quelles Ressources votre serveur exposera
+- Quels Outils il fournira
+- Quelles Invites de commande il devrait offrir
+- Avec quels systèmes externes il doit interagir
+
+Par exemple :
+
+```
+Crée un Serveur MCP qui :
+- se connecte à la base de données PostgreSQL de mon entreprise
+- expose les schémas de tables comme Ressources
+- fournit des Outils pour exécuter des requêtes SQL en lecture seule
+- inclut des Invites de commande pour les tâches courantes d’analyse de données
+```
+
+<div id="working-with-claude">
+  ## Travailler avec Claude
+</div>
+
+Lorsque vous travaillez avec Claude sur des serveurs MCP :
+
+1. Commencez par les fonctionnalités de base, puis itérez pour en ajouter d’autres
+2. Demandez à Claude d’expliquer les parties du code que vous ne comprenez pas
+3. Demandez des modifications ou des améliorations au besoin
+4. Demandez à Claude de vous aider à tester le serveur et à gérer les cas limites
+
+Claude peut aider à implémenter toutes les fonctionnalités clés du MCP :
+
+- Gestion et exposition des Ressources
+- Définitions et implémentations des Outils
+- Modèles d’Invite de commande et gestionnaires
+- Gestion des erreurs et journalisation
+- Configuration de la connexion et du transport
+
+<div id="best-practices">
+  ## Meilleures pratiques
+</div>
+
+Lors de la création de serveurs MCP avec Claude :
+
+- Décomposez les serveurs complexes en composants plus petits
+- Testez chaque composant minutieusement avant de passer à la suite
+- Gardez la sécurité à l’esprit — validez les entrées et limitez l’accès de façon appropriée
+- Documentez bien votre code pour en faciliter la maintenance future
+- Suivez rigoureusement les spécifications du Protocole de contexte de modèle (MCP)
+
+<div id="next-steps">
+  ## Prochaines étapes
+</div>
+
+Après que Claude vous a aidé à créer votre serveur :
+
+1. Examinez attentivement le code généré
+2. Testez le serveur avec l’outil MCP Inspector
+3. Connectez-le à Claude.app ou à d’autres Clients MCP
+4. Itérez en fonction de l’utilisation réelle et de la rétroaction
+
+N’oubliez pas que Claude peut vous aider à modifier et à améliorer votre serveur à mesure que les exigences évoluent.
+
+Besoin de plus d’accompagnement? Posez simplement à Claude des questions précises sur l’implémentation des fonctionnalités du MCP ou sur le dépannage des problèmes qui surviennent.

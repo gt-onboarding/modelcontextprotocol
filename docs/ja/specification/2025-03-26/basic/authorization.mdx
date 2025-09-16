@@ -1,0 +1,425 @@
+---
+title: 認可
+---
+
+<Info>**プロトコル改定**: 2025-03-26</Info>
+
+<div id="introduction">
+  ## はじめに
+</div>
+
+<div id="purpose-and-scope">
+  ### 目的と範囲
+</div>
+
+Model Context Protocol（MCP）はトランスポートレベルでの認可機能を提供し、
+MCPクライアントがリソース所有者に代わってアクセス制限のあるMCPサーバーへリクエストを送信できるようにします。
+本仕様では、HTTPベースのトランスポートにおける認可フローを定義します。
+
+<div id="protocol-requirements">
+  ### プロトコル要件
+</div>
+
+MCP実装における認可は**任意**です。サポートされる場合は次のとおりです。
+
+- HTTPベースのトランスポートを使用する実装は、この仕様に準拠することが**望ましい**です（SHOULD）。
+- STDIOトランスポートを使用する実装は、この仕様に従う**べきではありません**（SHOULD NOT）。代わりに、資格情報は環境から取得してください。
+- 代替トランスポートを使用する実装は、そのプロトコルに関する確立されたセキュリティのベストプラクティスに従うことが**必須**です（MUST）。
+
+<div id="standards-compliance">
+  ### 標準への準拠
+</div>
+
+この認可メカニズムは、以下の確立された仕様に基づいていますが、
+簡潔さを保ちながらセキュリティと相互運用性を確保するため、機能の一部のみを選択して実装しています。
+
+- [OAuth 2.1 IETF DRAFT](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-12)
+- OAuth 2.0 Authorization Server Metadata
+  ([RFC8414](https://datatracker.ietf.org/doc/html/rfc8414))
+- OAuth 2.0 Dynamic Client Registration Protocol
+  ([RFC7591](https://datatracker.ietf.org/doc/html/rfc7591))
+
+<div id="authorization-flow">
+  ## 認可フロー
+</div>
+
+<div id="overview">
+  ### 概要
+</div>
+
+1. MCPの認可実装は、機密クライアントおよびパブリッククライアントの両方に対し、適切なセキュリティ対策を施したOAuth 2.1を実装することが**必須**です。
+
+2. MCPの認可実装は、OAuth 2.0のDynamic Client Registration（Dynamic Client Registration（DCR））プロトコル（[RFC7591](https://datatracker.ietf.org/doc/html/rfc7591)）をサポートすることが**推奨**されます。
+
+3. MCPサーバーは**推奨**、MCPクライアントはOAuth 2.0 Authorization Server Metadata（[RFC8414](https://datatracker.ietf.org/doc/html/rfc8414)）を実装することが**必須**です。Authorization Server Metadataをサポートしないサーバーは、デフォルトのURIスキーマに従うことが**必須**です。
+
+<div id="oauth-grant-types">
+  ### OAuthのグラントタイプ
+</div>
+
+OAuthは、アクセストークンを取得するための複数のフロー（グラントタイプ）を定義しています。これらはそれぞれ異なるユースケースやシナリオを想定しています。
+
+MCPサーバーは、想定する対象ユーザーに最も適したOAuthのグラントタイプをサポートすることが望ましい（SHOULD）です。例えば:
+
+1. Authorization Code: クライアントが（人間の）エンドユーザーの代理として動作する場合に有用
+   - 例: エージェントが、SaaSシステムで実装されたMCPツールを呼び出す。
+2. Client Credentials: クライアントが別のアプリケーション（人間ではない）の場合
+   - 例: エージェントが、特定の店舗の在庫を確認するためにセキュアなMCPツールを呼び出す。
+     エンドユーザーのなりすましは不要。
+
+<div id="example-authorization-code-grant">
+  ### 例: authorization code grant
+</div>
+
+これはユーザー認証に用いられる authorization code grant タイプの OAuth 2.1 フローを示します。
+
+**注意**: 以下の例では、MCPサーバーが認可サーバーとしても機能していることを前提としています。ただし、認可サーバーは独立したサービスとしてデプロイされる場合があります。
+
+人間のユーザーはウェブブラウザ経由で OAuth フローを完了し、本人を特定でき、クライアントがユーザーの代理で動作することを可能にするアクセス トークンを取得します。
+
+認可が必要で、かつクライアントによってまだ証明されていない場合、サーバーは _HTTP 401 Unauthorized_ で応答する **必要があります**。
+
+クライアントは
+[OAuth 2.1 IETF DRAFT](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-12#name-authorization-code-grant)
+の認可フローを、_HTTP 401 Unauthorized_ を受け取った後に開始します。
+
+以下は、PKCE を用いるパブリッククライアント向けの基本的な OAuth 2.1 を示します。
+
+```mermaid
+sequenceDiagram
+    participant B as User-Agent (Browser)
+    participant C as Client
+    participant M as MCP Server
+
+    C->>M: MCP Request
+    M->>C: HTTP 401 Unauthorized
+    Note over C: code_verifier と code_challenge を生成
+    C->>B: 認可URL + code_challenge でブラウザを開く
+    B->>M: GET /authorize
+    Note over M: ユーザーがログインして認可
+    M->>B: 認可コードを付与してコールバックURLにリダイレクト
+    B->>C: 認可コード付きでコールバック
+    C->>M: code + code_verifier でトークンリクエスト
+    M->>C: アクセストークン（+ リフレッシュトークン）
+    C->>M: アクセストークン付きで MCP Request
+    Note over C,M: 標準的な MCP メッセージ交換を開始
+```
+
+<div id="server-metadata-discovery">
+  ### サーバーメタデータの検出
+</div>
+
+サーバー機能の検出にあたっては、次のとおりとします。
+
+- MCPクライアントは、[RFC8414](https://datatracker.ietf.org/doc/html/rfc8414) で定義される OAuth 2.0 Authorization Server Metadata プロトコルに_必ず_従わなければなりません。
+- MCPサーバーは、OAuth 2.0 Authorization Server Metadata プロトコルに従うことが_望ましい_です。
+- OAuth 2.0 Authorization Server Metadata プロトコルをサポートしない MCPサーバーは、
+  フォールバックURLを_必ず_サポートしなければなりません。
+
+検出フローは以下のとおりです。
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant S as Server
+
+    C->>S: GET /.well-known/oauth-authorization-server
+    alt Discovery Success
+        S->>C: 200 OK + Metadata Document
+        Note over C: Use endpoints from metadata
+    else Discovery Failed
+        S->>C: 404 Not Found
+        Note over C: Fall back to default endpoints
+    end
+    Note over C: Continue with authorization flow
+```
+
+<div id="server-metadata-discovery-headers">
+  #### サーバーメタデータ検出ヘッダー
+</div>
+
+MCPクライアントは、サーバーメタデータの検出時に `MCP-Protocol-Version: <protocol-version>` ヘッダーを含めることが推奨されます（_SHOULD_）。これにより、MCPサーバーはMCPプロトコルのバージョンに基づいて応答できます。
+
+例: `MCP-Protocol-Version: 2024-11-05`
+
+<div id="authorization-base-url">
+  #### Authorization Base URL
+</div>
+
+認可ベースURLは、既存の`path`コンポーネントを取り除き、MCPサーバーURLから導出する**必要があります**。例:
+
+MCPサーバーURLが `https://api.example.com/v1/mcp` の場合:
+
+- 認可ベースURLは `https://api.example.com`
+- メタデータエンドポイントは
+  `https://api.example.com/.well-known/oauth-authorization-server` にある**必要があります**
+
+これにより、MCPサーバーのURLにどのようなパスコンポーネントが含まれていても、認可エンドポイントがMCPサーバーをホストしているドメインのルートレベルに一貫して配置されることが保証されます。
+
+<div id="fallbacks-for-servers-without-metadata-discovery">
+  #### メタデータディスカバリーを実装していないサーバーのためのフォールバック
+</div>
+
+OAuth 2.0 Authorization Server Metadata を実装していないサーバーについて、クライアントは
+[authorization base URL](#authorization-base-url) に対する以下の既定エンドポイントパスを
+必ず使用しなければなりません（MUST）。
+
+| Endpoint               | Default Path | Description                         |
+| ---------------------- | ------------ | ----------------------------------- |
+| Authorization Endpoint | /authorize   | 認可リクエストに使用                 |
+| Token Endpoint         | /token       | トークンの交換およびリフレッシュに使用 |
+| Registration Endpoint  | /register    | Dynamic Client Registration に使用   |
+
+たとえば、`https://api.example.com/v1/mcp` でホストされている MCPサーバーの場合、既定の
+エンドポイントは次のとおりです。
+
+- `https://api.example.com/authorize`
+- `https://api.example.com/token`
+- `https://api.example.com/register`
+
+クライアントは、既定パスにフォールバックする前に、まずメタデータドキュメントによるエンドポイントのディスカバリーを試みなければなりません（MUST）。既定パスを使用する場合でも、他のすべてのプロトコル要件は変わりません。
+
+<div id="dynamic-client-registration">
+  ### Dynamic Client Registration
+</div>
+
+MCPクライアントおよびサーバーは、ユーザー操作なしにMCPクライアントがOAuthクライアントIDを取得できるよう、[OAuth 2.0 Dynamic Client Registration Protocol](https://datatracker.ietf.org/doc/html/rfc7591)をサポートすることが望ましい（SHOULD）。これは、クライアントが新しいサーバーに自動登録するための標準化された方法を提供するもので、次の理由からMCPにとって重要である。
+
+- クライアントは事前に考え得るすべてのサーバーを把握できない
+- 手動登録はユーザーに負担や摩擦を生む
+- 新しいサーバーへシームレスに接続できる
+- サーバーが独自の登録ポリシーを実装できる
+
+Dynamic Client Registrationをサポートしていない_MCPサーバー_は、クライアントID（および該当する場合はクライアントシークレット）を取得するための代替手段を提供する必要がある。こうしたサーバーに対しては、MCPクライアントは次のいずれかを行う必要がある。
+
+1. そのMCPサーバー専用のクライアントID（および該当する場合はクライアントシークレット）をハードコードする、または
+2. ユーザーが自分でOAuthクライアントを登録した後（例：サーバーが提供する設定インターフェース経由）、これらの情報を入力できるUIを提示する。
+
+<div id="authorization-flow-steps">
+  ### 認可フローの手順
+</div>
+
+完全な認可フローは次のように進みます:
+
+```mermaid
+sequenceDiagram
+    participant B as User-Agent (Browser)
+    participant C as Client
+    participant M as MCP Server
+
+    C->>M: GET /.well-known/oauth-authorization-server
+    alt サーバーがディスカバリーに対応
+        M->>C: 認可サーバーのメタデータ
+    else ディスカバリー非対応
+        M->>C: 404（デフォルトのエンドポイントを使用）
+    end
+
+    alt Dynamic Client Registration
+        C->>M: POST /register
+        M->>C: クライアント認証情報
+    end
+
+    Note over C: PKCEパラメータを生成
+    C->>B: 認可URL + code_challenge でブラウザを開く
+    B->>M: 認可リクエスト
+    Note over M: ユーザーが承認
+    M->>B: 認可コードを付与してコールバックへリダイレクト
+    B->>C: 認可コードのコールバック
+    C->>M: トークンリクエスト + code_verifier
+    M->>C: アクセストークン（+ リフレッシュトークン）
+    C->>M: アクセストークンを用いたAPIリクエスト
+```
+
+<div id="decision-flow-overview">
+  #### 判定フローの概要
+</div>
+
+```mermaid
+flowchart TD
+    A[認可フロー開始] --> B{メタデータ検出の確認}
+    B -->|利用可能| C[メタデータエンドポイントを使用]
+    B -->|利用不可| D[デフォルトエンドポイントを使用]
+
+    C --> G{登録エンドポイントの確認}
+    D --> G
+
+    G -->|利用可能| H[ダイナミック登録を実行]
+    G -->|利用不可| I[代替の登録が必要]
+
+    H --> J[OAuthフローを開始]
+    I --> J
+
+    J --> K[PKCEパラメータを生成]
+    K --> L[認可を要求]
+    L --> M[ユーザーによる認可]
+    M --> N[コードをトークンに交換]
+    N --> O[アクセストークンを使用]
+```
+
+<div id="access-token-usage">
+  ### アクセス トークンの利用
+</div>
+
+<div id="token-requirements">
+  #### トークン要件
+</div>
+
+アクセストークンの取り扱いは、リソース要求に関する
+[OAuth 2.1 セクション 5](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-12#section-5)
+の要件に準拠することが**必須**です。具体的には:
+
+1. MCPクライアントは、Authorization リクエストヘッダーフィールド
+   [セクション 5.1.1](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-12#section-5.1.1) を**必ず**使用しなければなりません:
+
+```
+Authorization: Bearer <access-token>
+```
+
+認可は、同一の論理セッション内であっても、クライアントからサーバーへのすべての HTTP リクエストに**必ず**含める必要がある点に注意してください。
+
+2. アクセストークンを URI のクエリ文字列に含めては**なりません**
+
+リクエスト例:
+
+```http
+GET /v1/contexts HTTP/1.1
+Host: mcp.example.com
+Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+```
+
+<div id="token-handling">
+  #### トークンの取り扱い
+</div>
+
+リソースサーバーは [Section 5.2](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-12#section-5.2) に記載されたとおりにアクセストークンを検証しなければなりません（MUST）。
+検証に失敗した場合、サーバーは [Section 5.3](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-12#section-5.3) のエラーハンドリング要件に従って応答しなければなりません（MUST）。
+無効または期限切れのトークンには、HTTP 401 応答を返さなければなりません（MUST）。
+
+<div id="security-considerations">
+  ### セキュリティに関する考慮事項
+</div>
+
+以下のセキュリティ要件は必ず実装すること（MUST）:
+
+1. クライアントは、OAuth 2.0 のベストプラクティスに従ってトークンを安全に保管しなければならない（MUST）
+2. サーバーは、トークンの有効期限とローテーションを実施することが望ましい（SHOULD）
+3. すべての認可エンドポイントは HTTPS 経由で提供しなければならない（MUST）
+4. サーバーは、オープンリダイレクトの脆弱性を防ぐためにリダイレクト URI を検証しなければならない（MUST）
+5. リダイレクト URI は localhost の URL か HTTPS の URL でなければならない（MUST）
+
+<div id="error-handling">
+  ### エラー処理
+</div>
+
+サーバーは認可エラーに対して適切な HTTP ステータスコードを返さなければなりません（MUST）。
+
+| ステータスコード | 説明         | 用途                                      |
+| --------------- | ------------ | ----------------------------------------- |
+| 401             | Unauthorized | 認可が必要、またはトークンが無効          |
+| 403             | Forbidden    | スコープが無効、または権限が不足          |
+| 400             | Bad Request  | 認可リクエストの形式が不正                |
+
+<div id="implementation-requirements">
+  ### 実装要件
+</div>
+
+1. 実装は OAuth 2.1 のセキュリティベストプラクティスに**必ず**従うこと
+2. すべてのクライアントで PKCE を**必須**とすること
+3. セキュリティ強化のため、トークンローテーションの実装を**推奨**する
+4. セキュリティ要件に基づき、トークンの有効期間を制限することを**推奨**する
+
+<div id="third-party-authorization-flow">
+  ### サードパーティ認証フロー
+</div>
+
+<div id="overview">
+  #### 概要
+</div>
+
+MCPサーバーは、サードパーティの認可サーバーを介した委任認可をサポートしてもよい（MAY）。このフローでは、MCPサーバーはサードパーティの認可サーバーに対してはOAuthクライアントとして、MCPクライアントに対してはOAuth認可サーバーとして動作します。
+
+<div id="flow-description">
+  #### フローの説明
+</div>
+
+サードパーティ認可フローは次の手順で構成されます：
+
+1. MCPクライアントがMCPサーバーとの標準的なOAuthフローを開始する
+2. MCPサーバーがユーザーをサードパーティの認可サーバーへリダイレクトする
+3. ユーザーがサードパーティサーバーで認可を行う
+4. サードパーティサーバーが認可コードを付与してMCPサーバーにリダイレクトする
+5. MCPサーバーがコードをサードパーティのアクセストークンに交換する
+6. MCPサーバーがサードパーティのセッションに紐づく自身のアクセストークンを生成する
+7. MCPサーバーがMCPクライアントとの元のOAuthフローを完了する
+
+```mermaid
+sequenceDiagram
+    participant B as User-Agent (Browser)
+    participant C as MCP Client
+    participant M as MCP Server
+    participant T as Third-Party Auth Server
+
+    C->>M: Initial OAuth Request
+    M->>B: Redirect to Third-Party /authorize
+    B->>T: Authorization Request
+    Note over T: User authorizes
+    T->>B: Redirect to MCP Server callback
+    B->>M: Authorization code
+    M->>T: Exchange code for token
+    T->>M: Third-party access token
+    Note over M: Generate bound MCP token
+    M->>B: Redirect to MCP Client callback
+    B->>C: MCP authorization code
+    C->>M: Exchange code for token
+    M->>C: MCP access token
+```
+
+<div id="session-binding-requirements">
+  #### セッションバインディング要件
+</div>
+
+サードパーティ認可を実装するMCPサーバーは、以下を満たすことが**必須**です:
+
+1. サードパーティトークンと発行したMCPトークンの間の安全な対応関係を維持する
+2. MCPトークンを受け付ける前にサードパーティトークンの有効性を検証する
+3. 適切なトークンのライフサイクル管理を実装する
+4. サードパーティトークンの失効と更新に適切に対応する
+
+<div id="security-considerations">
+  #### セキュリティに関する考慮事項
+</div>
+
+サードパーティ認可を実装する際、サーバーは**必ず**次を行うこと:
+
+1. すべてのリダイレクトURIを検証する
+2. サードパーティの資格情報を安全に保管する
+3. 適切なセッションタイムアウト処理を実装する
+4. トークンチェーンのセキュリティ上の影響を考慮する
+5. サードパーティ認可の失敗に対して適切なエラー処理を実装する
+
+<div id="best-practices">
+  ## ベストプラクティス
+</div>
+
+<div id="local-clients-as-public-oauth-21-clients">
+  #### ローカルクライアントをパブリック OAuth 2.1 クライアントとして扱う
+</div>
+
+ローカルクライアントは、パブリッククライアントとして OAuth 2.1 を実装することを強く推奨します。
+
+1. 傍受攻撃を防ぐため、認可リクエストでコードチャレンジ（PKCE）を利用する
+2. ローカル環境に適した安全なトークンの保管方法を実装する
+3. セッション維持のため、トークン更新のベストプラクティスに従う
+4. トークンの有効期限切れと更新を適切に処理する
+
+<div id="authorization-metadata-discovery">
+  #### 認可メタデータのディスカバリ
+</div>
+
+すべてのクライアントでメタデータのディスカバリを実装することを強く推奨します。これにより、ユーザーがエンドポイントを手動で指定したり、クライアントが定義済みのデフォルトにフォールバックしたりする必要が減ります。
+
+<div id="dynamic-client-registration">
+  #### Dynamic Client Registration
+</div>
+
+クライアントは事前にMCPサーバーの一覧を把握できないため、Dynamic Client Registration（DCR）の実装を強く推奨します。これにより、アプリケーションはMCPサーバーへ自動的に登録でき、ユーザーがクライアントIDを手動で取得する必要がなくなります。

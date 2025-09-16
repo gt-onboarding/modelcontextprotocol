@@ -1,0 +1,39 @@
+---
+title: Versionado
+type: docs
+weight: 10
+---
+
+El Protocolo de Contexto de Modelo (MCP) utiliza identificadores de versión basados en cadenas con el formato
+`YYYY-MM-DD` para indicar la fecha más reciente en que se realizaron cambios incompatibles con versiones anteriores.
+
+<Info>
+  La versión del protocolo *no* se incrementará cuando se
+  actualice el protocolo, siempre que los cambios mantengan la compatibilidad con versiones anteriores. Esto permite
+  mejoras incrementales sin perder la interoperabilidad.
+</Info>
+
+<div id="revisions">
+  ## Revisiones
+</div>
+
+Las revisiones pueden marcarse como:
+
+* **Borrador**: especificaciones en desarrollo, aún no listas para su uso.
+* **Actual**: la versión vigente del protocolo, lista para su uso y que puede seguir
+  recibiendo cambios retrocompatibles.
+* **Final**: especificaciones completas de versiones anteriores que no se modificarán.
+
+La versión **actual** del protocolo es [**2025-06-18**](/es/specification/2025-06-18/).
+
+<div id="negotiation">
+  ## Negociación
+</div>
+
+La negociación de versiones se realiza durante la
+[inicialización](/es/specification/2025-06-18/basic/lifecycle#initialization). Los clientes y
+servidores **PUEDEN** admitir varias versiones del protocolo simultáneamente, pero **DEBEN**
+acordar una única versión para usar en la sesión.
+
+El protocolo proporciona un manejo de errores adecuado si falla la negociación de versiones, lo que permite a los clientes finalizar las conexiones de forma ordenada cuando no pueden encontrar una versión compatible
+con el servidor.

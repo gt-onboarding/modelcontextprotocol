@@ -1,0 +1,430 @@
+---
+title: 资源
+---
+
+<div id="enable-section-numbers" />
+
+<Info>**协议修订**：2025-06-18</Info>
+
+模型上下文协议（MCP）为服务器向客户端公开资源提供了标准化方式。资源使服务器能够共享为语言模型提供上下文的数据，例如文件、数据库架构或特定于应用的信息。每个资源都由
+[URI](https://datatracker.ietf.org/doc/html/rfc3986) 唯一标识。
+
+<div id="user-interaction-model">
+  ## 用户交互模型
+</div>
+
+MCP 中的资源是**由应用驱动**的，由 MCP 主机应用
+根据自身需求决定如何引入上下文。
+
+例如，应用可以：
+
+* 通过 UI 元素以树状或列表视图展示资源，供用户显式选择
+* 允许用户搜索并筛选可用资源
+* 基于启发式规则或 AI 模型的选择，自动纳入上下文
+
+![资源上下文选择器示例](/specification/2025-06-18/server/resource-picker.png)
+
+不过，具体实现可以自由采用任何符合其需求的界面模式来暴露资源——
+协议本身并不规定任何特定的用户交互模型。
+
+<div id="capabilities">
+  ## 能力
+</div>
+
+支持资源的服务器**必须**声明 `resources` 能力：
+
+```json
+{
+  "capabilities": {
+    "resources": {
+      "subscribe": true,
+      "listChanged": true
+    }
+  }
+}
+```
+
+该能力支持两个可选功能：
+
+* `subscribe`：客户端是否可以订阅以接收单个资源的变更通知。
+* `listChanged`：当可用资源列表发生变化时，服务器是否会发送通知。
+
+`subscribe` 和 `listChanged` 都是可选的——服务器可以两者都不支持、仅支持其中一个，或同时支持两者：
+
+```json
+{
+  "capabilities": {
+    "resources": {} // Neither feature supported
+  }
+}
+```
+
+```json
+{
+  "capabilities": {
+    "resources": {
+      "subscribe": true // Only subscriptions supported
+    }
+  }
+}
+```
+
+```json
+{
+  "capabilities": {
+    "resources": {
+      "listChanged": true // Only list change notifications supported
+    }
+  }
+}
+```
+
+<div id="protocol-messages">
+  ## 协议消息
+</div>
+
+<div id="listing-resources">
+  ### 列出资源
+</div>
+
+要发现可用资源，客户端需要发送 `resources/list` 请求。此操作
+支持[分页](/zh/specification/2025-06-18/server/utilities/pagination)。
+
+**请求：**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "resources/list",
+  "params": {
+    "cursor": "optional-cursor-value"
+  }
+}
+```
+
+**响应：**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "resources": [
+      {
+        "uri": "file:///project/src/main.rs",
+        "name": "main.rs",
+        "title": "Rust 软件应用主文件",
+        "description": "应用程序主入口",
+        "mimeType": "text/x-rust"
+      }
+    ],
+    "nextCursor": "next-page-cursor"
+  }
+}
+```
+
+<div id="reading-resources">
+  ### 读取资源
+</div>
+
+要获取资源内容，客户端应发送一个 `resources/read` 请求：
+
+**请求：**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "resources/read",
+  "params": {
+    "uri": "file:///project/src/main.rs"
+  }
+}
+```
+
+**响应：**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "contents": [
+      {
+        "uri": "file:///project/src/main.rs",
+        "name": "main.rs",
+        "title": "Rust 应用程序主文件",
+        "mimeType": "text/x-rust",
+        "text": "fn main() {\n    println!(\"Hello world!\");\n}"
+      }
+    ]
+  }
+}
+```
+
+<div id="resource-templates">
+  ### 资源模板
+</div>
+
+资源模板允许服务器使用
+[URI 模板](https://datatracker.ietf.org/doc/html/rfc6570)公开带参数的资源。参数可通过[补全 API](/zh/specification/2025-06-18/server/utilities/completion)自动完成。
+
+**请求：**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "method": "resources/templates/list"
+}
+```
+
+**响应：**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "result": {
+    "resourceTemplates": [
+      {
+        "uriTemplate": "file:///{path}",
+        "name": "Project Files",
+        "title": "📁 Project Files",
+        "description": "Access files in the project directory",
+        "mimeType": "application/octet-stream"
+      }
+    ]
+  }
+}
+```
+
+<div id="list-changed-notification">
+  ### 列表变更通知
+</div>
+
+当可用资源的列表发生变更时，已声明 `listChanged`
+能力的服务器**应**发送一条通知：
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/resources/list_changed"
+}
+```
+
+<div id="subscriptions">
+  ### 订阅
+</div>
+
+该协议支持对资源变更进行可选订阅。客户端可以订阅
+特定资源，并在其发生变化时接收通知：
+
+**订阅请求：**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 4,
+  "method": "resources/subscribe",
+  "params": {
+    "uri": "file:///project/src/main.rs"
+  }
+}
+```
+
+**更新通知：**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/resources/updated",
+  "params": {
+    "uri": "file:///project/src/main.rs",
+    "title": "Rust 应用程序主文件"
+  }
+}
+```
+
+<div id="message-flow">
+  ## 消息流
+</div>
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Server
+
+    Note over Client,Server: 资源发现
+    Client->>Server: resources/list
+    Server-->>Client: 资源列表
+
+    Note over Client,Server: 资源访问
+    Client->>Server: resources/read
+    Server-->>Client: 资源内容
+
+    Note over Client,Server: 订阅
+    Client->>Server: resources/subscribe
+    Server-->>Client: 订阅已确认
+
+    Note over Client,Server: 更新
+    Server--)Client: notifications/resources/updated
+    Client->>Server: resources/read
+    Server-->>Client: 更新后的内容
+```
+
+<div id="data-types">
+  ## 数据类型
+</div>
+
+<div id="resource">
+  ### 资源
+</div>
+
+资源定义包括：
+
+* `uri`: 资源的唯一标识符
+* `name`: 资源名称
+* `title`: 可选，用于展示的人类可读名称
+* `description`: 可选的描述
+* `mimeType`: 可选的 MIME 类型
+* `size`: 可选的大小（字节数）
+
+<div id="resource-contents">
+  ### 资源内容
+</div>
+
+资源可以包含文本或二进制数据：
+
+<div id="text-content">
+  #### 文本内容
+</div>
+
+```json
+{
+  "uri": "file:///example.txt",
+  "name": "example.txt",
+  "title": "示例文本文件",
+  "mimeType": "text/plain",
+  "text": "资源内容"
+}
+```
+
+<div id="binary-content">
+  #### 二进制内容
+</div>
+
+```json
+{
+  "uri": "file:///example.png",
+  "name": "example.png",
+  "title": "示例图片",
+  "mimeType": "image/png",
+  "blob": "base64-encoded-data"
+}
+```
+
+<div id="annotations">
+  ### 注释
+</div>
+
+资源、资源模板和内容块支持可选注释，用于向客户端提示如何使用或展示该资源：
+
+* **`audience`**：数组，表示该资源的目标受众。有效值为 `"user"` 和 `"assistant"`。例如，`["user", "assistant"]` 表示内容对两者都适用。
+* **`priority`**：0.0 到 1.0 的数值，表示该资源的重要性。值为 1 表示“最重要”（相当于必需），而 0 表示“最不重要”（完全可选）。
+* **`lastModified`**：ISO 8601 格式的时间戳，表示该资源的最近修改时间（例如，`"2025-01-12T15:00:58Z"`）。
+
+带注释的资源示例：
+
+```json
+{
+  "uri": "file:///project/README.md",
+  "name": "README.md",
+  "title": "Project Documentation",
+  "mimeType": "text/markdown",
+  "annotations": {
+    "audience": ["user"],
+    "priority": 0.8,
+    "lastModified": "2025-01-12T15:00:58Z"
+  }
+}
+```
+
+客户端可以使用这些注释来：
+
+* 按目标受众筛选资源
+* 确定在上下文中优先包含哪些资源
+* 显示修改时间或按最新程度排序
+
+<div id="common-uri-schemes">
+  ## 常见 URI 方案
+</div>
+
+该协议定义了若干标准的 URI 方案。此列表并非穷尽——各实现仍可自由采用其他自定义的 URI 方案。
+
+<div id="https">
+  ### https://
+</div>
+
+用于表示可在网络上访问的资源。
+
+仅当客户端能够自行直接从网络获取并加载该资源时，服务器才**应（SHOULD）**使用此方案——也就是说，不需要通过 MCP 服务器来读取该资源。
+
+对于其他用例，服务器**应（SHOULD）**优先使用其他 URI 方案，或定义自定义方案，即便服务器本身需要通过互联网下载该资源内容。
+
+<div id="file">
+  ### file://
+</div>
+
+用于标识行为类似文件系统的资源。不过，这些资源不一定映射到实际的物理文件系统。
+
+MCP 服务器**可以（MAY）**使用
+[XDG MIME 类型](https://specifications.freedesktop.org/shared-mime-info-spec/0.14/ar01s02.html#id-1.3.14)
+来标识 file:// 资源，例如使用 `inode/directory` 来表示非常规文件（如目录），因为这类对象通常没有标准的 MIME 类型。
+
+<div id="git">
+  ### git://
+</div>
+
+Git 版本控制集成。
+
+<div id="custom-uri-schemes">
+  ### 自定义 URI 方案
+</div>
+
+自定义 URI 方案**必须**遵循 [RFC3986](https://datatracker.ietf.org/doc/html/rfc3986)，并将上述指南纳入考量。
+
+<div id="error-handling">
+  ## 错误处理
+</div>
+
+服务器**应**针对常见失败场景返回标准 JSON-RPC 错误：
+
+* 资源未找到：`-32002`
+* 内部错误：`-32603`
+
+错误示例：
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 5,
+  "error": {
+    "code": -32002,
+    "message": "Resource not found",
+    "data": {
+      "uri": "file:///nonexistent.txt"
+    }
+  }
+}
+```
+
+<div id="security-considerations">
+  ## 安全注意事项
+</div>
+
+1. 服务器**必须**验证所有资源 URI
+2. 对敏感资源**应**实施访问控制
+3. 二进制数据**必须**正确编码
+4. 在执行操作前**应**检查资源权限

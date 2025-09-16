@@ -1,0 +1,40 @@
+---
+title: Cambios clave
+---
+
+Este documento recopila los cambios realizados en la especificación del Protocolo de Contexto de Modelo (MCP) desde
+la revisión anterior, [2024-11-05](/es/specification/2024-11-05).
+
+<div id="major-changes">
+  ## Cambios importantes
+</div>
+
+1. Se añadió un **[marco de autorización](/es/specification/2025-03-26/basic/authorization)** completo
+   basado en OAuth 2.1 (PR
+   [#133](https://github.com/modelcontextprotocol/specification/pull/133))
+2. Se reemplazó el transporte HTTP+SSE anterior por un **[transporte HTTP transmitible](/es/specification/2025-03-26/basic/transports#streamable-http)** más flexible (PR
+   [#206](https://github.com/modelcontextprotocol/specification/pull/206))
+3. Se añadió compatibilidad con **[procesamiento por lotes](https://www.jsonrpc.org/specification#batch)** de JSON-RPC
+   (PR [#228](https://github.com/modelcontextprotocol/specification/pull/228))
+4. Se añadieron **anotaciones de herramientas** completas para describir mejor el comportamiento de la herramienta, como
+   si es de solo lectura o destructiva (PR
+   [#185](https://github.com/modelcontextprotocol/specification/pull/185))
+
+<div id="other-schema-changes">
+  ## Otros cambios en el esquema
+</div>
+
+* Se añadió el campo `message` a `ProgressNotification` para ofrecer actualizaciones de estado descriptivas
+* Se añadió compatibilidad con datos de audio, sumándose a los tipos de contenido existentes de texto e imagen
+* Se añadió la capacidad `completions` para indicar explícitamente la compatibilidad con sugerencias de autocompletado de argumentos
+
+Consulta
+[el esquema actualizado](http://github.com/modelcontextprotocol/specification/tree/main/schema/2025-03-26/schema.ts)
+para más detalles.
+
+<div id="full-changelog">
+  ## Registro de cambios completo
+</div>
+
+Para ver la lista completa de todos los cambios desde la última revisión del protocolo,
+[consulta GitHub](https://github.com/modelcontextprotocol/specification/compare/2024-11-05...2025-03-26).

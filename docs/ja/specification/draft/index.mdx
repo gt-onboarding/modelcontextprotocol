@@ -1,0 +1,144 @@
+---
+title: 仕様
+---
+
+<div id="enable-section-numbers" />
+
+[Model Context Protocol](https://modelcontextprotocol.io)（MCP）は、LLMアプリケーションと外部データソースおよびツールをシームレスに統合するためのオープンなプロトコルです。AI対応のIDEの構築、チャットインターフェースの拡張、カスタムAIワークフローの作成など、いずれの場面でも、MCPはLLMを必要なコンテキストへ接続するための標準化された方法を提供します。
+
+本仕様は、
+[schema.ts](https://github.com/modelcontextprotocol/specification/blob/main/schema/draft/schema.ts)
+にあるTypeScriptスキーマに基づく、正式なプロトコル要件を定義します。
+
+実装ガイドや実例については
+[modelcontextprotocol.io](https://modelcontextprotocol.io)
+をご覧ください。
+
+本書における「MUST」「MUST NOT」「REQUIRED」「SHALL」「SHALL NOT」「SHOULD」「SHOULD NOT」「RECOMMENDED」「NOT RECOMMENDED」「MAY」「OPTIONAL」という語は、[BCP 14](https://datatracker.ietf.org/doc/html/bcp14)
+[[RFC2119](https://datatracker.ietf.org/doc/html/rfc2119)]
+[[RFC8174](https://datatracker.ietf.org/doc/html/rfc8174)] に記載されたとおり、ここで示すようにすべて大文字で表記された場合に限って、その定義に従って解釈されます。
+
+<div id="overview">
+  ## 概要
+</div>
+
+MCPは、アプリケーションが次のことを行うための標準化された方法を提供します：
+
+* 言語モデルとコンテキスト情報を共有する
+* AIシステムにツールや機能を公開する
+* 組み合わせ可能な統合やワークフローを構築する
+
+このプロトコルは、[JSON-RPC](https://www.jsonrpc.org/) 2.0 メッセージを使用して、次の間で
+通信を確立します：
+
+* **ホスト**：接続を開始するLLMアプリケーション
+* **クライアント**：ホストアプリケーション内のコネクタ
+* **サーバー**：コンテキストと機能を提供するサービス
+
+MCPは
+[Language Server Protocol](https://microsoft.github.io/language-server-protocol/) から着想を得ています。これは、開発ツールのエコシステム全体で
+プログラミング言語のサポートを追加する方法を標準化したものです。同様に、MCPはAIアプリケーションのエコシステムに追加のコンテキストや
+ツールを統合する方法を標準化します。
+
+<div id="key-details">
+  ## 重要なポイント
+</div>
+
+<div id="base-protocol">
+  ### ベースプロトコル
+</div>
+
+* [JSON-RPC](https://www.jsonrpc.org/) メッセージ形式
+* 状態を持つ接続
+* サーバーとクライアントの機能交渉
+
+<div id="features">
+  ### 機能
+</div>
+
+サーバーはクライアントに対して、次の機能を提供できます:
+
+* **リソース**: ユーザーやAIモデルが利用するためのコンテキストとデータ
+* **プロンプト**: ユーザー向けのテンプレート化メッセージやワークフロー
+* **ツール**: AIモデルが実行する関数
+
+クライアントはサーバーに対して、次の機能を提供する場合があります:
+
+* **サンプリング**: サーバー主導のエージェント的な挙動や再帰的なLLMインタラクション
+* **ルーツ**: 操作対象とするURIやファイルシステムの境界についてのサーバー主導の照会
+* **エリシテーション**: ユーザーに追加情報を求めるサーバー主導のリクエスト
+
+<div id="additional-utilities">
+  ### 追加ユーティリティ
+</div>
+
+* 設定
+* 進行状況の追跡
+* 取り消し
+* エラー報告
+* ロギング
+
+<div id="security-and-trust-safety">
+  ## セキュリティとトラスト＆セーフティ
+</div>
+
+Model Context Protocol（MCP）は、任意のデータへのアクセスやコードの実行経路を通じて強力な機能を実現します。この強力さには重要なセキュリティおよびトラストに関する配慮が伴うため、すべての実装者はこれらに細心の注意を払って対処する必要があります。
+
+<div id="key-principles">
+  ### 重要な原則
+</div>
+
+1. **ユーザーの同意とコントロール**
+   * ユーザーは、すべてのデータアクセスと操作について明示的に同意し、内容を理解していなければならない
+   * ユーザーは、どのデータを共有し、どの操作を実行するかについてのコントロールを保持しなければならない
+   * 実装者は、アクティビティの確認と承認のための分かりやすいUIを提供すべきである
+
+2. **データプライバシー**
+   * MCPホストは、ユーザーデータをMCPサーバーに開示する前に、ユーザーの明示的な同意を得なければならない
+   * MCPホストは、ユーザーの同意なしにリソースデータを他所へ送信してはならない
+   * ユーザーデータは、適切なアクセス制御で保護されるべきである
+
+3. **ツールの安全性**
+   * ツールは任意コードの実行に相当し、適切な注意をもって扱わなければならない。
+     * 特に、注釈などのツール動作の説明は、信頼できるMCPサーバーから取得された場合を除き、信頼できないものとして扱うべきである。
+   * MCPホストは、いかなるツールを呼び出す前にも、ユーザーの明示的な同意を得なければならない
+   * ユーザーは、使用を承認する前に、各ツールの機能を理解しておくべきである
+
+4. **LLMのサンプリング制御**
+   * ユーザーは、あらゆるLLMのサンプリング要求を明示的に承認しなければならない
+   * ユーザーがコントロールすべき事項:
+     * サンプリングを実行するかどうか
+     * 送信される実際のプロンプト
+     * サーバーが閲覧できる結果
+   * このプロトコルは、意図的にサーバーからプロンプトの可視性を制限している
+
+<div id="implementation-guidelines">
+  ### 実装ガイドライン
+</div>
+
+MCP 自体はプロトコルレベルでこれらのセキュリティ原則を強制できないため、
+実装者は次の点を実施することが**推奨されます**。
+
+1. アプリケーションに堅牢な同意および認可フローを組み込むこと
+2. セキュリティ上の影響を明確にドキュメント化すること
+3. 適切なアクセス制御とデータ保護を実装すること
+4. 統合においてセキュリティのベストプラクティスに従うこと
+5. 機能設計におけるプライバシーへの影響を考慮すること
+
+<div id="learn-more">
+  ## さらに詳しく知る
+</div>
+
+各プロトコルコンポーネントの詳細仕様をご覧ください：
+
+<CardGroup cols={5}>
+  <Card title="アーキテクチャ" icon="sitemap" href="/ja/specification/draft/architecture" />
+
+  <Card title="基本プロトコル" icon="code" href="/ja/specification/draft/basic" />
+
+  <Card title="サーバー機能" icon="server" href="/ja/specification/draft/server" />
+
+  <Card title="クライアント機能" icon="user" href="/ja/specification/draft/client" />
+
+  <Card title="コントリビュート" icon="pencil" href="/ja/development/contributing" />
+</CardGroup>

@@ -1,0 +1,57 @@
+---
+title: 什么是模型上下文协议（MCP）？
+sidebarTitle: 什么是 MCP？
+---
+
+MCP（模型上下文协议）是一种开源标准，用于将 AI 应用程序连接到外部系统。
+
+借助 MCP，像 Claude 或 ChatGPT 这样的 AI 应用程序可以连接到数据源（例如本地文件、数据库）、工具（例如搜索引擎、计算器）以及工作流（例如专用的提示模板），从而获取关键信息并执行任务。
+
+可以把 MCP 看作是 AI 应用程序的 USB‑C 接口。正如 USB‑C 提供了连接电子设备的标准化方式，MCP 也为 AI 应用程序连接外部系统提供了标准化方式。
+
+<Frame>
+  <img src="/images/mcp-simple-diagram.png" />
+</Frame>
+
+<div id="what-can-mcp-enable">
+  ## MCP 能实现什么？
+</div>
+
+* 智能体可以访问你的 Google 日历和 Notion，成为更个性化的 AI 助手。
+* Claude Code 可以基于 Figma 设计生成完整的 Web 应用。
+* 企业聊天机器人可以连接组织内的多个数据库，支持用户通过对话分析数据。
+* AI 模型可以在 Blender 中创建 3D 设计，并用 3D 打印机打印出来。
+
+<div id="why-does-mcp-matter">
+  ## 为什么 MCP 很重要？
+</div>
+
+根据你在生态系统中的角色不同，MCP 能带来多方面的收益。
+
+* **开发者**：在构建或集成 AI 应用或智能体时，MCP 能减少开发时间与复杂度。
+* **AI 应用或智能体**：MCP 提供对数据源、工具和应用生态的访问，提升能力并改善最终用户体验。
+* **最终用户**：MCP 带来更强大的 AI 应用或智能体，必要时可访问你的数据并代表你采取行动。
+
+<div id="start-building">
+  ## 开始构建
+</div>
+
+<CardGroup cols={2}>
+  <Card title="构建服务器" icon="server" href="/zh/docs/develop/build-server">
+    创建 MCP 服务器，向外提供你的数据与工具
+  </Card>
+
+  <Card title="构建客户端" icon="computer" href="/zh/docs/develop/build-client">
+    开发可连接到 MCP 服务器的应用程序
+  </Card>
+</CardGroup>
+
+<div id="learn-more">
+  ## 进一步了解
+</div>
+
+<CardGroup cols={2}>
+  <Card title="理解概念" icon="book" href="/zh/docs/learn/architecture">
+    掌握 MCP 的核心概念与架构
+  </Card>
+</CardGroup>

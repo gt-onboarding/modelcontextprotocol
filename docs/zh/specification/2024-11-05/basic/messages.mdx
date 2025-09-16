@@ -1,0 +1,75 @@
+---
+title: 消息
+type: docs
+weight: 20
+---
+
+<Info>**协议修订**：2024-11-05</Info>
+
+MCP 中的所有消息**必须**遵循
+[JSON-RPC 2.0](https://www.jsonrpc.org/specification) 规范。该协议定义了三类消息：
+
+<div id="requests">
+  ## 请求
+</div>
+
+请求可以由客户端发送到服务器，或由服务器发送到客户端。
+
+```typescript
+{
+  jsonrpc: "2.0";
+  id: string | number;
+  method: string;
+  params?: {
+    [key: string]: unknown;
+  };
+}
+```
+
+- 请求**必须**包含字符串或整数类型的 ID。
+- 不同于基础 JSON-RPC，ID **不得**为 `null`。
+- 在同一会话中，请求方**不得**重复使用相同的请求 ID。
+
+<div id="responses">
+  ## Responses
+</div>
+
+响应用于回复请求。
+
+```typescript
+{
+  jsonrpc: "2.0";
+  id: string | number;
+  result?: {
+    [key: string]: unknown;
+  }
+  error?: {
+    code: number;
+    message: string;
+    data?: unknown;
+  }
+}
+```
+
+- 响应**必须**包含与其对应请求相同的 ID。
+- 必须设置 `result` 或 `error` 之一，响应**不得**同时设置二者。
+- 错误代码**必须**为整数。
+
+<div id="notifications">
+  ## 通知
+</div>
+
+通知可以由客户端发送给服务器，或由服务器发送给客户端。它们不需要
+响应。
+
+```typescript
+{
+  jsonrpc: "2.0";
+  method: string;
+  params?: {
+    [key: string]: unknown;
+  };
+}
+```
+
+- 通知**不得**包含 ID。

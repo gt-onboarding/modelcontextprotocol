@@ -1,0 +1,174 @@
+---
+title: Architecture
+---
+
+<div id="enable-section-numbers" />
+
+Le Protocole de contexte de modèle (MCP) adopte une architecture client-hôte-serveur où chaque hôte peut exécuter plusieurs instances de client. Cette architecture permet aux utilisateurs d’intégrer des capacités d’IA dans leurs applications tout en maintenant des frontières de sécurité claires et en isolant les responsabilités. Bâti sur JSON-RPC 2.0, MCP fournit un protocole de session avec état axé sur l’échange de contexte et la coordination de l’échantillonnage entre les Clients MCP et les Serveurs MCP.
+
+<div id="core-components">
+  ## Composants principaux
+</div>
+
+```mermaid
+graph LR
+    subgraph "Processus hôte de l’application"
+        H[Hôte]
+        C1[Client 1]
+        C2[Client 2]
+        C3[Client 3]
+        H --> C1
+        H --> C2
+        H --> C3
+    end
+
+    subgraph "Machine locale"
+        S1[Serveur 1<br>Fichiers et Git]
+        S2[Serveur 2<br>Base de données]
+        R1[("Ressource locale<br>A")]
+        R2[("Ressource locale<br>B")]
+
+        C1 --> S1
+        C2 --> S2
+        S1 <--> R1
+        S2 <--> R2
+    end
+
+    subgraph "Internet"
+        S3[Serveur 3<br>API externes]
+        R3[("Ressource distante<br>C")]
+
+        C3 --> S3
+        S3 <--> R3
+    end
+```
+
+<div id="host">
+  ### Hôte
+</div>
+
+Le processus hôte agit comme conteneur et coordonnateur :
+
+* Crée et gère plusieurs instances de clients
+* Contrôle les autorisations de connexion des clients et leur cycle de vie
+* Applique les politiques de sécurité et les exigences de consentement
+* Gère les décisions d’autorisation des utilisateurs
+* Coordonne l’intégration à l’IA/aux LLM et l’échantillonnage
+* Gère l’agrégation de contexte entre les clients
+
+<div id="clients">
+  ### Clients
+</div>
+
+Chaque client est créé par l’hôte et maintient une connexion au serveur isolée :
+
+* Établit une session avec état par serveur
+* Gère la négociation du protocole et l’échange de capacités
+* Acheminer les messages du protocole dans les deux sens
+* Gère les abonnements et les notifications
+* Maintient des limites de sécurité entre les serveurs
+
+Une application hôte crée et gère plusieurs clients, chacun ayant une relation 1:1
+avec un serveur donné.
+
+<div id="servers">
+  ### Serveurs
+</div>
+
+Les serveurs fournissent un contexte et des capacités spécialisés :
+
+* Exposent des Ressources, des Outils et des Invites via les primitives MCP
+* Fonctionnent de manière autonome avec des responsabilités ciblées
+* Demandent l’Échantillonnage par l’entremise des interfaces client
+* Doivent respecter les contraintes de sécurité
+* Peuvent être des processus locaux ou des services à distance
+
+<div id="design-principles">
+  ## Principes de conception
+</div>
+
+Le MCP repose sur plusieurs principes de conception clés qui orientent son architecture et
+son implantation :
+
+1. **Les serveurs devraient être extrêmement faciles à créer**
+   * Les applications hôtes prennent en charge l’orchestration complexe
+   * Les serveurs se concentrent sur des capacités spécifiques et bien définies
+   * Des interfaces simples réduisent l’effort d’implantation
+   * Une séparation claire favorise la maintenabilité du code
+
+2. **Les serveurs devraient être hautement composables**
+   * Chaque serveur offre une fonctionnalité ciblée, en isolation
+   * Plusieurs serveurs peuvent être combinés de façon transparente
+   * Un protocole commun permet l’interopérabilité
+   * Une conception modulaire soutient l’extensibilité
+
+3. **Les serveurs ne devraient pas pouvoir lire toute la conversation ni “voir” dans d’autres
+   serveurs**
+   * Les serveurs reçoivent uniquement l’information contextuelle nécessaire
+   * L’historique complet de la conversation demeure chez l’hôte
+   * Chaque connexion à un serveur maintient l’isolation
+   * Les interactions entre serveurs sont contrôlées par l’hôte
+   * Le processus hôte impose des limites de sécurité
+
+4. **Les fonctionnalités peuvent être ajoutées progressivement aux serveurs et aux clients**
+   * Le protocole de base fournit les fonctionnalités minimales requises
+   * Des capacités supplémentaires peuvent être négociées au besoin
+   * Les serveurs et les clients évoluent indépendamment
+   * Le protocole est conçu pour l’extensibilité future
+   * La rétrocompatibilité est maintenue
+
+<div id="capability-negotiation">
+  ## Négociation des capacités
+</div>
+
+Le Protocole de contexte de modèle (MCP) utilise un système de négociation basé sur les capacités, où les clients et les serveurs déclarent explicitement les fonctionnalités qu’ils prennent en charge lors de l’initialisation. Les capacités déterminent quelles fonctionnalités et primitives du protocole sont disponibles pendant une session.
+
+* Les serveurs déclarent des capacités comme les abonnements aux ressources, la prise en charge des outils et les gabarits d’invites
+* Les clients déclarent des capacités comme la prise en charge de l’échantillonnage et la gestion des notifications
+* Les deux parties doivent respecter les capacités déclarées tout au long de la session
+* Des capacités supplémentaires peuvent être négociées au moyen d’extensions au protocole
+
+```mermaid
+sequenceDiagram
+    participant Host
+    participant Client
+    participant Server
+
+    Host->>+Client: Initialize client
+    Client->>+Server: Initialize session with capabilities
+    Server-->>Client: Respond with supported capabilities
+
+    Note over Host,Server: Active Session with Negotiated Features
+
+    loop Client Requests
+        Host->>Client: User- or model-initiated action
+        Client->>Server: Request (tools/resources)
+        Server-->>Client: Response
+        Client-->>Host: Update UI or respond to model
+    end
+
+    loop Server Requests
+        Server->>Client: Request (sampling)
+        Client->>Host: Forward to AI
+        Host-->>Client: AI response
+        Client-->>Server: Response
+    end
+
+    loop Notifications
+        Server--)Client: Resource updates
+        Client--)Server: Status changes
+    end
+
+    Host->>Client: Terminate
+    Client->>-Server: End session
+    deactivate Server
+```
+
+Chaque capacité permet d’activer des fonctionnalités spécifiques du protocole à utiliser pendant la session. Par exemple :
+
+* Les [fonctionnalités du serveur](/fr-CA/specification/draft/server) mises en œuvre doivent être annoncées dans les capacités du serveur
+* L’émission de notifications d’abonnement aux ressources exige que le serveur déclare la prise en charge des abonnements
+* L’appel d’outils exige que le serveur déclare des capacités liées aux outils
+* L’[échantillonnage](/fr-CA/specification/draft/client) exige que le client déclare la prise en charge dans ses capacités
+
+Cette négociation des capacités garantit que les clients et les serveurs ont une compréhension claire des fonctionnalités prises en charge, tout en préservant l’extensibilité du protocole.

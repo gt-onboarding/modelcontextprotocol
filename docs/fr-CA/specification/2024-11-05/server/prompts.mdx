@@ -1,0 +1,279 @@
+---
+title: Invites
+weight: 10
+---
+
+<Info>**Révision du protocole** : 2024-11-05</Info>
+
+Le Model Context Protocol (MCP) fournit une façon normalisée pour que les serveurs exposent des modèles d’invite
+aux clients. Les invites permettent aux serveurs de fournir des messages structurés et des
+instructions pour interagir avec des modèles de langage. Les clients peuvent découvrir les invites
+disponibles, en récupérer le contenu et fournir des arguments pour les personnaliser.
+
+<div id="user-interaction-model">
+  ## Modèle d’interaction utilisateur
+</div>
+
+Les invites sont conçues pour être **contrôlées par l’utilisateur**, c’est-à-dire qu’elles sont exposées par les serveurs aux clients afin que l’utilisateur puisse les sélectionner explicitement pour les utiliser.
+
+Habituellement, les invites sont déclenchées par des commandes lancées par l’utilisateur dans l’interface, ce qui permet aux utilisateurs de découvrir et d’appeler naturellement les invites disponibles.
+
+Par exemple, sous forme de commandes « slash » :
+
+![Exemple d’invite exposée comme commande « slash »](/specification/2024-11-05/server/slash-command.png)
+
+Cependant, les implémenteurs sont libres d’exposer des invites via tout modèle d’interface qui répond à leurs besoins — le protocole lui-même n’impose aucun modèle d’interaction utilisateur particulier.
+
+<div id="capabilities">
+  ## Capacités
+</div>
+
+Les serveurs qui prennent en charge les invites **DOIVENT** déclarer la capacité `prompts` lors de
+[l’initialisation](/fr-CA/specification/2024-11-05/basic/lifecycle#initialization) :
+
+```json
+{
+  "capabilities": {
+    "prompts": {
+      "listChanged": true
+    }
+  }
+}
+```
+
+`listChanged` indique si le serveur émettra des notifications lorsque la liste des
+invites disponibles est modifiée.
+
+<div id="protocol-messages">
+  ## Messages de protocole
+</div>
+
+<div id="listing-prompts">
+  ### Lister les invites
+</div>
+
+Pour obtenir les invites disponibles, les clients envoient une requête `prompts/list`. Cette opération
+prend en charge la
+[pagination](/fr-CA/specification/2024-11-05/server/utilities/pagination).
+
+**Requête :**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "prompts/list",
+  "params": {
+    "cursor": "optional-cursor-value"
+  }
+}
+```
+
+**Réponse :**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "prompts": [
+      {
+        "name": "code_review",
+        "description": "Demande au LLM d’analyser la qualité du code et de suggérer des améliorations",
+        "arguments": [
+          {
+            "name": "code",
+            "description": "Le code à réviser",
+            "required": true
+          }
+        ]
+      }
+    ],
+    "nextCursor": "next-page-cursor"
+  }
+}
+```
+
+<div id="getting-a-prompt">
+  ### Récupérer une invite
+</div>
+
+Pour récupérer une invite précise, les clients envoient une requête `prompts/get`. Les arguments peuvent être remplis automatiquement au moyen de [l’API de complétion](/fr-CA/specification/2024-11-05/server/utilities/completion).
+
+**Requête :**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "prompts/get",
+  "params": {
+    "name": "code_review",
+    "arguments": {
+      "code": "def hello():\n    print('world')"
+    }
+  }
+}
+```
+
+**Réponse :**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "description": "Invite d’examen de code",
+    "messages": [
+      {
+        "role": "user",
+        "content": {
+          "type": "text",
+          "text": "Veuillez examiner ce code Python :\ndef hello():\n    print('world')"
+        }
+      }
+    ]
+  }
+}
+```
+
+<div id="list-changed-notification">
+  ### Notification de modification de la liste
+</div>
+
+Lorsque la liste des invites disponibles change, les serveurs ayant déclaré la capacité `listChanged` **DEVRAIENT** envoyer une notification :
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/prompts/list_changed"
+}
+```
+
+<div id="message-flow">
+  ## Flux des messages
+</div>
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Server
+
+    Note over Client,Server: Découverte
+    Client->>Server: prompts/list
+    Server-->>Client: Liste des invites
+
+    Note over Client,Server: Utilisation
+    Client->>Server: prompts/get
+    Server-->>Client: Contenu de l’invite
+
+    opt listChanged
+      Note over Client,Server: Modifications
+      Server--)Client: prompts/list_changed
+      Client->>Server: prompts/list
+      Server-->>Client: Invites mises à jour
+    end
+```
+
+<div id="data-types">
+  ## Types de données
+</div>
+
+<div id="prompt">
+  ### Invite
+</div>
+
+Une définition d’invite comprend :
+
+* `name` : Identifiant unique de l’invite
+* `description` : Description facultative, lisible par les humains
+* `arguments` : Liste facultative d’arguments pour la personnalisation
+
+<div id="promptmessage">
+  ### MessageDInvite
+</div>
+
+Les messages dans une invite peuvent contenir :
+
+* `role` : « user » ou « assistant » pour indiquer l’interlocuteur
+* `content` : L’un des types de contenu suivants :
+
+<div id="text-content">
+  #### Contenu textuel
+</div>
+
+Le contenu textuel représente des messages en texte brut :
+
+```json
+{
+  "type": "text",
+  "text": "The text content of the message"
+}
+```
+
+Il s’agit du type de contenu le plus courant pour les interactions en langage naturel.
+
+<div id="image-content">
+  #### Contenu d’image
+</div>
+
+Le contenu d’image permet d’inclure des informations visuelles dans les messages :
+
+```json
+{
+  "type": "image",
+  "data": "base64-encoded-image-data",
+  "mimeType": "image/png"
+}
+```
+
+Les données de l’image DOIVENT être encodées en base64 et inclure un type MIME valide. Cela permet des interactions multimodales où le contexte visuel est important.
+
+<div id="embedded-resources">
+  #### Ressources intégrées
+</div>
+
+Les ressources intégrées permettent de référencer directement des ressources côté serveur dans les messages :
+
+```json
+{
+  "type": "resource",
+  "resource": {
+    "uri": "resource://example",
+    "mimeType": "text/plain",
+    "text": "Resource content"
+  }
+}
+```
+
+Les ressources peuvent contenir soit du texte, soit des données binaires (blob) et **DOIVENT** inclure :
+
+* Un URI de ressource valide
+* Le type MIME approprié
+* Soit du contenu textuel, soit des données blob encodées en base64
+
+Les ressources intégrées permettent aux invites d’intégrer de façon transparente du contenu géré par le serveur, comme de la documentation, des exemples de code ou d’autres ressources de référence, directement dans le flux de conversation.
+
+<div id="error-handling">
+  ## Gestion des erreurs
+</div>
+
+Les serveurs **DEVRAIENT** renvoyer des erreurs JSON-RPC standard pour les échecs courants :
+
+* Nom d’invite invalide : `-32602` (Paramètres invalides)
+* Arguments requis manquants : `-32602` (Paramètres invalides)
+* Erreurs internes : `-32603` (Erreur interne)
+
+<div id="implementation-considerations">
+  ## Considérations de mise en œuvre
+</div>
+
+1. Les serveurs **DEVRAIENT** valider les arguments d’invite avant le traitement
+2. Les clients **DEVRAIENT** gérer la pagination pour les longues listes d’invites
+3. Les deux parties **DEVRAIENT** respecter la négociation des capacités
+
+<div id="security">
+  ## Sécurité
+</div>
+
+Les implémentations DOIVENT valider avec soin toutes les entrées et sorties d’Invites afin de prévenir les attaques par injection ou tout accès non autorisé aux Ressources.

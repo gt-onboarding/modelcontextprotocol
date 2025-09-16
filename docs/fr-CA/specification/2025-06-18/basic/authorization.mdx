@@ -1,0 +1,413 @@
+---
+title: Autorisation
+---
+
+<div id="enable-section-numbers" />
+
+<Info>**Révision du protocole** : 2025-06-18</Info>
+
+<div id="introduction">
+  ## Introduction
+</div>
+
+<div id="purpose-and-scope">
+  ### Objectif et portée
+</div>
+
+Le Model Context Protocol offre des capacités d’autorisation au niveau du transport, permettant aux clients MCP de faire des requêtes à des serveurs MCP restreints au nom des propriétaires de ressources. Cette spécification définit le déroulement d’autorisation pour les transports fondés sur HTTP.
+
+<div id="protocol-requirements">
+  ### Exigences du protocole
+</div>
+
+L’autorisation est **FACULTATIVE** pour les implémentations MCP. Lorsqu’elle est prise en charge :
+
+* Les implémentations utilisant un transport HTTP **DOIVENT** se conformer à cette spécification.
+* Les implémentations utilisant un transport STDIO **NE DOIVENT PAS** suivre cette spécification et
+  devraient plutôt récupérer les justificatifs d’identité à partir de l’environnement.
+* Les implémentations utilisant des transports alternatifs **DOIVENT** suivre les meilleures pratiques
+  de sécurité établies pour leur protocole.
+
+<div id="standards-compliance">
+  ### Conformité aux normes
+</div>
+
+Ce mécanisme d’autorisation s’appuie sur les spécifications établies ci-dessous, mais
+met en œuvre un sous-ensemble de leurs fonctionnalités afin d’assurer la sécurité et l’interopérabilité,
+tout en restant simple :
+
+* OAuth 2.1 IETF DRAFT ([draft-ietf-oauth-v2-1-13](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13))
+* Métadonnées du serveur d’autorisation OAuth 2.0
+  ([RFC8414](https://datatracker.ietf.org/doc/html/rfc8414))
+* Protocole d’enregistrement dynamique du client OAuth 2.0
+  ([RFC7591](https://datatracker.ietf.org/doc/html/rfc7591))
+* Métadonnées des ressources protégées OAuth 2.0 ([RFC9728](https://datatracker.ietf.org/doc/html/rfc9728))
+
+<div id="authorization-flow">
+  ## Processus d’autorisation
+</div>
+
+<div id="roles">
+  ### Rôles
+</div>
+
+Un *serveur MCP* protégé agit comme un [serveur de ressources OAuth 2.1](https://www.ietf.org/archive/id/draft-ietf-oauth-v2-1-13.html#name-roles),
+capable d’accepter et de répondre à des requêtes de ressources protégées au moyen de jetons d’accès.
+
+Un *client MCP* agit comme un [client OAuth 2.1](https://www.ietf.org/archive/id/draft-ietf-oauth-v2-1-13.html#name-roles),
+effectuant des requêtes de ressources protégées au nom d’un propriétaire de ressource.
+
+Le *serveur d’autorisation* est responsable d’interagir avec l’utilisateur (au besoin) et d’émettre des jetons d’accès à utiliser auprès du serveur MCP.
+Les détails d’implémentation du serveur d’autorisation dépassent la portée de cette spécification. Il peut être hébergé avec le
+serveur de ressources ou par une entité distincte. La [section Découverte du serveur d’autorisation](#authorization-server-discovery)
+précise comment un serveur MCP indique à un client l’emplacement de son serveur d’autorisation correspondant.
+
+<div id="overview">
+  ### Aperçu
+</div>
+
+1. Les serveurs d’autorisation DOIVENT implémenter OAuth 2.1 avec des mesures de sécurité appropriées pour les clients confidentiels et publics.
+
+2. Les serveurs d’autorisation et les clients MCP DEVRAIENT prendre en charge le protocole d’Enregistrement dynamique du client (DCR) OAuth 2.0 ([RFC7591](https://datatracker.ietf.org/doc/html/rfc7591)).
+
+3. Les serveurs MCP DOIVENT implémenter les métadonnées de Ressource protégée OAuth 2.0 ([RFC9728](https://datatracker.ietf.org/doc/html/rfc9728)).
+   Les clients MCP DOIVENT utiliser les métadonnées de Ressource protégée OAuth 2.0 pour la découverte du serveur d’autorisation.
+
+4. Les serveurs d’autorisation DOIVENT fournir les métadonnées du serveur d’autorisation OAuth 2.0 ([RFC8414](https://datatracker.ietf.org/doc/html/rfc8414)).
+   Les clients MCP DOIVENT utiliser les métadonnées du serveur d’autorisation OAuth 2.0.
+
+<div id="authorization-server-discovery">
+  ### Découverte du serveur d’autorisation
+</div>
+
+Cette section décrit les mécanismes par lesquels les serveurs MCP annoncent à leurs clients MCP les serveurs d’autorisation qui leur sont associés, ainsi que le processus de découverte permettant aux clients MCP de déterminer les points de terminaison du serveur d’autorisation et les fonctionnalités prises en charge.
+
+<div id="authorization-server-location">
+  #### Emplacement du serveur d’autorisation
+</div>
+
+Les serveurs MCP **DOIVENT** mettre en œuvre la spécification OAuth 2.0 Protected Resource Metadata ([RFC9728](https://datatracker.ietf.org/doc/html/rfc9728))
+afin d’indiquer l’emplacement des serveurs d’autorisation. Le document Protected Resource Metadata renvoyé par le serveur MCP **DOIT** inclure
+le champ `authorization_servers` contenant au moins un serveur d’autorisation.
+
+L’utilisation précise de `authorization_servers` dépasse la portée de cette spécification; les responsables de l’implémentation devraient consulter
+OAuth 2.0 Protected Resource Metadata ([RFC9728](https://datatracker.ietf.org/doc/html/rfc9728)) pour
+des indications sur les détails d’implémentation.
+
+Les responsables de l’implémentation devraient noter que les documents Protected Resource Metadata peuvent définir plusieurs serveurs d’autorisation. La responsabilité du choix du serveur d’autorisation à utiliser incombe au Client MCP, conformément aux lignes directrices précisées dans
+[RFC9728 Section 7.6 « Authorization Servers »](https://datatracker.ietf.org/doc/html/rfc9728#name-authorization-servers).
+
+Les Serveurs MCP **DOIVENT** utiliser l’en-tête HTTP `WWW-Authenticate` lorsqu’ils renvoient un *401 Unauthorized* afin d’indiquer l’emplacement de l’URL des métadonnées du serveur de ressources,
+comme décrit dans [RFC9728 Section 5.1 « WWW-Authenticate Response »](https://datatracker.ietf.org/doc/html/rfc9728#name-www-authenticate-response).
+
+Les Clients MCP **DOIVENT** être capables d’analyser les en-têtes `WWW-Authenticate` et de répondre de manière appropriée aux réponses `HTTP 401 Unauthorized` du serveur MCP.
+
+<div id="server-metadata-discovery">
+  #### Découverte des métadonnées du serveur
+</div>
+
+Les Clients MCP **DOIVENT** suivre la spécification OAuth 2.0 Authorization Server Metadata [RFC8414](https://datatracker.ietf.org/doc/html/rfc8414) pour obtenir les informations nécessaires pour interagir avec le serveur d’autorisation.
+
+<div id="sequence-diagram">
+  #### Diagramme de séquence
+</div>
+
+Le diagramme suivant illustre un exemple de flux :
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant M as Serveur MCP (Serveur de ressources)
+    participant A as Serveur d’autorisation
+
+    C->>M: Requête MCP sans jeton
+    M-->>C: HTTP 401 Non autorisé avec en-tête WWW-Authenticate
+    Note over C: Extraire resource_metadata<br />de WWW-Authenticate
+
+    C->>M: GET /.well-known/oauth-protected-resource
+    M-->>C: Métadonnées des ressources avec l’URL du serveur d’autorisation
+    Note over C: Valider les métadonnées du RS,<br />construire l’URL des métadonnées de l’AS
+
+    C->>A: GET /.well-known/oauth-authorization-server
+    A-->>C: Métadonnées du serveur d’autorisation
+
+    Note over C,A: Le flux d’autorisation OAuth 2.1 se déroule ici
+
+    C->>A: Demande de jeton
+    A-->>C: Jeton d’accès
+
+    C->>M: Requête MCP avec jeton d’accès
+    M-->>C: Réponse MCP
+    Note over C,M: La communication MCP continue avec un jeton valide
+```
+
+<div id="dynamic-client-registration">
+  ### Enregistrement dynamique du client
+</div>
+
+Les Clients MCP et les serveurs d’autorisation DOIVENT prendre en charge le
+protocole OAuth 2.0 Dynamic Client Registration [RFC7591](https://datatracker.ietf.org/doc/html/rfc7591)
+pour permettre aux Clients MCP d’obtenir des identifiants de client OAuth sans interaction avec l’utilisateur. Cela offre une
+méthode normalisée permettant aux clients de s’enregistrer automatiquement auprès de nouveaux serveurs d’autorisation, ce qui est crucial
+pour le MCP, car :
+
+* Les clients peuvent ne pas connaître à l’avance tous les Serveurs MCP possibles et leurs serveurs d’autorisation.
+* L’enregistrement manuel créerait des frictions pour les utilisateurs.
+* Cela permet une connexion transparente à de nouveaux Serveurs MCP et à leurs serveurs d’autorisation.
+* Les serveurs d’autorisation peuvent appliquer leurs propres politiques d’enregistrement.
+
+Tout serveur d’autorisation qui ne prend PAS en charge l’Enregistrement dynamique du client doit fournir
+des moyens alternatifs d’obtenir un ID de client (et, le cas échéant, des informations d’identification du client). Pour l’un de
+ces serveurs d’autorisation, les Clients MCP devront soit :
+
+1. Coder en dur un ID de client (et, le cas échéant, des informations d’identification du client) spécifiquement pour que le Client MCP l’utilise lors
+   de l’interaction avec ce serveur d’autorisation, ou
+2. Présenter une interface utilisateur permettant aux utilisateurs de saisir ces renseignements, après avoir enregistré eux-mêmes un
+   client OAuth (p. ex., au moyen d’une interface de configuration hébergée par le
+   serveur).
+
+<div id="authorization-flow-steps">
+  ### Étapes du flux d’autorisation
+</div>
+
+Le flux d’autorisation complet se déroule comme suit :
+
+```mermaid
+sequenceDiagram
+    participant B as Agent utilisateur (navigateur)
+    participant C as Client
+    participant M as Serveur MCP (serveur de ressources)
+    participant A as Serveur d’autorisation
+
+    C->>M: Requête MCP sans jeton
+    M->>C: HTTP 401 Non autorisé avec en-tête WWW-Authenticate
+    Note over C: Extraire l’URL resource_metadata depuis WWW-Authenticate
+
+    C->>M: Demander les métadonnées de la ressource protégée
+    M->>C: Retourner les métadonnées
+
+    Note over C: Analyser les métadonnées et extraire le(s) serveur(s) d’autorisation<br/>Le client détermine quel AS utiliser
+
+    C->>A: GET /.well-known/oauth-authorization-server
+    A->>C: Réponse avec les métadonnées du serveur d’autorisation
+
+    alt Enregistrement dynamique du client
+        C->>A: POST /register
+        A->>C: Identifiants du client
+    end
+
+    Note over C: Générer les paramètres PKCE<br/>Inclure le paramètre resource
+    C->>B: Ouvrir le navigateur avec l’URL d’autorisation + code_challenge + resource
+    B->>A: Requête d’autorisation avec le paramètre resource
+    Note over A: L’utilisateur autorise
+    A->>B: Rediriger vers le rappel avec le code d’autorisation
+    B->>C: Rappel avec le code d’autorisation
+    C->>A: Requête de jeton + code_verifier + resource
+    A->>C: Jeton d’accès (+ jeton d’actualisation)
+    C->>M: Requête MCP avec jeton d’accès
+    M-->>C: Réponse MCP
+    Note over C,M: La communication MCP se poursuit avec un jeton valide
+```
+
+<div id="resource-parameter-implementation">
+  #### Mise en œuvre du paramètre Resource
+</div>
+
+Les clients MCP DOIVENT implémenter les indicateurs de ressource pour OAuth 2.0 tels que définis dans la [RFC 8707](https://www.rfc-editor.org/rfc/rfc8707.html)
+afin de spécifier explicitement la ressource cible pour laquelle le jeton est demandé. Le paramètre `resource` :
+
+1. DOIT être inclus à la fois dans les requêtes d’autorisation et les requêtes de jeton.
+2. DOIT identifier le serveur MCP avec lequel le client a l’intention d’utiliser le jeton.
+3. DOIT utiliser l’URI canonique du serveur MCP tel que défini dans la [RFC 8707, section 2](https://www.rfc-editor.org/rfc/rfc8707.html#name-access-token-request).
+
+<div id="canonical-server-uri">
+  ##### URI canonique du serveur
+</div>
+
+Aux fins de cette spécification, l’URI canonique d’un Serveur MCP est défini comme l’identifiant de ressource tel que spécifié dans
+[RFC 8707 Section 2](https://www.rfc-editor.org/rfc/rfc8707.html#section-2) et correspond au paramètre `resource` dans
+[RFC 9728](https://datatracker.ietf.org/doc/html/rfc9728).
+
+Les Clients MCP **DEVRAIENT** fournir l’URI le plus précis possible pour le Serveur MCP qu’ils souhaitent atteindre, en suivant les recommandations de [RFC 8707](https://www.rfc-editor.org/rfc/rfc8707). Bien que la forme canonique utilise des composants de schéma et d’hôte en minuscules, les implémentations **DEVRAIENT** accepter des composants de schéma et d’hôte en majuscules pour une meilleure robustesse et interopérabilité.
+
+Exemples d’URI canoniques valides :
+
+* `https://mcp.example.com/mcp`
+* `https://mcp.example.com`
+* `https://mcp.example.com:8443`
+* `https://mcp.example.com/server/mcp` (lorsque le composant de chemin est nécessaire pour identifier un Serveur MCP donné)
+
+Exemples d’URI canoniques invalides :
+
+* `mcp.example.com` (schéma manquant)
+* `https://mcp.example.com#fragment` (contient un fragment)
+
+> **Remarque :** Bien que `https://mcp.example.com/` (avec barre oblique finale) et `https://mcp.example.com` (sans barre oblique finale) soient techniquement des URI absolus valides selon [RFC 3986](https://www.rfc-editor.org/rfc/rfc3986), les implémentations **DEVRAIENT** utiliser de façon cohérente la forme sans barre oblique finale pour une meilleure interopérabilité, à moins que la barre oblique finale ne soit sémantiquement significative pour la ressource visée.
+
+Par exemple, si l’on accède à un Serveur MCP à `https://mcp.example.com`, la requête d’autorisation inclurait :
+
+```
+&resource=https%3A%2F%2Fmcp.example.com
+```
+
+Les Clients MCP **DOIVENT** envoyer ce paramètre, que les serveurs d’autorisation le prennent en charge ou non.
+
+<div id="access-token-usage">
+  ### Utilisation du jeton d’accès
+</div>
+
+<div id="token-requirements">
+  #### Exigences relatives aux jetons
+</div>
+
+La gestion des jetons d’accès lors des requêtes aux serveurs MCP **DOIT** être conforme aux exigences définies dans
+[OAuth 2.1 Section 5 « Resource Requests »](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#section-5).
+Plus précisément :
+
+1. Le client MCP **DOIT** utiliser l’en-tête de requête Authorization défini dans
+   [OAuth 2.1 Section 5.1.1](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#section-5.1.1) :
+
+```
+Authorization: Bearer <access-token>
+```
+
+Notez que l’autorisation **DOIT** être incluse dans chaque requête HTTP du client vers le serveur,
+même si elles font partie de la même session logique.
+
+2. Les jetons d’accès **NE DOIVENT PAS** être inclus dans la chaîne de requête de l’URI
+
+Exemple de requête :
+
+```http
+GET /mcp HTTP/1.1
+Host: mcp.example.com
+Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+```
+
+<div id="token-handling">
+  #### Gestion des jetons
+</div>
+
+Les serveurs MCP, agissant en tant que serveurs de ressources OAuth 2.1, DOIVENT valider les jetons d’accès comme décrit dans
+[OAuth 2.1, section 5.2](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#section-5.2).
+Les serveurs MCP DOIVENT vérifier que les jetons d’accès ont été émis spécifiquement pour eux en tant qu’audience visée,
+conformément à la [RFC 8707, section 2](https://www.rfc-editor.org/rfc/rfc8707.html#section-2).
+Si la validation échoue, les serveurs DOIVENT répondre conformément aux exigences de traitement des erreurs de la
+[section 5.3 d’OAuth 2.1](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#section-5.3).
+Les jetons invalides ou expirés DOIVENT recevoir une réponse HTTP 401.
+
+Les clients MCP NE DOIVENT PAS envoyer au serveur MCP des jetons autres que ceux émis par le serveur d’autorisation du serveur MCP.
+
+Les serveurs d’autorisation DOIVENT uniquement accepter des jetons valides pour une utilisation avec leurs
+propres ressources.
+
+Les serveurs MCP NE DOIVENT PAS accepter ni transmettre d’autres jetons.
+
+<div id="error-handling">
+  ### Gestion des erreurs
+</div>
+
+Les serveurs **DOIVENT** renvoyer des codes d’état HTTP appropriés pour les erreurs d’autorisation :
+
+| Code d’état | Description        | Utilisation                                    |
+| ----------- | ------------------ | ---------------------------------------------- |
+| 401         | Non autorisé       | Autorisation requise ou jeton invalide         |
+| 403         | Interdit           | Champs d’application invalides ou permissions insuffisantes |
+| 400         | Requête incorrecte | Requête d’autorisation mal formée              |
+
+<div id="security-considerations">
+  ## Considérations de sécurité
+</div>
+
+Les implémentations DOIVENT respecter les pratiques exemplaires de sécurité OAuth 2.1 telles qu’énoncées dans [OAuth 2.1, section 7 « Considérations de sécurité »](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#name-security-considerations).
+
+<div id="token-audience-binding-and-validation">
+  ### Liaison et validation de l’audience du jeton
+</div>
+
+Les Resource Indicators de la [RFC 8707](https://www.rfc-editor.org/rfc/rfc8707.html) offrent des avantages de sécurité essentiels en liant les jetons à leurs audiences visées **lorsque le serveur d’autorisation prend en charge cette capacité**. Pour favoriser l’adoption actuelle et future :
+
+* Les clients MCP **DOIVENT** inclure le paramètre `resource` dans les requêtes d’autorisation et de jeton, tel qu’indiqué dans la section [Implémentation du paramètre resource](#resource-parameter-implementation)
+* Les serveurs MCP **DOIVENT** valider que les jetons qui leur sont présentés ont été émis spécifiquement pour leur utilisation
+
+Le [document sur les pratiques exemplaires de sécurité](/fr-CA/specification/2025-06-18/basic/security_best_practices#token-passthrough)
+explique pourquoi la validation de l’audience du jeton est cruciale et pourquoi le passage de jeton en transit est explicitement interdit.
+
+<div id="token-theft">
+  ### Vol de jetons
+</div>
+
+Les attaquants qui obtiennent des jetons stockés par le client, ou des jetons mis en cache ou consignés sur le serveur, peuvent accéder à des ressources protégées au moyen de requêtes qui semblent légitimes aux serveurs de ressources.
+
+Les clients et les serveurs **DOIVENT** mettre en place un stockage sécurisé des jetons et suivre les pratiques exemplaires OAuth, comme indiqué dans [OAuth 2.1, section 7.1](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#section-7.1).
+
+Les serveurs d’autorisation **DEVRAIENT** émettre des jetons d’accès de courte durée afin de réduire l’impact des fuites de jetons.
+Pour les clients publics, les serveurs d’autorisation **DOIVENT** effectuer une rotation des jetons d’actualisation, comme décrit dans [OAuth 2.1, section 4.3.1 « Token Endpoint Extension »](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#section-4.3.1).
+
+<div id="communication-security">
+  ### Sécurité des communications
+</div>
+
+Les implémentations **DOIVENT** suivre [OAuth 2.1, section 1.5 « Sécurité des communications »](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#section-1.5).
+
+Plus précisément :
+
+1. Tous les points de terminaison du serveur d’autorisation **DOIVENT** être fournis sur HTTPS.
+2. Tous les URI de redirection **DOIVENT** être soit `localhost`, soit utiliser HTTPS.
+
+<div id="authorization-code-protection">
+  ### Protection du code d’autorisation
+</div>
+
+Un attaquant qui a obtenu un code d’autorisation contenu dans une réponse d’autorisation peut tenter d’échanger ce code contre un jeton d’accès ou autrement s’en servir.
+(Décrit plus en détail dans [OAuth 2.1, section 7.5](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#section-7.5))
+
+Pour atténuer ce risque, les Clients MCP **DOIVENT** implémenter PKCE conformément à [OAuth 2.1, section 7.5.2](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#section-7.5.2).
+PKCE permet de prévenir l’interception et l’injection de codes d’autorisation en exigeant que les clients créent une paire secrète vérificateur–défi, ce qui garantit que seul le demandeur initial peut échanger un code d’autorisation contre des jetons.
+
+<div id="open-redirection">
+  ### Redirection ouverte
+</div>
+
+Un attaquant peut forger des URI de redirection malveillantes pour diriger les utilisateurs vers des sites d’hameçonnage.
+
+Les clients MCP **DOIVENT** enregistrer des URI de redirection auprès du serveur d’autorisation.
+
+Les serveurs d’autorisation **DOIVENT** valider les URI de redirection exactes par rapport aux valeurs préenregistrées afin de prévenir les attaques par redirection.
+
+Les clients MCP **DEVRAIENT** utiliser et vérifier les paramètres d’état dans le flux de code d’autorisation
+et rejeter tout résultat qui n’inclut pas l’état d’origine ou qui ne correspond pas à celui-ci.
+
+Les serveurs d’autorisation **DOIVENT** prendre des précautions pour éviter de rediriger les agents utilisateurs vers des URI non fiables, en suivant les recommandations présentées dans [OAuth 2.1 Section 7.12.2](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#section-7.12.2)
+
+Les serveurs d’autorisation **DEVRAIENT** uniquement rediriger automatiquement l’agent utilisateur s’ils ont confiance en l’URI de redirection. Si l’URI n’est pas fiable, le serveur d’autorisation PEUT informer l’utilisateur et s’en remettre à lui pour prendre la bonne décision.
+
+<div id="confused-deputy-problem">
+  ### Problème du « deputy » confus
+</div>
+
+Des attaquants peuvent exploiter des serveurs MCP agissant comme intermédiaires vers des API tierces, entraînant des [vulnérabilités de « deputy » confus](/fr-CA/specification/2025-06-18/basic/security_best_practices#confused-deputy-problem).
+En utilisant des codes d’autorisation volés, ils peuvent obtenir des jetons d’accès sans le consentement de l’utilisateur.
+
+Les serveurs mandataires MCP utilisant des identifiants client statiques **DOIVENT** obtenir le consentement de l’utilisateur pour chaque client enregistré dynamiquement avant de transmettre la demande à des serveurs d’autorisation tiers (qui peuvent exiger un consentement supplémentaire).
+
+<div id="access-token-privilege-restriction">
+  ### Restriction des privilèges des jetons d’accès
+</div>
+
+Un attaquant peut obtenir un accès non autorisé ou autrement compromettre un serveur MCP si celui-ci accepte des jetons émis pour d’autres ressources.
+
+Cette vulnérabilité comporte deux dimensions critiques :
+
+1. **Échecs de validation de l’audience.** Lorsqu’un serveur MCP ne vérifie pas que les jetons lui sont spécifiquement destinés (par exemple, via l’attribut d’audience, comme mentionné dans [RFC9068](https://www.rfc-editor.org/rfc/rfc9068.html)), il peut accepter des jetons initialement émis pour d’autres services. Cela brise une frontière de sécurité fondamentale d’OAuth, permettant aux attaquants de réutiliser des jetons légitimes entre différents services, contrairement à l’intention.
+2. **Transfert direct de jeton (token passthrough).** Si le serveur MCP non seulement accepte des jetons avec une audience incorrecte, mais transmet aussi ces jetons non modifiés à des services en aval, il peut potentiellement provoquer le problème du [&quot;confused deputy&quot;](#confused-deputy-problem), où l’API en aval peut faire confiance au jeton à tort comme s’il provenait du serveur MCP ou supposer que le jeton a été validé par l’API en amont. Voir la [section Token Passthrough](/fr-CA/specification/2025-06-18/basic/security_best_practices#token-passthrough) du guide des meilleures pratiques de sécurité pour plus de détails.
+
+Les serveurs MCP **DOIVENT** valider les jetons d’accès avant de traiter la requête, s’assurer que le jeton d’accès est émis spécifiquement pour le serveur MCP, et prendre toutes les mesures nécessaires pour qu’aucune donnée ne soit renvoyée à des parties non autorisées.
+
+Un serveur MCP **DOIT** suivre les lignes directrices d’[OAuth 2.1 - Section 5.2](https://www.ietf.org/archive/id/draft-ietf-oauth-v2-1-13.html#section-5.2) pour valider les jetons entrants.
+
+Les serveurs MCP **DOIVENT** n’accepter que des jetons spécifiquement destinés à eux-mêmes et **DOIVENT** rejeter les jetons qui ne les incluent pas dans l’attribut d’audience ou, autrement, vérifier qu’ils sont le destinataire prévu du jeton. Voir la [section Token Passthrough des meilleures pratiques de sécurité](/fr-CA/specification/2025-06-18/basic/security_best_practices#token-passthrough) pour plus de détails.
+
+Si le serveur MCP effectue des requêtes vers des API en amont, il peut agir comme client OAuth auprès d’elles. Le jeton d’accès utilisé avec l’API en amont est un jeton distinct, émis par le serveur d’autorisation en amont. Le serveur MCP **NE DOIT PAS** transmettre tel quel le jeton reçu du client MCP.
+
+Les clients MCP **DOIVENT** implémenter et utiliser le paramètre `resource` tel que défini dans [RFC 8707 - Resource Indicators for OAuth 2.0](https://www.rfc-editor.org/rfc/rfc8707.html) pour préciser explicitement la ressource cible pour laquelle le jeton est demandé. Cette exigence s’aligne sur la recommandation de [RFC 9728 Section 7.4](https://datatracker.ietf.org/doc/html/rfc9728#section-7.4). Cela garantit que les jetons d’accès sont liés aux ressources prévues et ne peuvent pas être utilisés abusivement entre différents services.

@@ -1,0 +1,454 @@
+---
+title: "Invite"
+description: "Créer des modèles d’invite et des flux de travail réutilisables"
+---
+
+Les invites permettent aux serveurs de définir des modèles d’invite et des flux de travail réutilisables que les clients peuvent facilement proposer aux utilisateurs et aux LLM. Elles offrent un moyen puissant de standardiser et de partager des interactions courantes avec les LLM.
+
+<Note>
+
+Les invites sont conçues pour être **contrôlées par l’utilisateur**, c’est-à-dire qu’elles sont exposées par les serveurs aux clients afin que l’utilisateur puisse les sélectionner explicitement pour les utiliser.
+
+</Note>
+
+<div id="overview">
+  ## Aperçu
+</div>
+
+Les invites dans le MCP sont des modèles prédéfinis qui peuvent :
+
+- Accepter des arguments dynamiques
+- Inclure du contexte à partir de ressources
+- Enchaîner plusieurs interactions
+- Guider des flux de travail spécifiques
+- S’afficher comme des éléments d’interface utilisateur (p. ex., des commandes « slash »)
+
+<div id="prompt-structure">
+  ## Structure de l'invite
+</div>
+
+Chaque invite est définie comme suit :
+
+```typescript
+{
+  name: string;              // Identifiant unique de l'invite
+  description?: string;      // Description lisible par une personne
+  arguments?: [              // Liste facultative d’arguments
+    {
+      name: string;          // Identifiant de l’argument
+      description?: string;  // Description de l’argument
+      required?: boolean;    // Indique si l’argument est obligatoire
+    }
+  ]
+}
+```
+
+<div id="discovering-prompts">
+  ## Découverte des invites
+</div>
+
+Les clients peuvent découvrir les invites disponibles en envoyant une requête `prompts/list` :
+
+```typescript
+// Request
+{
+  method: "prompts/list";
+}
+
+// Response
+{
+  prompts: [
+    {
+      name: "analyze-code",
+      description: "Analyze code for potential improvements",
+      arguments: [
+        {
+          name: "language",
+          description: "Programming language",
+          required: true,
+        },
+      ],
+    },
+  ];
+}
+```
+
+<div id="using-prompts">
+  ## Utilisation des invites
+</div>
+
+Pour utiliser une invite, les clients envoient une requête `prompts/get` :
+
+````typescript
+// Request
+{
+  method: "prompts/get",
+  params: {
+    name: "analyze-code",
+    arguments: {
+      language: "python"
+    }
+  }
+}
+
+// Response
+{
+  description: "Analyser du code Python pour des améliorations possibles",
+  messages: [
+    {
+      role: "user",
+      content: {
+        type: "text",
+        text: "Veuillez analyser le code Python suivant afin d’identifier des améliorations possibles :\n\n```python\ndef calculate_sum(numbers):\n    total = 0\n    for num in numbers:\n        total = total + num\n    return total\n\nresult = calculate_sum([1, 2, 3, 4, 5])\nprint(result)\n```"
+      }
+    }
+  ]
+}
+````
+
+<div id="dynamic-prompts">
+  ## Invites dynamiques
+</div>
+
+Les invites peuvent être dynamiques et inclure :
+
+<div id="embedded-resource-context">
+  ### Contexte de ressources intégrées
+</div>
+
+```json
+{
+  "name": "analyze-project",
+  "description": "Analyser les journaux du projet et le code",
+  "arguments": [
+    {
+      "name": "timeframe",
+      "description": "Période à analyser pour les journaux",
+      "required": true
+    },
+    {
+      "name": "fileUri",
+      "description": "URI du fichier de code à examiner",
+      "required": true
+    }
+  ]
+}
+```
+
+Lors du traitement de la requête `prompts/get` :
+
+```json
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": {
+        "type": "text",
+        "text": "Analyse ces journaux système et le fichier de code pour détecter d’éventuels problèmes :"
+      }
+    },
+    {
+      "role": "user",
+      "content": {
+        "type": "resource",
+        "resource": {
+          "uri": "logs://recent?timeframe=1h",
+          "text": "[2024-03-14 15:32:11] ERROR: Connection timeout in network.py:127\n[2024-03-14 15:32:15] WARN: Retrying connection (attempt 2/3)\n[2024-03-14 15:32:20] ERROR: Max retries exceeded",
+          "mimeType": "text/plain"
+        }
+      }
+    },
+    {
+      "role": "user",
+      "content": {
+        "type": "resource",
+        "resource": {
+          "uri": "file:///path/to/code.py",
+          "text": "def connect_to_service(timeout=30):\n    retries = 3\n    for attempt in range(retries):\n        try:\n            return establish_connection(timeout)\n        except TimeoutError:\n            if attempt == retries - 1:\n                raise\n            time.sleep(5)\n\ndef establish_connection(timeout):\n    # Connection implementation\n    pass",
+          "mimeType": "text/x-python"
+        }
+      }
+    }
+  ]
+}
+```
+
+<div id="multi-step-workflows">
+  ### Flux de travail à étapes multiples
+</div>
+
+```typescript
+const debugWorkflow = {
+  name: "debug-error",
+  async getMessages(error: string) {
+    return [
+      {
+        role: "user",
+        content: {
+          type: "text",
+          text: `Voici une erreur que je rencontre : ${error}`,
+        },
+      },
+      {
+        role: "assistant",
+        content: {
+          type: "text",
+          text: "Je vais vous aider à analyser cette erreur. Qu’avez-vous essayé jusqu’à maintenant?",
+        },
+      },
+      {
+        role: "user",
+        content: {
+          type: "text",
+          text: "J’ai essayé de redémarrer le service, mais l’erreur persiste.",
+        },
+      },
+    ];
+  },
+};
+```
+
+<div id="example-implementation">
+  ## Exemple d’implémentation
+</div>
+
+Voici un exemple complet d’implémentation d’Invites dans un Serveur MCP :
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Server } from "@modelcontextprotocol/sdk/server";
+import {
+  ListPromptsRequestSchema,
+  GetPromptRequestSchema,
+} from "@modelcontextprotocol/sdk/types";
+
+const PROMPTS = {
+  "git-commit": {
+    name: "git-commit",
+    description: "Générer un message de commit Git",
+    arguments: [
+      {
+        name: "changes",
+        description: "Diff Git ou description des changements",
+        required: true,
+      },
+    ],
+  },
+  "explain-code": {
+    name: "explain-code",
+    description: "Expliquer le fonctionnement du code",
+    arguments: [
+      {
+        name: "code",
+        description: "Code à expliquer",
+        required: true,
+      },
+      {
+        name: "language",
+        description: "Langage de programmation",
+        required: false,
+      },
+    ],
+  },
+};
+
+const server = new Server(
+  {
+    name: "example-prompts-server",
+    version: "1.0.0",
+  },
+  {
+    capabilities: {
+      prompts: {},
+    },
+  },
+);
+
+// Lister les invites disponibles
+server.setRequestHandler(ListPromptsRequestSchema, async () => {
+  return {
+    prompts: Object.values(PROMPTS),
+  };
+});
+
+// Obtenir une invite spécifique
+server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+  const prompt = PROMPTS[request.params.name];
+  if (!prompt) {
+    throw new Error(`Invite introuvable : ${request.params.name}`);
+  }
+
+  if (request.params.name === "git-commit") {
+    return {
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: `Génère un message de commit concis mais descriptif pour ces changements :\n\n${request.params.arguments?.changes}`,
+          },
+        },
+      ],
+    };
+  }
+
+  if (request.params.name === "explain-code") {
+    const language = request.params.arguments?.language || "Inconnu";
+    return {
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: `Explique le fonctionnement de ce code ${language} :\n\n${request.params.arguments?.code}`,
+          },
+        },
+      ],
+    };
+  }
+
+  throw new Error("Implémentation de l’invite introuvable");
+});
+```
+
+```python Python
+from mcp.server import Server
+import mcp.types as types
+
+# Définir les invites disponibles
+PROMPTS = {
+    "git-commit": types.Prompt(
+        name="git-commit",
+        description="Générer un message de commit Git",
+        arguments=[
+            types.PromptArgument(
+                name="changes",
+                description="Diff Git ou description des changements",
+                required=True
+            )
+        ],
+    ),
+    "explain-code": types.Prompt(
+        name="explain-code",
+        description="Expliquer le fonctionnement du code",
+        arguments=[
+            types.PromptArgument(
+                name="code",
+                description="Code à expliquer",
+                required=True
+            ),
+            types.PromptArgument(
+                name="language",
+                description="Langage de programmation",
+                required=False
+            )
+        ],
+    )
+}
+
+# Initialiser le serveur
+app = Server("example-prompts-server")
+
+@app.list_prompts()
+async def list_prompts() -> list[types.Prompt]:
+    return list(PROMPTS.values())
+
+@app.get_prompt()
+async def get_prompt(
+    name: str, arguments: dict[str, str] | None = None
+) -> types.GetPromptResult:
+    if name not in PROMPTS:
+        raise ValueError(f"Invite introuvable : {name}")
+
+    if name == "git-commit":
+        changes = arguments.get("changes") if arguments else ""
+        return types.GetPromptResult(
+            messages=[
+                types.PromptMessage(
+                    role="user",
+                    content=types.TextContent(
+                        type="text",
+                        text=f"Génère un message de commit concis mais descriptif "
+                        f"pour ces changements :\n\n{changes}"
+                    )
+                )
+            ]
+        )
+
+    if name == "explain-code":
+        code = arguments.get("code") if arguments else ""
+        language = arguments.get("language", "Inconnu") if arguments else "Inconnu"
+        return types.GetPromptResult(
+            messages=[
+                types.PromptMessage(
+                    role="user",
+                    content=types.TextContent(
+                        type="text",
+                        text=f"Explique le fonctionnement de ce code {language} :\n\n{code}"
+                    )
+                )
+            ]
+        )
+
+    raise ValueError("Implémentation de l’invite introuvable")
+```
+
+</CodeGroup>
+
+<div id="best-practices">
+  ## Bonnes pratiques
+</div>
+
+Lors de la mise en œuvre d’invites :
+
+1. Utilisez des noms d’invite clairs et descriptifs
+2. Fournissez des descriptions détaillées pour les invites et leurs arguments
+3. Validez tous les arguments requis
+4. Gérez l’absence d’arguments de façon robuste
+5. Envisagez la gestion des versions pour les modèles d’invite
+6. Mettez en cache le contenu dynamique lorsque c’est approprié
+7. Mettez en place une gestion des erreurs
+8. Documentez les formats d’arguments attendus
+9. Envisagez la composition d’invites
+10. Testez les invites avec divers types d’entrées
+
+<div id="ui-integration">
+  ## Intégration à l’interface utilisateur
+</div>
+
+Les invites peuvent être affichées dans les interfaces client sous forme de :
+
+- Commandes « slash »
+- Actions rapides
+- Éléments de menu contextuel
+- Entrées de la palette de commandes
+- Parcours guidés
+- Formulaires interactifs
+
+<div id="updates-and-changes">
+  ## Mises à jour et changements
+</div>
+
+Les serveurs peuvent informer les clients des changements d’invite :
+
+1. Fonctionnalité du serveur : `prompts.listChanged`
+2. Notification : `notifications/prompts/list_changed`
+3. Le client récupère la liste des invites de nouveau
+
+<div id="security-considerations">
+  ## Considérations de sécurité
+</div>
+
+Lors de la mise en œuvre d’invite :
+
+- Validez tous les arguments
+- Validez et nettoyez les entrées utilisateur
+- Envisagez une limitation du débit
+- Mettez en œuvre des contrôles d’accès
+- Auditez l’utilisation des invites
+- Traitez adéquatement les données sensibles
+- Validez le contenu généré
+- Mettez en œuvre des délais d’expiration
+- Prenez en compte les risques d’injection d’invite
+- Documentez les exigences de sécurité

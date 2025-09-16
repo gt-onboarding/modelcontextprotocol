@@ -1,0 +1,247 @@
+---
+title: 传输方式
+---
+
+<div id="enable-section-numbers" />
+
+<Info>**协议修订**：草案</Info>
+
+MCP 使用 JSON-RPC 对消息进行编码。JSON-RPC 消息**必须**采用 UTF-8 编码。
+
+该协议目前为客户端—服务器通信定义了两种标准传输机制：
+
+1. [stdio](#stdio)，通过标准输入和标准输出通信
+2. [可流式 HTTP](#streamable-http)
+
+客户端在可行时**应**支持 stdio。
+
+客户端和服务器也可以以可插拔的方式实现
+[自定义传输](#custom-transports)。
+
+<div id="stdio">
+  ## stdio
+</div>
+
+在 **stdio** 传输方式中：
+
+* 客户端将 MCP 服务器作为子进程启动。
+* 服务器从其标准输入（`stdin`）读取 JSON-RPC 消息，并通过其标准输出（`stdout`）发送消息。
+* 每条消息是一个独立的 JSON-RPC 请求、通知或响应。
+* 消息以换行符分隔，且**不得**包含内嵌换行符。
+* 服务器**可以**向其标准错误（`stderr`）写入 UTF-8 字符串用于日志记录。客户端**可以**捕获、转发或忽略这些日志。
+* 服务器**不得**向其 `stdout` 写入任何非有效的 MCP 消息。
+* 客户端**不得**向服务器的 `stdin` 写入任何非有效的 MCP 消息。
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Server Process
+
+    Client->>+Server Process: Launch subprocess
+    loop Message Exchange
+        Client->>Server Process: Write to stdin
+        Server Process->>Client: Write to stdout
+        Server Process--)Client: Optional logs on stderr
+    end
+    Client->>Server Process: Close stdin, terminate subprocess
+    deactivate Server Process
+```
+
+<div id="streamable-http">
+  ## 可流式 HTTP
+</div>
+
+<Info>
+  这取代了协议版本 2024-11-05 中的 [HTTP+SSE 传输](/zh/specification/2024-11-05/basic/transports#http-with-sse)。请参阅下文的[向后兼容性](#backwards-compatibility)指南。
+</Info>
+
+在**可流式 HTTP** 传输方式中，服务器作为独立进程运行，可处理多个客户端连接。此传输方式使用 HTTP 的 POST 和 GET 请求。服务器还可以选择使用[服务器发送事件（SSE）](https://en.wikipedia.org/wiki/Server-sent_events)来流式传输多条服务器消息。这既支持基础的 MCP 服务器，也支持具备流式传输以及服务器到客户端通知与请求等更丰富功能的服务器。
+
+服务器**必须**提供一个单一的 HTTP 端点路径（以下简称 **MCP 端点**），同时支持 POST 和 GET 方法。例如，可以是 `https://example.com/mcp` 这样的 URL。
+
+<div id="security-warning">
+  #### 安全警告
+</div>
+
+在实现可流式 HTTP 传输方式时：
+
+1. 服务器在所有入站连接上**必须**校验 `Origin` 头以防止 DNS 重绑定攻击
+2. 在本地运行时，服务器**应当**仅绑定到 localhost（127.0.0.1），而非所有网络接口（0.0.0.0）
+3. 服务器**应当**为所有连接实施适当的身份验证
+
+缺少这些防护时，攻击者可能通过 DNS 重绑定从远程网站与本地 MCP 服务器进行交互。
+
+<div id="sending-messages-to-the-server">
+  ### 向服务器发送消息
+</div>
+
+从客户端发送的每条 JSON-RPC 消息都**必须**作为一个新的 HTTP POST 请求发送到 MCP 端点。
+
+1. 客户端**必须**使用 HTTP POST 将 JSON-RPC 消息发送到 MCP 端点。
+2. 客户端**必须**在请求中包含 `Accept` 头，声明同时支持 `application/json` 和 `text/event-stream` 两种内容类型。
+3. POST 请求的主体**必须**是单个 JSON-RPC 的 *request*、*notification* 或 *response*。
+4. 如果输入为 JSON-RPC 的 *response* 或 *notification*：
+   * 如果服务器接受该输入，服务器**必须**返回 202 Accepted，且无响应体。
+   * 如果服务器无法接受该输入，**必须**返回相应的 HTTP 错误状态码
+     （例如 400 Bad Request）。HTTP 响应体**可以（MAY）**是一个不带 `id` 的 JSON-RPC *error response*。
+5. 如果输入为 JSON-RPC 的 *request*，服务器**必须**返回 `Content-Type: text/event-stream` 以启动 SSE 流，或返回
+   `Content-Type: application/json` 以返回一个 JSON 对象。客户端**必须**同时支持这两种情况。
+6. 如果服务器启动了 SSE 流：
+   * SSE 流**应该（SHOULD）**最终包含针对在 POST 主体中发送的 JSON-RPC *request* 的 JSON-RPC *response*。
+   * 在发送 JSON-RPC *response* 之前，服务器**可以（MAY）**先发送 JSON-RPC *requests* 和 *notifications*。这些消息**应该（SHOULD）**与最初的客户端 *request* 相关。
+   * 在为收到的 JSON-RPC *request* 发送 JSON-RPC *response* 之前，服务器**不应（SHOULD NOT）**关闭 SSE 流，除非[会话](#session-management)已过期。
+   * 发送 JSON-RPC *response* 后，服务器**应该（SHOULD）**关闭 SSE 流。
+   * 随时**可能（MAY）**发生断连（例如由于网络状况）。因此：
+     * 不应（SHOULD NOT）将断连解读为客户端取消其请求。
+     * 若要取消，客户端**应该（SHOULD）**显式发送 MCP `CancelledNotification`。
+     * 为避免因断连导致的消息丢失，服务器**可以（MAY）**使该流[可恢复](#resumability-and-redelivery)。
+
+<div id="listening-for-messages-from-the-server">
+  ### 监听来自服务器的消息
+</div>
+
+1. 客户端**可以（MAY）**向 MCP 端点发起 HTTP GET 请求。这可用于打开
+   一个服务器发送事件（SSE）流，使服务器无需客户端先通过 HTTP POST
+   发送数据就能与客户端通信。
+2. 客户端**必须（MUST）**包含 `Accept` 头，将 `text/event-stream` 列为
+   支持的内容类型。
+3. 服务器**必须（MUST）**在响应此 HTTP GET 请求时返回 `Content-Type: text/event-stream`，
+   否则应返回 HTTP 405 Method Not Allowed，表示该端点不提供 SSE 流。
+4. 如果服务器发起 SSE 流：
+   * 服务器**可以（MAY）**在该流上发送 JSON-RPC 的_请求_和_通知_。
+   * 这些消息**应该（SHOULD）**与客户端任何并发进行的 JSON-RPC
+     _请求_无关。
+   * 服务器**不得（MUST NOT）**在该流上发送 JSON-RPC 的_响应_，**除非**
+     在[恢复](#resumability-and-redelivery)与先前客户端请求关联的流时。
+   * 服务器**可以（MAY）**在任何时候关闭该 SSE 流。
+   * 客户端**可以（MAY）**在任何时候关闭该 SSE 流。
+
+<div id="multiple-connections">
+  ### 多重连接
+</div>
+
+1. 客户端**可以（MAY）**同时连接多个 SSE 流。
+2. 服务器**必须（MUST）**仅在已连接的某一个流上发送其每条 JSON-RPC 消息；也就是说，**不得（MUST NOT）**在多个流上广播同一条消息。
+   * 通过使该流[可恢复](#resumability-and-redelivery)，**可以（MAY）**降低消息丢失的风险。
+
+<div id="resumability-and-redelivery">
+  ### 可恢复性与重传
+</div>
+
+为支持在连接中断后恢复，以及重传否则可能丢失的消息：
+
+1. 服务器**可以（MAY）**在其 服务器发送事件（SSE）中附加一个 `id` 字段，具体见
+   [SSE 标准](https://html.spec.whatwg.org/multipage/server-sent-events.html#event-stream-interpretation)。
+   * 如果存在，该 ID **必须（MUST）**在该
+     [会话](#session-management)内的所有流中全局唯一；如果未使用会话管理，则在与该特定客户端的所有流中全局唯一。
+2. 如果客户端希望在连接中断后继续，它**应当（SHOULD）**向 MCP 端点发起 HTTP
+   GET，并包含
+   [`Last-Event-ID`](https://html.spec.whatwg.org/multipage/server-sent-events.html#the-last-event-id-header)
+   头以指示其接收到的最后一个事件 ID。
+   * 服务器**可以（MAY）**使用该头在_被断开的流上_重放最后一个事件 ID 之后本应发送的消息，并从该点恢复该流。
+   * 服务器**不得（MUST NOT）**重放那些本应在不同流上投递的消息。
+
+换言之，这些事件 ID 应由服务器按_每个流_进行分配，在该特定流中充当游标。
+
+<div id="session-management">
+  ### 会话管理
+</div>
+
+一个 MCP“会话”由客户端与服务器之间一组逻辑相关的交互构成，起始于[初始化阶段](/zh/specification/draft/basic/lifecycle)。为支持希望建立有状态会话的服务器：
+
+1. 使用可流式 HTTP 传输方式的服务器**可以**在初始化时分配会话 ID，并将其包含在带有 `InitializeResult` 的 HTTP 响应的 `Mcp-Session-Id` 头中。
+   * 会话 ID **应当**在全局范围内唯一且具备密码学级别的安全性（例如，安全生成的 UUID、JWT 或加密哈希）。
+   * 会话 ID **必须**只包含可见的 ASCII 字符（范围 0x21 到 0x7E）。
+2. 如果服务器在初始化期间返回了 `Mcp-Session-Id`，使用可流式 HTTP 传输方式的客户端**必须**在其后续所有 HTTP 请求的 `Mcp-Session-Id` 头中包含该值。
+   * 需要会话 ID 的服务器**应当**对缺少 `Mcp-Session-Id` 头（初始化除外）的请求返回 HTTP 400 Bad Request。
+3. 服务器**可以**随时终止会话，之后它**必须**对包含该会话 ID 的请求返回 HTTP 404 Not Found。
+4. 当客户端在对包含 `Mcp-Session-Id` 的请求的响应中收到 HTTP 404 时，**必须**通过发送新的、不带会话 ID 的 `InitializeRequest` 来启动一个新会话。
+5. 不再需要某个会话的客户端（例如用户即将离开客户端应用）**应当**向 MCP 端点发送带有 `Mcp-Session-Id` 头的 HTTP DELETE，以显式终止该会话。
+   * 服务器**可以**对该请求返回 HTTP 405 Method Not Allowed，表示服务器不允许客户端终止会话。
+
+<div id="sequence-diagram">
+  ### 序列图
+</div>
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Server
+
+    note over Client, Server: 初始化
+
+    Client->>+Server: POST InitializeRequest
+    Server->>-Client: InitializeResponse<br>Mcp-Session-Id: 1868a90c...
+
+    Client->>+Server: POST InitializedNotification<br>Mcp-Session-Id: 1868a90c...
+    Server->>-Client: 202 Accepted
+
+    note over Client, Server: 客户端请求
+    Client->>+Server: POST ... 请求 ...<br>Mcp-Session-Id: 1868a90c...
+
+    alt 单个 HTTP 响应
+      Server->>Client: ... 响应 ...
+    else 服务器打开 SSE 流
+      loop 连接保持打开期间
+          Server-)Client: ... 服务器发送的 SSE 消息 ...
+      end
+      Server-)Client: SSE 事件：... 响应 ...
+    end
+    deactivate Server
+
+    note over Client, Server: 客户端通知/响应
+    Client->>+Server: POST ... 通知/响应 ...<br>Mcp-Session-Id: 1868a90c...
+    Server->>-Client: 202 Accepted
+
+    note over Client, Server: 服务器请求
+    Client->>+Server: GET<br>Mcp-Session-Id: 1868a90c...
+    loop 连接保持打开期间
+        Server-)Client: ... 服务器发送的 SSE 消息 ...
+    end
+    deactivate Server
+
+```
+
+<div id="protocol-version-header">
+  ### 协议版本请求头
+</div>
+
+如果使用 HTTP，客户端**必须**在此后发送给 MCP 服务器的所有请求中包含 `MCP-Protocol-Version: <protocol-version>` HTTP 请求头，以便 MCP 服务器根据 MCP 协议版本进行响应。
+
+例如：`MCP-Protocol-Version: 2025-06-18`
+
+客户端发送的协议版本**应当**为[在初始化期间协商的版本](/zh/specification/draft/basic/lifecycle#version-negotiation)。
+
+为确保向后兼容，如果服务器未收到 `MCP-Protocol-Version`
+请求头，且没有其他方式识别版本——例如依赖初始化期间协商的协议版本——则服务器**应当**假定协议版本为 `2025-03-26`。
+
+如果服务器收到的请求包含无效或不受支持的
+`MCP-Protocol-Version`，则**必须**返回 `400 Bad Request`。
+
+<div id="backwards-compatibility">
+  ### 向后兼容性
+</div>
+
+客户端和服务器可以按如下方式与已弃用的 [HTTP+SSE 传输](/zh/specification/2024-11-05/basic/transports#http-with-sse)（自协议版本 2024-11-05 起）保持向后兼容：
+
+想要支持旧版客户端的**服务器**应当：
+
+* 继续同时提供旧传输方式中的 SSE 与 POST 端点，并与为可流式 HTTP 传输定义的全新 “MCP endpoint” 并行提供。
+  * 也可以将旧的 POST 端点与新的 MCP endpoint 合并，但这可能会引入不必要的复杂性。
+
+想要支持旧版服务器的**客户端**应当：
+
+1. 从用户处接收一个 MCP 服务器 URL，该 URL 可能指向使用旧传输或新传输的服务器。
+2. 尝试向该服务器 URL 发送一个 `InitializeRequest` 的 POST 请求，并带上如上所述的 `Accept` 头：
+   * 如果成功，客户端可以认为该服务器支持新的可流式 HTTP 传输。
+   * 如果以 HTTP 4xx 状态码失败（例如 405 Method Not Allowed 或 404 Not Found）：
+     * 向该服务器 URL 发起一个 GET 请求，预期会打开一个 SSE 流，并将 `endpoint` 事件作为第一个事件返回。
+     * 当收到 `endpoint` 事件时，客户端可以认为该服务器正在运行旧的 HTTP+SSE 传输，并应使用该传输进行后续所有通信。
+
+<div id="custom-transports">
+  ## 自定义传输方式
+</div>
+
+客户端和服务器**可以（MAY）**实现额外的自定义传输机制，以满足各自的特定需求。该协议与传输无关，可在任何支持双向消息交换的通信通道上实现。
+
+选择支持自定义传输方式的实现者**必须（MUST）**确保保留由 MCP 定义的 JSON-RPC 消息格式和生命周期要求。自定义传输方式**应当（SHOULD）**记录其特定的连接建立与消息交换模式，以促进互操作性。

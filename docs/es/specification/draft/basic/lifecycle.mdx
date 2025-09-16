@@ -1,0 +1,266 @@
+---
+title: Ciclo de vida
+---
+
+<div id="enable-section-numbers" />
+
+<Info>**Revisión del protocolo**: borrador</Info>
+
+El Protocolo de Contexto de Modelo (MCP) define un ciclo de vida riguroso para las conexiones cliente-servidor que garantiza una negociación de capacidades adecuada y una gestión del estado correcta.
+
+1. **Inicialización**: Negociación de capacidades y acuerdo sobre la versión del protocolo
+2. **Operación**: Comunicación normal del protocolo
+3. **Cierre**: Terminación ordenada de la conexión
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Server
+
+    Note over Client,Server: Fase de inicialización
+    activate Client
+    Client->>+Server: solicitud de inicialización
+    Server-->>Client: respuesta de inicialización
+    Client--)Server: notificación de inicialización completada
+
+    Note over Client,Server: Fase de operación
+    rect rgb(200, 220, 250)
+        note over Client,Server: Operaciones normales del protocolo
+    end
+
+    Note over Client,Server: Cierre
+    Client--)-Server: Desconectar
+    deactivate Server
+    Note over Client,Server: Conexión cerrada
+```
+
+<div id="lifecycle-phases">
+  ## Fases del ciclo de vida
+</div>
+
+<div id="initialization">
+  ### Inicialización
+</div>
+
+La fase de inicialización **DEBE** ser la primera interacción entre el cliente y el servidor.
+Durante esta fase, el cliente y el servidor:
+
+* Establecen la compatibilidad de la versión del protocolo
+* Intercambian y negocian capacidades
+* Comparten detalles de implementación
+
+El cliente **DEBE** iniciar esta fase enviando una solicitud `initialize` que contenga:
+
+* Versión del protocolo compatible
+* Capacidades del cliente
+* Información de la implementación del cliente
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "initialize",
+  "params": {
+    "protocolVersion": "2024-11-05",
+    "capabilities": {
+      "roots": {
+        "listChanged": true
+      },
+      "sampling": {},
+      "elicitation": {}
+    },
+    "clientInfo": {
+      "name": "ExampleClient",
+      "title": "Example Client Display Name",
+      "version": "1.0.0",
+      "icons": [
+        {
+          "src": "https://example.com/icon.png",
+          "mimeType": "image/png",
+          "sizes": "48x48"
+        }
+      ],
+      "websiteUrl": "https://example.com"
+    }
+  }
+}
+```
+
+El servidor **DEBE** responder con sus propias capacidades e información:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "protocolVersion": "2024-11-05",
+    "capabilities": {
+      "logging": {},
+      "prompts": {
+        "listChanged": true
+      },
+      "resources": {
+        "subscribe": true,
+        "listChanged": true
+      },
+      "tools": {
+        "listChanged": true
+      }
+    },
+    "serverInfo": {
+      "name": "ExampleServer",
+      "title": "Example Server Display Name",
+      "version": "1.0.0",
+      "icons": [
+        {
+          "src": "https://example.com/server-icon.svg",
+          "mimeType": "image/svg+xml",
+          "sizes": "any"
+        }
+      ],
+      "websiteUrl": "https://example.com/server"
+    },
+    "instructions": "Instrucciones opcionales para el cliente"
+  }
+}
+```
+
+Tras una inicialización correcta, el cliente **DEBE** enviar una notificación `initialized`
+para indicar que está listo para comenzar las operaciones normales:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/initialized"
+}
+```
+
+* El cliente **NO DEBERÍA** enviar solicitudes distintas de
+  [pings](/es/specification/draft/basic/utilities/ping) antes de que el servidor haya respondido a la
+  solicitud `initialize`.
+* El servidor **NO DEBERÍA** enviar solicitudes distintas de
+  [pings](/es/specification/draft/basic/utilities/ping) y
+  [logging](/es/specification/draft/server/utilities/logging) antes de recibir la notificación
+  `initialized`.
+
+<div id="version-negotiation">
+  #### Negociación de versiones
+</div>
+
+En la solicitud `initialize`, el cliente **DEBE** enviar una versión del protocolo que admita.
+Esta **DEBERÍA** ser la versión *más reciente* admitida por el cliente.
+
+Si el servidor admite la versión de protocolo solicitada, **DEBE** responder con la misma
+versión. De lo contrario, el servidor **DEBE** responder con otra versión del protocolo que
+admita. Esta **DEBERÍA** ser la versión *más reciente* admitida por el servidor.
+
+Si el cliente no admite la versión en la respuesta del servidor, **DEBERÍA**
+desconectarse.
+
+<Note>
+  Si se usa HTTP, el cliente **DEBE** incluir el encabezado HTTP `MCP-Protocol-Version: <protocol-version>` en todas las solicitudes posteriores al
+  servidor MCP.
+  Para más detalles, consulte [la sección Encabezado de versión del protocolo en Transportes](/es/specification/draft/basic/transports#protocol-version-header).
+</Note>
+
+<div id="capability-negotiation">
+  #### Negociación de capacidades
+</div>
+
+Las capacidades del cliente y del servidor establecen qué funciones opcionales del protocolo estarán disponibles durante la sesión.
+
+Las capacidades clave incluyen:
+
+| Categoría | Capacidad     | Descripción                                                                                |
+| --------- | ------------- | ------------------------------------------------------------------------------------------ |
+| Cliente   | `roots`       | Capacidad para proporcionar [Raíces](/es/specification/draft/client/roots) del sistema de archivos |
+| Cliente   | `sampling`    | Compatibilidad con solicitudes de [Muestreo](/es/specification/draft/client/sampling) para LLM |
+| Cliente   | `elicitation` | Compatibilidad con solicitudes de [Elicitación](/es/specification/draft/client/elicitation) del servidor |
+| Cliente   | `experimental`| Describe la compatibilidad con funciones experimentales no estándar                      |
+| Servidor  | `prompts`     | Ofrece [plantillas de Indicaciones](/es/specification/draft/server/prompts)                  |
+| Servidor  | `resources`   | Proporciona [Recursos](/es/specification/draft/server/resources) legibles                    |
+| Servidor  | `tools`       | Expone [Herramientas](/es/specification/draft/server/tools) invocables                       |
+| Servidor  | `logging`     | Emite [mensajes de registro](/es/specification/draft/server/utilities/logging) estructurados |
+| Servidor  | `completions` | Admite [autocompletado](/es/specification/draft/server/utilities/completion) de argumentos   |
+| Servidor  | `experimental`| Describe la compatibilidad con funciones experimentales no estándar                      |
+
+Los objetos de capacidades pueden describir subcapacidades como:
+
+* `listChanged`: Compatibilidad con notificaciones de cambios en listas (para Indicaciones, Recursos y Herramientas)
+* `subscribe`: Compatibilidad con la suscripción a cambios de elementos individuales (solo Recursos)
+
+<div id="operation">
+  ### Operación
+</div>
+
+Durante la fase de operación, el cliente y el servidor intercambian mensajes conforme a las
+capacidades negociadas.
+
+Ambas partes **DEBEN**:
+
+* Respetar la versión del protocolo negociada
+* Usar únicamente las capacidades que se hayan negociado correctamente
+
+<div id="shutdown">
+  ### Apagado
+</div>
+
+Durante la fase de apagado, una de las partes (generalmente el cliente) cierra de forma ordenada la conexión del protocolo. No se definen mensajes de apagado específicos; en su lugar, debe usarse el mecanismo de transporte subyacente para indicar la finalización de la conexión:
+
+<div id="stdio">
+  #### stdio
+</div>
+
+Para el [transporte](/es/specification/draft/basic/transports) stdio, el cliente **DEBERÍA** iniciar
+el apagado mediante:
+
+1. Primero, cerrar el flujo de entrada al proceso hijo (el servidor)
+2. Esperar a que el servidor termine, o enviar `SIGTERM` si el servidor no finaliza
+   dentro de un tiempo razonable
+3. Enviar `SIGKILL` si el servidor no finaliza dentro de un tiempo razonable después de `SIGTERM`
+
+El servidor **PUEDE** iniciar el apagado cerrando su flujo de salida hacia el cliente y
+saliendo.
+
+<div id="http">
+  #### HTTP
+</div>
+
+En los [transportes](/es/specification/draft/basic/transports) HTTP, el apagado se indica cerrando las conexiones HTTP asociadas.
+
+<div id="timeouts">
+  ## Tiempos de espera
+</div>
+
+Las implementaciones **DEBERÍAN** establecer tiempos de espera para todas las solicitudes enviadas, a fin de evitar conexiones bloqueadas y el agotamiento de recursos. Cuando la solicitud no haya recibido una respuesta de éxito o de error dentro del período de tiempo de espera, el remitente **DEBERÍA** emitir una [notificación de cancelación](/es/specification/draft/basic/utilities/cancellation) para esa solicitud y dejar de esperar una respuesta.
+
+Los SDK y otros middleware **DEBERÍAN** permitir configurar estos tiempos de espera por solicitud.
+
+Las implementaciones **PUEDEN** optar por reiniciar el temporizador del tiempo de espera al recibir una [notificación de progreso](/es/specification/draft/basic/utilities/progress) correspondiente a la solicitud, ya que esto implica que efectivamente se está realizando trabajo. Sin embargo, las implementaciones **DEBERÍAN** aplicar siempre un tiempo de espera máximo, independientemente de las notificaciones de progreso, para limitar el impacto de un cliente o servidor que se comporte de forma incorrecta.
+
+<div id="error-handling">
+  ## Manejo de errores
+</div>
+
+Las implementaciones **DEBERÍAN** estar preparadas para manejar estos casos de error:
+
+* Incompatibilidad de la versión del protocolo
+* Fallo al negociar las capacidades requeridas
+* Tiempos de espera de solicitudes ([timeouts](#timeouts))
+
+Ejemplo de error de inicialización:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "error": {
+    "code": -32602,
+    "message": "Unsupported protocol version",
+    "data": {
+      "supported": ["2024-11-05"],
+      "requested": "1.0.0"
+    }
+  }
+}
+```

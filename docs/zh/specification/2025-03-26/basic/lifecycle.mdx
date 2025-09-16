@@ -1,0 +1,233 @@
+---
+title: 生命周期
+---
+
+<Info>**协议修订**：2025-03-26</Info>
+
+模型上下文协议（MCP）为客户端与服务器的连接定义了严谨的生命周期，以确保正确的能力协商与状态管理。
+
+1. **初始化**：进行能力协商并达成协议版本一致
+2. **运行**：正常进行协议通信
+3. **关闭**：优雅终止连接
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Server
+
+    Note over Client,Server: 初始化阶段
+    activate Client
+    Client->>+Server: initialize 请求
+    Server-->>Client: initialize 响应
+    Client--)Server: initialized 通知
+
+    Note over Client,Server: 运行阶段
+    rect rgb(200, 220, 250)
+        note over Client,Server: 正常的协议操作
+    end
+
+    Note over Client,Server: 关闭
+    Client--)-Server: 断开连接
+    deactivate Server
+    Note over Client,Server: 连接已关闭
+```
+
+<div id="lifecycle-phases">
+  ## 生命周期阶段
+</div>
+
+<div id="initialization">
+  ### 初始化
+</div>
+
+初始化阶段**必须**是客户端与服务器之间的首次交互。
+在此阶段，客户端和服务器将：
+
+* 确认协议版本兼容性
+* 交换并协商能力
+* 共享实现细节
+
+客户端**必须**通过发送包含以下内容的 `initialize` 请求来启动此阶段：
+
+* 支持的协议版本
+* 客户端能力
+* 客户端实现信息
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "initialize",
+  "params": {
+    "protocolVersion": "2025-03-26",
+    "capabilities": {
+      "roots": {
+        "listChanged": true
+      },
+      "sampling": {}
+    },
+    "clientInfo": {
+      "name": "ExampleClient",
+      "version": "1.0.0"
+    }
+  }
+}
+```
+
+`initialize` 请求**不得**作为 JSON-RPC
+[批处理](https://www.jsonrpc.org/specification#batch)的一部分，因为在初始化完成之前无法处理其他请求和通知。这也确保与未明确支持 JSON-RPC
+批处理的较早协议版本保持向后兼容。
+
+服务器**必须**返回其自身的能力与信息：
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "protocolVersion": "2025-03-26",
+    "capabilities": {
+      "logging": {},
+      "prompts": {
+        "listChanged": true
+      },
+      "resources": {
+        "subscribe": true,
+        "listChanged": true
+      },
+      "tools": {
+        "listChanged": true
+      }
+    },
+    "serverInfo": {
+      "name": "ExampleServer",
+      "version": "1.0.0"
+    },
+    "instructions": "Optional instructions for the client"
+  }
+}
+```
+
+初始化成功后，客户端**必须**发送 `initialized` 通知，表明其已准备好开始正常运行：
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/initialized"
+}
+```
+
+* 在服务器对 `initialize` 请求作出响应之前，客户端**不应**发送除
+  [pings](/zh/specification/2025-03-26/basic/utilities/ping) 之外的请求。
+* 在收到 `initialized` 通知之前，服务器**不应**发送除
+  [pings](/zh/specification/2025-03-26/basic/utilities/ping) 和
+  [logging](/zh/specification/2025-03-26/server/utilities/logging) 之外的请求。
+
+<div id="version-negotiation">
+  #### 版本协商
+</div>
+
+在 `initialize` 请求中，客户端**必须**发送其支持的协议版本。
+该版本**应当**是客户端所支持的_最新_版本。
+
+如果服务器支持所请求的协议版本，则**必须**以相同版本响应。否则，服务器**必须**以其支持的另一个协议版本响应，
+该版本**应当**是服务器所支持的_最新_版本。
+
+如果客户端不支持服务器响应中的版本，则**应当**断开连接。
+
+<div id="capability-negotiation">
+  #### 能力协商
+</div>
+
+客户端和服务器的能力用于确定会话期间可用的可选协议功能。
+
+关键能力包括：
+
+| 类别 | 能力           | 描述                                                                                          |
+| ---- | -------------- | --------------------------------------------------------------------------------------------- |
+| 客户端 | `roots`        | 提供文件系统[根路径](/zh/specification/2025-03-26/client/roots) 的能力                               |
+| 客户端 | `sampling`     | 支持 LLM [采样](/zh/specification/2025-03-26/client/sampling) 请求                                   |
+| 客户端 | `experimental` | 描述对非标准实验性功能的支持                                                                      |
+| 服务器 | `prompts`      | 提供[提示模板](/zh/specification/2025-03-26/server/prompts)                                         |
+| 服务器 | `resources`    | 提供可读的[资源](/zh/specification/2025-03-26/server/resources)                                     |
+| 服务器 | `tools`        | 暴露可调用的[工具](/zh/specification/2025-03-26/server/tools)                                       |
+| 服务器 | `logging`      | 输出结构化的[日志消息](/zh/specification/2025-03-26/server/utilities/logging)                       |
+| 服务器 | `completions`  | 支持参数[自动补全](/zh/specification/2025-03-26/server/utilities/completion)                        |
+| 服务器 | `experimental` | 描述对非标准实验性功能的支持                                                                      |
+
+能力对象还可以描述如下子能力：
+
+* `listChanged`：支持列表变更通知（适用于提示模板、资源和工具）
+* `subscribe`：支持订阅单个条目的变更（仅限资源）
+
+<div id="operation">
+  ### 运行
+</div>
+
+在运行阶段，客户端与服务器根据已协商的功能交换消息。
+
+双方应当（SHOULD）：
+
+* 遵守已协商的协议版本
+* 仅使用已成功协商的功能
+
+<div id="shutdown">
+  ### 关闭
+</div>
+
+在关闭阶段，一方（通常为客户端）会以正常方式终止协议连接。协议未定义特定的关闭消息——应使用底层传输机制来指示连接终止：
+
+<div id="stdio">
+  #### stdio
+</div>
+
+对于 stdio [传输方式](/zh/specification/2025-03-26/basic/transports)，客户端**应**按以下步骤发起关闭：
+
+1. 先关闭到子进程（服务器）的输入流
+2. 等待服务器退出；若未在合理时间内退出，则发送 `SIGTERM`
+3. 若在 `SIGTERM` 后仍未在合理时间内退出，则发送 `SIGKILL`
+
+服务器**可**通过关闭发往客户端的输出流并退出来自行发起关闭。
+
+<div id="http">
+  #### HTTP
+</div>
+
+对于 HTTP [传输方式](/zh/specification/2025-03-26/basic/transports)，通过关闭相应的 HTTP 连接来表示关停。
+
+<div id="timeouts">
+  ## 超时
+</div>
+
+实现方**应当（SHOULD）**为所有发出的请求设置超时时间，以防止连接挂起和资源耗尽。当请求在超时时间内未收到成功或错误响应时，发送方**应当（SHOULD）**为该请求发出[取消通知](/zh/specification/2025-03-26/basic/utilities/cancellation)，并停止等待响应。
+
+SDK 和其他中间件**应当（SHOULD）**支持按请求配置这些超时时间。
+
+实现方**可以（MAY）**在收到与该请求对应的[进度通知](/zh/specification/2025-03-26/basic/utilities/progress)时选择重置超时计时，因为这表明处理正在进行中。然而，实现方**应当（SHOULD）**始终执行一个最大超时时间，无论是否收到进度通知，以限制异常客户端或服务器带来的影响。
+
+<div id="error-handling">
+  ## 错误处理
+</div>
+
+实现方（implementations）应当准备处理以下错误情况：
+
+* 协议版本不匹配
+* 无法协商所需能力
+* 请求[超时](#timeouts)
+
+初始化错误示例：
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "error": {
+    "code": -32602,
+    "message": "Unsupported protocol version",
+    "data": {
+      "supported": ["2024-11-05"],
+      "requested": "1.0.0"
+    }
+  }
+}
+```

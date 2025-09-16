@@ -1,0 +1,88 @@
+---
+title: 取消
+---
+
+<Info>**协议修订**：2025-03-26</Info>
+
+模型上下文协议（MCP）通过通知消息支持对进行中的请求进行可选取消。任一方都可以发送取消通知，表示应终止先前发起的请求。
+
+<div id="cancellation-flow">
+  ## 取消流程
+</div>
+
+当任一方需要取消进行中的请求时，应发送一条 `notifications/cancelled`
+通知，内容包括：
+
+- 要取消的请求 ID
+- 可选的原因字符串，可用于记录或展示
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/cancelled",
+  "params": {
+    "requestId": "123",
+    "reason": "User requested cancellation"
+  }
+}
+```
+
+<div id="behavior-requirements">
+  ## 行为要求
+</div>
+
+1. 取消通知**必须（MUST）**仅引用以下请求：
+   - 之前以相同方向发出的
+   - 被认为仍在进行中的
+2. 客户端**不得（MUST NOT）**取消 `initialize` 请求
+3. 取消通知的接收方**应该（SHOULD）**：
+   - 停止处理被取消的请求
+   - 释放相关资源
+   - 不再对被取消的请求发送响应
+4. 在以下情况下，接收方**可以（MAY）**忽略取消通知：
+   - 被引用的请求未知
+   - 处理已完成
+   - 该请求无法被取消
+5. 取消通知的发送方**应该（SHOULD）**忽略随后到达的针对该请求的任何响应
+
+<div id="timing-considerations">
+  ## 时序注意事项
+</div>
+
+由于网络延迟，取消通知可能会在请求处理完成后才到达，甚至可能在响应已发送之后。
+
+双方**必须**从容地处理此类竞态情况：
+
+```mermaid
+sequenceDiagram
+   participant Client
+   participant Server
+
+   Client->>Server: Request (ID: 123)
+   Note over Server: Processing starts
+   Client--)Server: notifications/cancelled (ID: 123)
+   alt
+      Note over Server: Processing may have<br/>completed before<br/>cancellation arrives
+   else If not completed
+      Note over Server: Stop processing
+   end
+```
+
+<div id="implementation-notes">
+  ## 实施说明
+</div>
+
+- 双方**应当**记录取消原因以便调试
+- 应用程序 UI **应当**在发出取消请求时予以提示
+
+<div id="error-handling">
+  ## 错误处理
+</div>
+
+无效的取消通知**应当**被忽略：
+
+- 未知的请求 ID
+- 已完成的请求
+- 格式错误的通知
+
+这样既能保持通知的“发出即忘”特性，又能容纳异步通信中的竞争条件。

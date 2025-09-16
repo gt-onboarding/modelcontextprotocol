@@ -1,0 +1,201 @@
+---
+title: Aperçu du SDK Java
+description: Introduction au Protocole de contexte de modèle (MCP) pour le SDK Java
+---
+
+<div id="sdk-contents">
+  ## Contenu du SDK
+</div>
+
+[[Aperçu de MCP pour Java](/fr-CA/sdk/java/mcp-overview)]
+
+[Client MCP Java](/fr-CA/sdk/java/mcp-client)
+
+[Serveur MCP Java](/fr-CA/sdk/java/mcp-server)
+
+Le SDK Java pour le [Protocole de contexte de modèle](https://modelcontextprotocol.org/docs/concepts/architecture) permet une intégration normalisée entre les modèles d’IA et les outils.
+
+<div id="features">
+  ## Fonctionnalités
+</div>
+
+* Implémentations de Client MCP et de Serveur MCP prenant en charge :
+  * Négociation de la [compatibilité des versions du protocole](/fr-CA/specification/2025-06-18/basic/lifecycle#initialization)
+  * Découverte, exécution et notifications de modifications de la liste des [Outils](/fr-CA/specification/2025-06-18/server/tools/)
+  * Gestion des [Ressources](/fr-CA/specification/2025-06-18/server/resources/) avec des gabarits d’URI
+  * Gestion et traitement des [Invites](/fr-CA/specification/2025-06-18/server/prompts/)
+  * Suggestions d’auto-complétion des arguments de [Completion](/fr-CA/specification/2025-06-18/server/utilities/completion/) pour les invites et les URI de ressources
+  * Suivi de la progression des opérations de longue durée via [Progress](/fr-CA/specification/2025-06-18/basic/utilities/progress/)
+  * Mécanisme léger de vérification de l’état [Ping](/fr-CA/specification/2025-06-18/basic/utilities/ping/)
+    * [Maintien en vie du serveur](/fr-CA/specification/2025-06-18/basic/utilities/ping#implementation-considerations/) pour conserver des connexions serveur actives
+  * [Journalisation](/fr-CA/specification/2025-06-18/server/utilities/logging/) pour envoyer des messages de journal structurés aux clients
+  * Gestion et notifications de la liste des [Racines](/fr-CA/specification/2025-06-18/client/roots/)
+  * Prise en charge de l’[Échantillonnage](/fr-CA/specification/2025-06-18/client/sampling/) pour les interactions avec des modèles d’IA
+  * [Recueil d’informations](/fr-CA/specification/2025-06-18/client/elicitation/) permettant aux serveurs de demander des renseignements supplémentaires aux utilisateurs via le client
+* Plusieurs implémentations de transport :
+  * Transports par défaut (inclus dans le module central `mcp`, aucun framework Web externe requis) :
+    * Transport basé sur STDIO pour la communication entre processus
+    * Transport client Java HttpClient pour `SSE` et `Streamable-HTTP`
+    * Transport serveur basé sur Servlet pour `SSE` et `Streamable-HTTP`
+  * Transports optionnels basés sur Spring (pratique si vous utilisez le framework Spring) :
+    * Transports client et serveur WebFlux `SSE` et `Streamable-HTTP`
+    * Transport WebMVC `SSE` et `Streamable-HTTP` pour la diffusion HTTP basée sur des servlets
+* Prend en charge les paradigmes de programmation synchrones et asynchrones
+
+<Tip>
+  Le module central `io.modelcontextprotocol.sdk:mcp` fournit, par défaut, des implémentations de transport client et serveur `STDIO`, `SSE` et `Streamable-HTTP` sans nécessiter de frameworks Web externes.
+
+  Des transports propres à Spring sont offerts comme dépendances optionnelles pour plus de commodité lors de l’utilisation du framework [Spring AI](https://docs.spring.io/spring-ai/reference/1.1-SNAPSHOT/api/mcp/mcp-overview.html).
+</Tip>
+
+<div id="architecture">
+  ## Architecture
+</div>
+
+Le SDK adopte une architecture en couches avec une séparation claire des responsabilités :
+
+{/* ![MCP Stack Architecture](/images/java/mcp-stack.svg) */}
+
+* **Couche Client/Serveur (McpClient/McpServer)** : Les deux utilisent McpSession pour des opérations synchrones et asynchrones,
+  McpClient gérant le protocole côté client et McpServer gérant le protocole côté serveur.
+* **Couche Session (McpSession)** : Gère les modes de communication et l’état à l’aide de l’implémentation DefaultMcpSession.
+* **Couche Transport (McpTransport)** : Assure la sérialisation/désérialisation des messages JSON-RPC via :
+  * StdioTransport (stdin/stdout) dans le module core
+  * Transports HTTP « Streamable-HTTP » et « SSE » dans des modules de transport dédiés (Java HttpClient, Spring WebFlux, Spring WebMVC)
+
+Le [Client MCP](/fr-CA/sdk/java/mcp-client) est un composant clé de l’architecture du Protocole de contexte de modèle (MCP), responsable d’établir et de gérer les connexions avec les serveurs MCP.
+Il implémente la partie cliente du protocole.
+
+![Java MCP Client Architecture](/images/java/java-mcp-client-architecture.jpg)
+
+Le [Serveur MCP](/fr-CA/sdk/java/mcp-server) est un composant fondamental de l’architecture du Protocole de contexte de modèle (MCP) qui fournit des outils, des ressources et des fonctionnalités aux clients.
+Il implémente la partie serveur du protocole.
+
+![Java MCP Server Architecture](/images/java/java-mcp-server-architecture.jpg)
+
+Interactions clés :
+
+* **Initialisation Client/Serveur** : Configuration du transport, vérification de la compatibilité du protocole, négociation des capacités et échange des détails d’implémentation.
+* **Flux de messages** : Gestion des messages JSON-RPC avec validation, traitement des réponses de façon typée et gestion des erreurs.
+* **Gestion des ressources** : Découverte des ressources, accès basé sur des modèles d’URI, système d’abonnement et récupération de contenu.
+
+<div id="dependencies">
+  ## Dépendances
+</div>
+
+Ajoutez les dépendances suivantes à votre projet :
+
+<Tabs>
+  <Tab title="Maven">
+    Fonctionnalités de base du MCP :
+
+    ```xml
+    <dependency>
+        <groupId>io.modelcontextprotocol.sdk</groupId>
+        <artifactId>mcp</artifactId>
+    </dependency>
+    ```
+
+    Le module principal `mcp` inclut déjà des implémentations par défaut des transports `STDIO`, `SSE` et `Streamable-HTTP` et ne requiert aucun framework Web externe.
+
+    Si vous utilisez Spring Framework et souhaitez des implémentations de transport propres à Spring, ajoutez l’une des dépendances optionnelles suivantes :
+
+    ```xml
+    <!-- Optionnel : transports client et serveur SSE et Streamable-HTTP basés sur Spring WebFlux -->
+    <dependency>
+        <groupId>io.modelcontextprotocol.sdk</groupId>
+        <artifactId>mcp-spring-webflux</artifactId>
+    </dependency>
+
+    <!-- Optionnel : transports serveur SSE et Streamable-HTTP basés sur Spring WebMVC -->
+    <dependency>
+        <groupId>io.modelcontextprotocol.sdk</groupId>
+        <artifactId>mcp-spring-webmvc</artifactId>
+    </dependency>
+    ```
+  </Tab>
+
+  <Tab title="Gradle">
+    Fonctionnalités de base du MCP :
+
+    ```groovy
+    dependencies {
+      implementation platform("io.modelcontextprotocol.sdk:mcp")
+      //...
+    }
+    ```
+
+    Le module principal `mcp` inclut déjà des implémentations par défaut des transports `STDIO`, `SSE` et `Streamable-HTTP` et ne requiert aucun framework Web externe.
+
+    Si vous utilisez Spring Framework et souhaitez des implémentations de transport propres à Spring, ajoutez l’une des dépendances optionnelles suivantes :
+
+    ```groovy
+    // Optionnel : transports client et serveur SSE et Streamable-HTTP basés sur Spring WebFlux
+    dependencies {
+      implementation platform("io.modelcontextprotocol.sdk:mcp-spring-webflux")
+    }
+
+    // Optionnel : transports serveur SSE et Streamable-HTTP basés sur Spring WebMVC
+    dependencies {
+      implementation platform("io.modelcontextprotocol.sdk:mcp-spring-webmvc")
+    }
+    ```
+  </Tab>
+</Tabs>
+
+* `io.modelcontextprotocol.sdk:mcp-spring-webflux` - Client et serveur basés sur WebFlux, implémentations de transport `Streamable-HTTP` et `SSE`.
+  L’implémentation WebFlux peut être utilisée dans des applications réactives, tandis que le client MCP basé sur WebClient peut être utilisé à la fois dans des applications réactives et impératives.
+  C’est une option hautement scalable, adaptée et recommandée pour les scénarios à haut débit.
+* `io.modelcontextprotocol.sdk:mcp-spring-webmvc` - Serveur basé sur WebMVC, implémentations de transport `Streamable-HTTP` et `SSE` pour les applications basées sur des servlets.
+
+<div id="bill-of-materials-bom">
+  ### Nomenclature (BOM)
+</div>
+
+La nomenclature (BOM) indique les versions recommandées de toutes les dépendances utilisées par une version donnée.
+Utiliser la BOM dans le script de build de votre application vous évite d’avoir à spécifier et à maintenir vous‑même les versions des dépendances.
+La version de la BOM que vous utilisez détermine plutôt les versions de dépendances appliquées.
+Elle garantit aussi que vous utilisez par défaut des versions prises en charge et testées des dépendances, à moins de choisir de les remplacer.
+
+Ajoutez la BOM à votre projet :
+
+<Tabs>
+  <Tab title="Maven">
+    ```xml
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>io.modelcontextprotocol.sdk</groupId>
+                <artifactId>mcp-bom</artifactId>
+                <version>0.12.1</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+    ```
+  </Tab>
+
+  <Tab title="Gradle">
+    ```groovy
+    dependencies {
+      implementation platform("io.modelcontextprotocol.sdk:mcp-bom:0.12.1")
+      //...
+    }
+    ```
+
+    Les utilisateurs de Gradle peuvent aussi utiliser la BOM MCP en tirant parti de la prise en charge native de Gradle (5.0+) pour déclarer des contraintes de dépendances au moyen d’une BOM Maven.
+    Cela se fait en ajoutant la méthode du gestionnaire de dépendances « platform » dans la section dependencies de votre script de build Gradle.
+    Comme le montre l’extrait ci‑dessus, vous pouvez ensuite déclarer sans version les modules du SDK MCP que vous souhaitez utiliser.
+  </Tab>
+</Tabs>
+
+Remplacez le numéro de version par la version de la BOM que vous souhaitez utiliser.
+
+<div id="additional-dependencies">
+  ### Dépendances supplémentaires
+</div>
+
+Les dépendances supplémentaires suivantes sont disponibles et gérées par le BOM :
+
+* `io.modelcontextprotocol.sdk:mcp-test` - Utilitaires de test et prise en charge des applications basées sur le MCP.

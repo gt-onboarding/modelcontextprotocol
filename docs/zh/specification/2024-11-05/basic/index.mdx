@@ -1,0 +1,71 @@
+---
+title: 概览
+---
+
+<Info>**协议修订**：2024-11-05</Info>
+
+MCP 客户端与服务器之间的所有消息**必须**遵循
+[JSON-RPC 2.0](https://www.jsonrpc.org/specification) 规范。该协议定义了三类基础消息：
+
+| 类型            | 描述                                   | 要求                                     |
+| --------------- | -------------------------------------- | ---------------------------------------- |
+| `Requests`      | 用于发起操作的消息                     | 必须包含唯一的 ID 和方法名               |
+| `Responses`     | 对请求的回复消息                       | 必须包含与请求相同的 ID                  |
+| `Notifications` | 单向消息，无需回复                     | 不得包含 ID                              |
+
+**Responses** 进一步分为 **成功结果** 或 **错误**。结果可以采用任意 JSON 对象结构，而错误至少必须包含错误代码和消息。
+
+<div id="protocol-layers">
+  ## 协议分层
+</div>
+
+模型上下文协议由若干关键组件构成，并协同运作：
+
+* **基础协议**：核心 JSON-RPC 消息类型
+* **生命周期管理**：连接初始化、能力协商与会话控制
+* **服务器特性**：服务器暴露的资源、提示模板和工具
+* **客户端特性**：客户端提供的采样和根路径列表
+* **通用实用项**：跨领域关注点，如日志记录与参数补全
+
+所有实现**必须**支持基础协议和生命周期管理组件。其他组件**可**根据应用的具体需求选择性实现。
+
+这些协议层在实现丰富的客户端与服务器交互的同时，确保了清晰的关注点分离。模块化设计使实现能够精确支持所需功能。
+
+有关不同组件的更多信息，请参阅以下页面：
+
+<CardGroup cols={3}>
+  <Card title="生命周期" icon="arrows-rotate" href="/zh/specification/2024-11-05/basic/lifecycle" />
+
+  <Card title="资源" icon="file-lines" href="/zh/specification/2024-11-05/server/resources" />
+
+  <Card title="提示模板" icon="message" href="/zh/specification/2024-11-05/server/prompts" />
+
+  <Card title="工具" icon="wrench" href="/zh/specification/2024-11-05/server/tools" />
+
+  <Card title="日志记录" icon="rectangle-list" href="/zh/specification/2024-11-05/server/utilities/logging" />
+
+  <Card title="采样" icon="code" href="/zh/specification/2024-11-05/client/sampling" />
+</CardGroup>
+
+<div id="auth">
+  ## 认证
+</div>
+
+身份验证与授权目前不在模型上下文协议（MCP）核心规范之内，
+但我们正考虑在未来引入相关机制。欢迎加入
+[GitHub Discussions](https://github.com/modelcontextprotocol/specification/discussions)
+共同塑造该协议的未来！
+
+客户端和服务器**可以**协商各自的自定义身份验证与授权策略。
+
+<div id="schema">
+  ## 架构
+</div>
+
+该协议的完整规范定义为
+[TypeScript 架构](http://github.com/modelcontextprotocol/specification/tree/main/schema/2024-11-05/schema.ts)。
+这是所有协议消息和结构的权威依据。
+
+此外还有一个
+[JSON 架构](http://github.com/modelcontextprotocol/specification/tree/main/schema/2024-11-05/schema.json)，
+它由上述 TypeScript 权威依据自动生成，供各类自动化工具使用。

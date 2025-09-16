@@ -1,0 +1,469 @@
+---
+title: Outils
+---
+
+<div id="enable-section-numbers" />
+
+<Info>**Révision du protocole** : brouillon</Info>
+
+Le Protocole de contexte de modèle (MCP) permet aux serveurs d’exposer des outils que les modèles de langage peuvent invoquer. Les outils permettent aux modèles d’interagir avec des systèmes externes, par exemple interroger des bases de données, appeler des API ou effectuer des calculs. Chaque outil est identifié de manière unique par un nom et inclut des métadonnées décrivant son schéma.
+
+<div id="user-interaction-model">
+  ## Modèle d’interaction avec l’utilisateur
+</div>
+
+Les Outils dans le Protocole de contexte de modèle (MCP) sont conçus pour être **contrôlés par le modèle**, ce qui signifie que le modèle de langue peut
+découvrir et appeler des outils automatiquement en fonction de sa compréhension contextuelle et des
+invites de l’utilisateur.
+
+Cependant, les implémentations sont libres d’exposer des outils via n’importe quel modèle d’interface qui
+répond à leurs besoins—le protocole en soi n’impose aucun modèle d’interaction avec l’utilisateur
+spécifique.
+
+<Warning>
+  Pour des raisons de confiance, de sûreté et de sécurité, il **FAUT** toujours
+  qu’une personne soit dans la boucle, avec la possibilité de refuser l’appel d’outils.
+
+  Les applications **DOIVENT** :
+
+  * Fournir une interface utilisateur qui indique clairement quels outils sont exposés au modèle d’IA
+  * Afficher des indicateurs visuels clairs lorsque des outils sont appelés
+  * Présenter des invites de confirmation à l’utilisateur pour les opérations, afin de s’assurer qu’une personne est dans la
+    boucle
+</Warning>
+
+<div id="capabilities">
+  ## Capacités
+</div>
+
+Les serveurs qui prennent en charge les Outils **DOIVENT** déclarer la capacité `tools` :
+
+```json
+{
+  "capabilities": {
+    "tools": {
+      "listChanged": true
+    }
+  }
+}
+```
+
+`listChanged` indique si le serveur émettra des notifications lorsque la liste des Outils disponibles change.
+
+<div id="protocol-messages">
+  ## Messages du protocole
+</div>
+
+<div id="listing-tools">
+  ### Répertorier les Outils
+</div>
+
+Pour découvrir les outils disponibles, les clients envoient une requête `tools/list`. Cette opération prend en charge la
+[pagination](/fr-CA/specification/draft/server/utilities/pagination).
+
+**Requête :**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/list",
+  "params": {
+    "cursor": "optional-cursor-value"
+  }
+}
+```
+
+**Réponse :**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "tools": [
+      {
+        "name": "get_weather",
+        "title": "Fournisseur d’information météo",
+        "description": "Obtenir les conditions météo actuelles pour un emplacement",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "location": {
+              "type": "string",
+              "description": "Nom de la ville ou code postal"
+            }
+          },
+          "required": ["location"]
+        },
+        "icons": [
+          {
+            "src": "https://example.com/weather-icon.png",
+            "mimeType": "image/png",
+            "sizes": "48x48"
+          }
+        ]
+      }
+    ],
+    "nextCursor": "next-page-cursor"
+  }
+}
+```
+
+<div id="calling-tools">
+  ### Appeler des Outils
+</div>
+
+Pour appeler un outil, les clients envoient une requête `tools/call` :
+
+**Requête :**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/call",
+  "params": {
+    "name": "get_weather",
+    "arguments": {
+      "location": "New York"
+    }
+  }
+}
+```
+
+**Réponse :**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Météo actuelle à New York :\nTempérature : 72 °F\nConditions : Partiellement nuageux"
+      }
+    ],
+    "isError": false
+  }
+}
+```
+
+<div id="list-changed-notification">
+  ### Notification de changement de liste
+</div>
+
+Lorsque la liste des outils disponibles change, les serveurs qui ont déclaré la capacité `listChanged` **DEVRAIENT** envoyer une notification :
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/tools/list_changed"
+}
+```
+
+<div id="message-flow">
+  ## Flux des messages
+</div>
+
+```mermaid
+sequenceDiagram
+    participant LLM
+    participant Client
+    participant Server
+
+    Note over Client,Server: Découverte
+    Client->>Server: tools/list
+    Server-->>Client: Liste des Outils
+
+    Note over Client,LLM: Sélection d’Outil
+    LLM->>Client: Sélectionner l’Outil à utiliser
+
+    Note over Client,Server: Appel
+    Client->>Server: tools/call
+    Server-->>Client: Résultat de l’Outil
+    Client->>LLM: Traiter le résultat
+
+    Note over Client,Server: Mises à jour
+    Server--)Client: tools/list_changed
+    Client->>Server: tools/list
+    Server-->>Client: Outils mis à jour
+```
+
+<div id="data-types">
+  ## Types de données
+</div>
+
+<div id="tool">
+  ### Outil
+</div>
+
+Une définition d’outil comprend :
+
+* `name`: Identifiant unique de l’outil
+* `title`: Nom convivial de l’outil, facultatif, à des fins d’affichage
+* `description`: Description claire des fonctionnalités
+* `inputSchema`: Schéma JSON définissant les paramètres attendus
+* `outputSchema`: Schéma JSON facultatif définissant la structure de sortie attendue
+* `annotations`: Propriétés facultatives décrivant le comportement de l’outil
+
+<Warning>
+  Pour des raisons de confiance, de sûreté et de sécurité, les clients **DOIVENT** considérer
+  les annotations d’un outil comme non fiables à moins qu’elles ne proviennent de serveurs de confiance.
+</Warning>
+
+<div id="tool-result">
+  ### Résultat d’outil
+</div>
+
+Les résultats d’outil peuvent contenir du contenu [**structuré**](#structured-content) ou **non structuré**.
+
+Le contenu **non structuré** est renvoyé dans le champ `content` d’un résultat et peut contenir plusieurs éléments de contenu de différents types :
+
+<Note>
+  Tous les types de contenu (texte, image, audio, liens vers des ressources et ressources intégrées)
+  prennent en charge des
+  [annotations](/fr-CA/specification/draft/server/resources#annotations) facultatives qui fournissent
+  des métadonnées sur l’audience, la priorité et les moments de modification. Il s’agit du même
+  format d’annotations utilisé par les ressources et les invites.
+</Note>
+
+<div id="text-content">
+  #### Contenu textuel
+</div>
+
+```json
+{
+  "type": "text",
+  "text": "Texte du résultat de l’outil"
+}
+```
+
+<div id="image-content">
+  #### Contenu de l’image
+</div>
+
+```json
+{
+  "type": "image",
+  "data": "base64-encoded-data",
+  "mimeType": "image/png",
+  "annotations": {
+    "audience": ["user"],
+    "priority": 0.9
+  }
+}
+```
+
+<div id="audio-content">
+  #### Contenu audio
+</div>
+
+```json
+{
+  "type": "audio",
+  "data": "base64-encoded-audio-data",
+  "mimeType": "audio/wav"
+}
+```
+
+<div id="resource-links">
+  #### Liens vers des Ressources
+</div>
+
+Un outil **PEUT** renvoyer des liens vers des [Ressources](/fr-CA/specification/draft/server/resources) afin de fournir du contexte
+ou des données supplémentaires. Dans ce cas, l’outil renverra un URI auquel le client peut s’abonner ou qu’il peut récupérer :
+
+```json
+{
+  "type": "resource_link",
+  "uri": "file:///project/src/main.rs",
+  "name": "main.rs",
+  "description": "Point d’entrée principal de l’application",
+  "mimeType": "text/x-rust"
+}
+```
+
+Les liens vers des Ressources prennent en charge les mêmes [annotations de Ressource](/fr-CA/specification/draft/server/resources#annotations) que les Ressources ordinaires pour aider les clients à comprendre comment les utiliser.
+
+<Info>
+  Les liens vers des Ressources renvoyés par des outils ne sont pas garantis d’apparaître dans les résultats
+  d’une requête `resources/list`.
+</Info>
+
+<div id="embedded-resources">
+  #### Ressources intégrées
+</div>
+
+Les [ressources](/fr-CA/specification/draft/server/resources) **PEUVENT** être intégrées pour fournir un contexte
+ou des données supplémentaires au moyen d’un [schéma d’URI](fr-CA/./resources#common-uri-schemes) approprié. Les serveurs qui utilisent des ressources intégrées **DEVRAIENT** implémenter la fonctionnalité `resources` :
+
+```json
+{
+  "type": "resource",
+  "resource": {
+    "uri": "file:///project/src/main.rs",
+    "title": "Fichier principal Rust du projet",
+    "mimeType": "text/x-rust",
+    "text": "fn main() {\n    println!(\"Hello world!\");\n}",
+    "annotations": {
+      "audience": ["user", "assistant"],
+      "priority": 0.7,
+      "lastModified": "2025-05-03T14:30:00Z"
+    }
+  }
+}
+```
+
+Les ressources intégrées prennent en charge les mêmes [annotations de ressource](/fr-CA/specification/draft/server/resources#annotations) que les ressources ordinaires afin d’aider les clients à comprendre comment les utiliser.
+
+<div id="structured-content">
+  #### Contenu structuré
+</div>
+
+Le contenu **structuré** est retourné sous forme d’objet JSON dans le champ `structuredContent` d’un résultat.
+
+Pour assurer la rétrocompatibilité, un outil qui retourne du contenu structuré DEVRAIT aussi retourner le JSON sérialisé dans un bloc TextContent.
+
+<div id="output-schema">
+  #### Schéma de sortie
+</div>
+
+Les Outils peuvent aussi fournir un schéma de sortie pour valider des résultats structurés.
+Si un schéma de sortie est fourni :
+
+* Les Serveurs DOIVENT fournir des résultats structurés conformes à ce schéma.
+* Les Clients DEVRAIENT valider les résultats structurés par rapport à ce schéma.
+
+Exemple d’outil avec schéma de sortie :
+
+```json
+{
+  "name": "get_weather_data",
+  "title": "Weather Data Retriever",
+  "description": "Get current weather data for a location",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "location": {
+        "type": "string",
+        "description": "City name or zip code"
+      }
+    },
+    "required": ["location"]
+  },
+  "outputSchema": {
+    "type": "object",
+    "properties": {
+      "temperature": {
+        "type": "number",
+        "description": "Temperature in celsius"
+      },
+      "conditions": {
+        "type": "string",
+        "description": "Weather conditions description"
+      },
+      "humidity": {
+        "type": "number",
+        "description": "Humidity percentage"
+      }
+    },
+    "required": ["temperature", "conditions", "humidity"]
+  }
+}
+```
+
+Exemple de réponse valide pour cet outil :
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 5,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"temperature\": 22.5, \"conditions\": \"Partly cloudy\", \"humidity\": 65}"
+      }
+    ],
+    "structuredContent": {
+      "temperature": 22.5,
+      "conditions": "Partly cloudy",
+      "humidity": 65
+    }
+  }
+}
+```
+
+Fournir un schéma de sortie aide les Clients et les LLM à comprendre et à traiter correctement les sorties structurées des Outils en :
+
+* Permettant une validation stricte des réponses selon le schéma
+* Fournissant des informations de typage pour une meilleure intégration aux langages de programmation
+* Guidant les Clients et les LLM pour analyser et utiliser correctement les données renvoyées
+* Améliorant la documentation et l’expérience des développeurs
+
+<div id="error-handling">
+  ## Gestion des erreurs
+</div>
+
+Les Outils utilisent deux mécanismes de signalement des erreurs :
+
+1. **Erreurs de protocole** : erreurs JSON-RPC standard pour des problèmes comme :
+   * Outils inconnus
+   * Arguments non valides
+   * Erreurs serveur
+
+2. **Erreurs d’exécution d’outil** : signalées dans les résultats d’outil avec `isError: true` :
+   * Pannes d’API
+   * Données d’entrée non valides
+   * Erreurs de logique métier
+
+Exemple d’erreur de protocole :
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "error": {
+    "code": -32602,
+    "message": "Unknown tool: invalid_tool_name"
+  }
+}
+```
+
+Exemple d’erreur d’exécution d’outil :
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 4,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Failed to fetch weather data: API rate limit exceeded"
+      }
+    ],
+    "isError": true
+  }
+}
+```
+
+<div id="security-considerations">
+  ## Considérations de sécurité
+</div>
+
+1. Les serveurs **DOIVENT** :
+   * Valider toutes les entrées des Outils
+   * Mettre en place des contrôles d’accès appropriés
+   * Limiter la fréquence d’invocation des Outils
+   * Assainir les sorties des Outils
+
+2. Les Clients **DEVRAIENT** :
+   * Demander la confirmation de l’utilisateur pour les opérations sensibles
+   * Afficher les entrées des Outils à l’utilisateur avant d’appeler le serveur, afin d’éviter toute exfiltration
+     de données malveillante ou accidentelle
+   * Valider les résultats des Outils avant de les transmettre au LLM
+   * Mettre en place des délais d’expiration pour les appels aux Outils
+   * Consigner l’utilisation des Outils à des fins d’audit

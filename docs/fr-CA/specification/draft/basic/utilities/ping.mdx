@@ -1,0 +1,78 @@
+---
+title: Ping
+---
+
+<div id="enable-section-numbers" />
+
+<Info>**Révision du protocole** : ébauche</Info>
+
+Le Protocole de contexte de modèle (MCP) inclut un mécanisme de ping facultatif qui permet à l’une ou l’autre des parties de vérifier que son homologue est toujours réactif et que la connexion est active.
+
+<div id="overview">
+  ## Aperçu
+</div>
+
+La fonctionnalité de ping est implémentée selon un modèle simple requête/réponse. Le client ou le serveur peut lancer un ping en envoyant une requête `ping`.
+
+<div id="message-format">
+  ## Format du message
+</div>
+
+Une requête ping est une requête JSON-RPC standard sans paramètres :
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "123",
+  "method": "ping"
+}
+```
+
+<div id="behavior-requirements">
+  ## Exigences de comportement
+</div>
+
+1. Le récepteur DOIT répondre rapidement avec une réponse vide :
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "123",
+  "result": {}
+}
+```
+
+2. Si aucune réponse n’est reçue dans un délai raisonnable, l’émetteur PEUT :
+   - Considérer la connexion comme inactive
+   - Mettre fin à la connexion
+   - Tenter une reconnexion
+
+<div id="usage-patterns">
+  ## Modes d'utilisation
+</div>
+
+```mermaid
+sequenceDiagram
+    participant Expéditeur
+    participant Récepteur
+
+    Expéditeur->>Récepteur: requête ping
+    Récepteur->>Expéditeur: réponse vide
+```
+
+<div id="implementation-considerations">
+  ## Considérations relatives à l’implémentation
+</div>
+
+- Les implémentations **DEVRAIENT** envoyer périodiquement des pings pour vérifier l’état de la connexion
+- La fréquence des pings **DEVRAIT** être configurable
+- Les délais d’attente **DEVRAIENT** être adaptés à l’environnement réseau
+- Les pings excessifs **DEVRAIENT** être évités pour réduire la surcharge du réseau
+
+<div id="error-handling">
+  ## Gestion des erreurs
+</div>
+
+- Les délais d’attente **DEVRAIENT** être traités comme des échecs de connexion
+- Plusieurs pings échoués **PEUVENT** déclencher une réinitialisation de la connexion
+- Les implémentations **DEVRAIENT** consigner les échecs de ping à des fins de diagnostic

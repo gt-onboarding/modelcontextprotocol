@@ -1,0 +1,154 @@
+---
+title: Spécification
+---
+
+<div id="enable-section-numbers" />
+
+[Model Context Protocol](https://modelcontextprotocol.io) (MCP) est un protocole ouvert qui
+permet une intégration transparente entre les applications LLM et des sources de données externes ainsi que des
+outils. Que vous développiez un IDE propulsé par l’IA, amélioriez une interface de clavardage ou créiez
+des flux de travail d’IA personnalisés, MCP propose une façon normalisée de connecter les LLM au contexte
+dont ils ont besoin.
+
+Cette spécification définit les exigences de protocole faisant autorité, basées sur le
+schéma TypeScript dans
+[schema.ts](https://github.com/modelcontextprotocol/specification/blob/main/schema/draft/schema.ts).
+
+Pour des guides de mise en œuvre et des exemples, visitez
+[modelcontextprotocol.io](https://modelcontextprotocol.io).
+
+Les mots clés « MUST », « MUST NOT », « REQUIRED », « SHALL », « SHALL NOT », « SHOULD », « SHOULD
+NOT », « RECOMMENDED », « NOT RECOMMENDED », « MAY » et « OPTIONAL » dans ce document doivent être
+interprétés comme décrit dans [BCP 14](https://datatracker.ietf.org/doc/html/bcp14)
+[[RFC2119](https://datatracker.ietf.org/doc/html/rfc2119)]
+[[RFC8174](https://datatracker.ietf.org/doc/html/rfc8174)] lorsque, et uniquement lorsque, ils
+apparaissent en majuscules, comme illustré ici.
+
+<div id="overview">
+  ## Aperçu
+</div>
+
+Le MCP fournit une façon normalisée pour les applications de :
+
+* Partager des informations contextuelles avec des modèles de langage
+* Exposer des outils et des fonctionnalités aux systèmes d’IA
+* Créer des intégrations et des flux de travail composables
+
+Le protocole utilise des messages [JSON-RPC](https://www.jsonrpc.org/) 2.0 pour établir
+la communication entre :
+
+* **Hôtes** : applications LLM qui initient les connexions
+* **Clients** : connecteurs au sein de l’application hôte
+* **Serveurs** : services qui fournissent du contexte et des fonctionnalités
+
+Le MCP s’inspire en partie du
+[Language Server Protocol](https://microsoft.github.io/language-server-protocol/), qui
+normalise la façon d’ajouter la prise en charge des langages de programmation dans tout un écosystème d’outils de développement. De façon similaire, le MCP normalise la manière d’intégrer du contexte supplémentaire
+et des outils dans l’écosystème des applications d’IA.
+
+<div id="key-details">
+  ## Principaux détails
+</div>
+
+<div id="base-protocol">
+  ### Protocole de base
+</div>
+
+* Format de messages [JSON-RPC](https://www.jsonrpc.org/)
+* Connexions avec état
+* Négociation des capacités entre le serveur et le client
+
+<div id="features">
+  ### Fonctionnalités
+</div>
+
+Les serveurs offrent aux clients les fonctionnalités suivantes :
+
+* **Ressources** : contexte et données, à utiliser par l’utilisateur ou le modèle d’IA
+* **Invite** : messages et flux de travail modélisés pour les utilisateurs
+* **Outils** : fonctions que le modèle d’IA peut exécuter
+
+Les clients peuvent offrir aux serveurs les fonctionnalités suivantes :
+
+* **Échantillonnage** : comportements agentiques initiés par le serveur et interactions LLM récursives
+* **Racines** : requêtes initiées par le serveur dans les limites d’un URI ou d’un système de fichiers pour y opérer
+* **Élicitation** : demandes initiées par le serveur pour obtenir des informations supplémentaires auprès des utilisateurs
+
+<div id="additional-utilities">
+  ### Utilitaires supplémentaires
+</div>
+
+* Configuration
+* Suivi de progression
+* Annulation
+* Signalement des erreurs
+* Journalisation
+
+<div id="security-and-trust-safety">
+  ## Sécurité et Confiance
+</div>
+
+Le Model Context Protocol permet des fonctionnalités puissantes grâce à l’accès arbitraire aux données
+et à des chemins d’exécution de code. Cette puissance s’accompagne de considérations importantes
+en matière de sécurité et de confiance que tous les implémenteurs doivent aborder avec soin.
+
+<div id="key-principles">
+  ### Principes clés
+</div>
+
+1. **Consentement et contrôle de l’utilisateur**
+   * Les utilisateurs doivent donner un consentement explicite à tout accès aux données et à toute opération, et en comprendre la portée
+   * Les utilisateurs doivent conserver le contrôle sur les données partagées et les actions effectuées
+   * Les implémenteurs devraient fournir des interfaces claires pour examiner et autoriser les activités
+
+2. **Confidentialité des données**
+   * Les hôtes doivent obtenir le consentement explicite de l’utilisateur avant d’exposer des données d’utilisateur aux serveurs
+   * Les hôtes ne doivent pas transmettre des données de Ressources ailleurs sans le consentement de l’utilisateur
+   * Les données des utilisateurs devraient être protégées par des contrôles d’accès appropriés
+
+3. **Sécurité des Outils**
+   * Les Outils représentent une exécution de code arbitraire et doivent être traités avec une
+     prudence appropriée.
+     * En particulier, les descriptions du comportement des Outils, comme les annotations, devraient être
+       considérées comme non fiables, à moins qu’elles ne proviennent d’un Serveur MCP de confiance.
+   * Les hôtes doivent obtenir le consentement explicite de l’utilisateur avant d’invoquer un Outil
+   * Les utilisateurs devraient comprendre ce que fait chaque Outil avant d’en autoriser l’utilisation
+
+4. **Contrôles d’Échantillonnage LLM**
+   * Les utilisateurs doivent approuver explicitement toute demande d’Échantillonnage LLM
+   * Les utilisateurs devraient contrôler :
+     * Si un échantillonnage a lieu ou non
+     * L’invite exacte qui sera envoyée
+     * Quels résultats le serveur peut voir
+   * Le protocole limite intentionnellement la visibilité du serveur sur les Invites
+
+<div id="implementation-guidelines">
+  ### Directives de mise en œuvre
+</div>
+
+Bien que le MCP ne puisse pas appliquer ces principes de sécurité au niveau du protocole,
+les implémenteurs **DEVRAIENT** :
+
+1. Intégrer des parcours robustes de consentement et d’autorisation dans leurs applications
+2. Fournir une documentation claire des implications en matière de sécurité
+3. Mettre en place des contrôles d’accès et des protections des données appropriés
+4. Suivre les meilleures pratiques de sécurité dans leurs intégrations
+5. Tenir compte des enjeux de confidentialité dans la conception de leurs fonctionnalités
+
+<div id="learn-more">
+  ## En savoir plus
+</div>
+
+Consultez la spécification détaillée de chaque composant du protocole :
+
+<CardGroup cols={5}>
+  <Card title="Architecture" icon="sitemap" href="/fr-CA/specification/draft/architecture" />
+
+  <Card title="Protocole de base" icon="code" href="/fr-CA/specification/draft/basic" />
+
+  <Card title="Fonctionnalités du serveur" icon="server" href="/fr-CA/specification/draft/server" />
+
+  <Card title="Fonctionnalités du client" icon="user" href="/fr-CA/specification/draft/client" />
+
+  <Card title="Contribution" icon="pencil" href="/fr-CA/development/contributing" />
+</CardGroup>

@@ -1,0 +1,449 @@
+---
+title: Autorisation
+---
+
+<Info>**Révision du protocole** : 2025-03-26</Info>
+
+<div id="introduction">
+  ## Introduction
+</div>
+
+<div id="purpose-and-scope">
+  ### Objectif et portée
+</div>
+
+Le Protocole de contexte de modèle (MCP) offre des fonctionnalités d’autorisation au niveau du transport,
+permettant aux clients MCP d’effectuer des requêtes à des serveurs MCP restreints au nom des propriétaires de ressources.
+La présente spécification définit le flux d’autorisation pour les transports basés sur HTTP.
+
+<div id="protocol-requirements">
+  ### Exigences du protocole
+</div>
+
+L’autorisation est **FACULTATIVE** pour les implémentations MCP. Lorsqu’elle est prise en charge :
+
+- Les implémentations utilisant un transport HTTP **DEVRAIENT** se conformer à cette spécification.
+- Les implémentations utilisant un transport STDIO **NE DEVRAIENT PAS** suivre cette spécification et
+  devraient plutôt obtenir les informations d’identification à partir de l’environnement.
+- Les implémentations utilisant des transports alternatifs **DOIVENT** suivre les pratiques exemplaires de sécurité établies pour leur protocole.
+
+<div id="standards-compliance">
+  ### Conformité aux normes
+</div>
+
+Ce mécanisme d’autorisation s’appuie sur les spécifications établies ci-dessous, mais
+met en œuvre un sous-ensemble de leurs fonctionnalités afin d’assurer la sécurité et l’interopérabilité
+tout en conservant la simplicité :
+
+- [OAuth 2.1 IETF DRAFT](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-12)
+- Métadonnées du serveur d’autorisation OAuth 2.0
+  ([RFC8414](https://datatracker.ietf.org/doc/html/rfc8414))
+- Protocole d’inscription dynamique du client OAuth 2.0
+  ([RFC7591](https://datatracker.ietf.org/doc/html/rfc7591))
+
+<div id="authorization-flow">
+  ## Processus d’autorisation
+</div>
+
+<div id="overview">
+  ### Aperçu
+</div>
+
+1. Les implémentations d’authentification MCP **DOIVENT** utiliser OAuth 2.1 avec des
+   mesures de sécurité appropriées pour les clients confidentiels et publics.
+
+2. Les implémentations d’authentification MCP **DEVRAIENT** prendre en charge le
+   protocole d’inscription dynamique du client OAuth 2.0 ([RFC7591](https://datatracker.ietf.org/doc/html/rfc7591)).
+
+3. Les serveurs MCP **DEVRAIENT** et les clients MCP **DOIVENT** implémenter les
+   métadonnées du serveur d’autorisation OAuth 2.0 ([RFC8414](https://datatracker.ietf.org/doc/html/rfc8414)). Les serveurs
+   qui ne prennent pas en charge les métadonnées du serveur d’autorisation **DOIVENT** suivre le schéma d’URI par défaut.
+
+<div id="oauth-grant-types">
+  ### Types d’octroi OAuth
+</div>
+
+OAuth définit différents parcours (grant types), c’est‑à‑dire diverses manières d’obtenir un
+jeton d’accès. Chacun vise des cas d’utilisation et des scénarios distincts.
+
+Les serveurs MCP **DEVRAIENT** prendre en charge les types d’octroi OAuth qui correspondent le mieux au public
+visé. Par exemple :
+
+1. Authorization Code : utile lorsque le client agit au nom d’un utilisateur final (humain).
+   - Par exemple, un agent appelle un outil MCP implémenté par un système SaaS.
+2. Client Credentials : le client est une autre application (pas un humain)
+   - Par exemple, un agent appelle un outil MCP sécurisé pour vérifier l’inventaire d’un
+     magasin donné. Pas besoin d’imiter l’utilisateur final.
+
+<div id="example-authorization-code-grant">
+  ### Exemple : octroi par code d’autorisation
+</div>
+
+Ce qui suit illustre le flux OAuth 2.1 pour le type d’octroi par code d’autorisation, utilisé pour l’authentification des utilisateurs.
+
+**REMARQUE** : L’exemple suivant suppose que le Serveur MCP fait également office de serveur d’autorisation. Toutefois, le serveur d’autorisation peut être déployé comme service distinct.
+
+Un utilisateur effectue le flux OAuth dans un navigateur Web et obtient un jeton d’accès qui l’identifie personnellement et permet au client d’agir en son nom.
+
+Lorsque l’autorisation est requise et n’a pas encore été prouvée par le client, les serveurs **DOIVENT** répondre par _HTTP 401 Unauthorized_.
+
+Les clients amorcent le flux d’autorisation
+[OAuth 2.1 IETF DRAFT](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-12#name-authorization-code-grant)
+après avoir reçu la réponse _HTTP 401 Unauthorized_.
+
+Ce qui suit présente l’OAuth 2.1 de base pour les clients publics utilisant PKCE.
+
+```mermaid
+sequenceDiagram
+    participant B as User-Agent (Navigateur)
+    participant C as Client
+    participant M as Serveur MCP
+
+    C->>M: Requête MCP
+    M->>C: HTTP 401 Unauthorized
+    Note over C: Générer code_verifier et code_challenge
+    C->>B: Ouvrir le navigateur avec l’URL d’autorisation + code_challenge
+    B->>M: GET /authorize
+    Note over M: L’utilisateur se connecte et autorise
+    M->>B: Redirection vers l’URL de rappel avec le code d’auth
+    B->>C: Rappel avec le code d’autorisation
+    C->>M: Requête de jeton avec code + code_verifier
+    M->>C: Jeton d’accès (+ jeton d’actualisation)
+    C->>M: Requête MCP avec le jeton d’accès
+    Note over C,M: Début de l’échange standard de messages MCP
+```
+
+<div id="server-metadata-discovery">
+  ### Découverte des métadonnées du serveur
+</div>
+
+Pour découvrir les capacités du serveur :
+
+- Les clients MCP _DOIVENT_ suivre le protocole des métadonnées du serveur d’autorisation OAuth 2.0 défini
+  dans [RFC8414](https://datatracker.ietf.org/doc/html/rfc8414).
+- Les serveurs MCP _DEVRAIENT_ suivre le protocole des métadonnées du serveur d’autorisation OAuth 2.0.
+- Les serveurs MCP qui ne prennent pas en charge le protocole des métadonnées du serveur d’autorisation OAuth 2.0
+  _DOIVENT_ prendre en charge des URL de secours.
+
+Le processus de découverte est illustré ci-dessous :
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant S as Server
+
+    C->>S: GET /.well-known/oauth-authorization-server
+    alt Découverte réussie
+        S->>C: 200 OK + Document de métadonnées
+        Note over C: Utiliser les points de terminaison des métadonnées
+    else Échec de la découverte
+        S->>C: 404 Not Found
+        Note over C: Revenir aux points de terminaison par défaut
+    end
+    Note over C: Poursuivre le flux d’autorisation
+```
+
+<div id="server-metadata-discovery-headers">
+  #### En-têtes de découverte des métadonnées du serveur
+</div>
+
+Les clients MCP _DEVRAIENT_ inclure l’en-tête `MCP-Protocol-Version: <protocol-version>` lors de
+la découverte des métadonnées du serveur afin de permettre au serveur MCP de répondre en fonction de la
+version du protocole MCP.
+
+Par exemple : `MCP-Protocol-Version: 2024-11-05`
+
+<div id="authorization-base-url">
+  #### URL de base d’autorisation
+</div>
+
+L’URL de base d’autorisation DOIT être déterminée à partir de l’URL du serveur MCP en supprimant
+tout composant de `path` existant. Par exemple :
+
+Si l’URL du serveur MCP est `https://api.example.com/v1/mcp`, alors :
+
+- L’URL de base d’autorisation est `https://api.example.com`
+- Le point de terminaison des métadonnées DOIT se trouver à
+  `https://api.example.com/.well-known/oauth-authorization-server`
+
+Cela garantit que les points de terminaison d’autorisation se trouvent systématiquement à la racine du
+domaine qui héberge le serveur MCP, indépendamment de tout composant de chemin dans l’URL du serveur MCP.
+
+<div id="fallbacks-for-servers-without-metadata-discovery">
+  #### Solutions de repli pour les serveurs sans découverte de métadonnées
+</div>
+
+Pour les serveurs qui n’implémentent pas les métadonnées du serveur d’autorisation OAuth 2.0, les clients
+**DOIVENT** utiliser les chemins d’endpoint par défaut suivants par rapport à l’[URL de base de l’autorisation](#authorization-base-url) :
+
+| Endpoint               | Chemin par défaut | Description                                  |
+| ---------------------- | ----------------- | -------------------------------------------- |
+| Authorization Endpoint | /authorize        | Utilisé pour les requêtes d’autorisation     |
+| Token Endpoint         | /token            | Utilisé pour l’échange et le rafraîchissement de jetons |
+| Registration Endpoint  | /register         | Utilisé pour l’inscription dynamique du client |
+
+Par exemple, avec un Serveur MCP hébergé à `https://api.example.com/v1/mcp`, les endpoints par défaut seraient :
+
+- `https://api.example.com/authorize`
+- `https://api.example.com/token`
+- `https://api.example.com/register`
+
+Les clients **DOIVENT** d’abord tenter de découvrir les endpoints via le document de métadonnées avant
+de se rabattre sur les chemins par défaut. Lorsqu’on utilise les chemins par défaut, toutes les autres exigences du protocole demeurent inchangées.
+
+<div id="dynamic-client-registration">
+  ### Inscription dynamique du client
+</div>
+
+Les Clients MCP et les Serveurs MCP **DEVRAIENT** prendre en charge le
+[protocole d’inscription dynamique du client OAuth 2.0](https://datatracker.ietf.org/doc/html/rfc7591)
+afin de permettre aux Clients MCP d’obtenir des identifiants de client OAuth sans intervention de l’utilisateur. Cela offre une
+méthode normalisée qui permet aux clients de s’enregistrer automatiquement auprès de nouveaux serveurs, ce qui est crucial
+pour MCP, car :
+
+- Les clients ne peuvent pas connaître à l’avance tous les serveurs possibles
+- Une inscription manuelle créerait des irritants pour les utilisateurs
+- Cela permet une connexion transparente à de nouveaux serveurs
+- Les serveurs peuvent appliquer leurs propres politiques d’inscription
+
+Tout Serveur MCP qui ne prend pas en charge l’inscription dynamique du client doit fournir
+d’autres moyens d’obtenir un ID client (et, le cas échéant, un secret client). Pour l’un de
+ces serveurs, les Clients MCP devront soit :
+
+1. coder en dur un ID client (et, le cas échéant, un secret client) spécifiquement pour ce
+   Serveur MCP, soit
+2. présenter une interface utilisateur permettant aux utilisateurs de saisir ces détails, après avoir enregistré eux-mêmes
+   un client OAuth (p. ex., via une interface de configuration hébergée par le
+   serveur).
+
+<div id="authorization-flow-steps">
+  ### Étapes du flux d’autorisation
+</div>
+
+Le flux d’autorisation complet se déroule comme suit :
+
+```mermaid
+sequenceDiagram
+    participant B as Agent utilisateur (navigateur)
+    participant C as Client
+    participant M as Serveur MCP
+
+    C->>M: GET /.well-known/oauth-authorization-server
+    alt Le serveur prend en charge la découverte
+        M->>C: Métadonnées du serveur d’autorisation
+    else Pas de découverte
+        M->>C: 404 (utiliser les points de terminaison par défaut)
+    end
+
+    alt Inscription dynamique du client
+        C->>M: POST /register
+        M->>C: Informations d’identification du client
+    end
+
+    Note over C: Générer les paramètres PKCE
+    C->>B: Ouvrir le navigateur avec l’URL d’autorisation + code_challenge
+    B->>M: Requête d’autorisation
+    Note over M: L’utilisateur autorise (/authorizes)
+    M->>B: Rediriger vers le rappel avec un code d’autorisation
+    B->>C: Rappel avec le code d’autorisation
+    C->>M: Requête de jeton + code_verifier
+    M->>C: Jeton d’accès (+ jeton d’actualisation)
+    C->>M: Requêtes API avec le jeton d’accès
+```
+
+<div id="decision-flow-overview">
+  #### Aperçu du parcours décisionnel
+</div>
+
+```mermaid
+flowchart TD
+    A[Début du flux d’authentification] --> B{Vérifier la découverte des métadonnées}
+    B -->|Disponible| C[Utiliser les points de terminaison de métadonnées]
+    B -->|Non disponible| D[Utiliser les points de terminaison par défaut]
+
+    C --> G{Vérifier le point de terminaison d’inscription}
+    D --> G
+
+    G -->|Disponible| H[Effectuer l’inscription dynamique]
+    G -->|Non disponible| I[Inscription alternative requise]
+
+    H --> J[Démarrer le flux OAuth]
+    I --> J
+
+    J --> K[Générer les paramètres PKCE]
+    K --> L[Demander l’autorisation]
+    L --> M[Autorisation de l’utilisateur]
+    M --> N[Échanger le code contre des jetons]
+    N --> O[Utiliser le jeton d’accès]
+```
+
+<div id="access-token-usage">
+  ### Utilisation du jeton d’accès
+</div>
+
+<div id="token-requirements">
+  #### Exigences relatives aux jetons
+</div>
+
+La gestion des jetons d’accès DOIT être conforme aux exigences de
+[OAuth 2.1, section 5](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-12#section-5)
+pour les requêtes de ressources. Plus précisément :
+
+1. Le Client MCP DOIT utiliser l’en-tête de requête Authorization
+   [section 5.1.1](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-12#section-5.1.1) :
+
+```
+Authorization: Bearer <access-token>
+```
+
+Notez que l’autorisation DOIT être incluse dans chaque requête HTTP du client vers le serveur,
+même si elles font partie de la même session logique.
+
+2. Les jetons d’accès NE DOIVENT PAS être inclus dans la chaîne de requête de l’URI
+
+Exemple de requête :
+
+```http
+GET /v1/contexts HTTP/1.1
+Host: mcp.example.com
+Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+```
+
+<div id="token-handling">
+  #### Gestion des jetons
+</div>
+
+Les serveurs de ressources DOIVENT valider les jetons d’accès comme décrit à la
+[section 5.2](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-12#section-5.2).
+Si la validation échoue, les serveurs DOIVENT répondre conformément aux exigences de gestion
+des erreurs de la [section 5.3](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-12#section-5.3).
+Les jetons invalides ou expirés DOIVENT recevoir une réponse HTTP 401.
+
+<div id="security-considerations">
+  ### Considérations de sécurité
+</div>
+
+Les exigences de sécurité suivantes DOIVENT être mises en œuvre :
+
+1. Les clients DOIVENT stocker les jetons de façon sécuritaire en suivant les pratiques exemplaires d’OAuth 2.0
+2. Les serveurs DEVRAIENT appliquer l’expiration et la rotation des jetons
+3. Tous les points de terminaison d’autorisation DOIVENT être offerts sur HTTPS
+4. Les serveurs DOIVENT valider les URI de redirection afin de prévenir les vulnérabilités de redirection ouverte
+5. Les URI de redirection DOIVENT être soit des URL localhost, soit des URL HTTPS
+
+<div id="error-handling">
+  ### Gestion des erreurs
+</div>
+
+Les serveurs **DOIVENT** renvoyer des codes d’état HTTP appropriés pour les erreurs d’autorisation :
+
+| Code d’état | Description        | Utilisation                                    |
+| ----------- | ------------------ | ---------------------------------------------- |
+| 401         | Non autorisé       | Autorisation requise ou jeton invalide         |
+| 403         | Interdit           | Portées invalides ou permissions insuffisantes |
+| 400         | Requête erronée    | Requête d’autorisation mal formée              |
+
+<div id="implementation-requirements">
+  ### Exigences d’implémentation
+</div>
+
+1. Les implémentations **DOIVENT** suivre les meilleures pratiques de sécurité d’OAuth 2.1
+2. PKCE est **REQUIS** pour tous les clients
+3. La rotation des jetons **DEVRAIT** être mise en œuvre pour renforcer la sécurité
+4. La durée de vie des jetons **DEVRAIT** être limitée selon les exigences de sécurité
+
+<div id="third-party-authorization-flow">
+  ### Flux d’autorisation de tiers
+</div>
+
+<div id="overview">
+  #### Aperçu
+</div>
+
+Les serveurs MCP **PEUVENT** prendre en charge l’autorisation déléguée au moyen de serveurs d’autorisation tiers. Dans ce parcours, le serveur MCP agit à la fois comme client OAuth (auprès du serveur d’autorisation tiers) et comme serveur d’autorisation OAuth (auprès du client MCP).
+
+<div id="flow-description">
+  #### Description du flux
+</div>
+
+Le flux d’autorisation de tiers comprend les étapes suivantes :
+
+1. Le client MCP lance un flux OAuth standard avec le serveur MCP
+2. Le serveur MCP redirige l’utilisateur vers le serveur d’autorisation tiers
+3. L’utilisateur s’authentifie auprès du serveur tiers
+4. Le serveur tiers redirige vers le serveur MCP avec un code d’autorisation
+5. Le serveur MCP échange le code contre un jeton d’accès tiers
+6. Le serveur MCP génère son propre jeton d’accès lié à la session tierce
+7. Le serveur MCP termine le flux OAuth initial avec le client MCP
+
+```mermaid
+sequenceDiagram
+    participant B as Agent utilisateur (navigateur)
+    participant C as Client MCP
+    participant M as Serveur MCP
+    participant T as Serveur d’authentification tiers
+
+    C->>M: Requête OAuth initiale
+    M->>B: Redirection vers /authorize du tiers
+    B->>T: Requête d’autorisation
+    Note over T: L’utilisateur autorise
+    T->>B: Redirection vers le callback du serveur MCP
+    B->>M: Code d’autorisation
+    M->>T: Échanger le code contre un jeton
+    T->>M: Jeton d’accès du tiers
+    Note over M: Générer un jeton MCP lié
+    M->>B: Redirection vers le callback du client MCP
+    B->>C: Code d’autorisation MCP
+    C->>M: Échanger le code contre un jeton
+    M->>C: Jeton d’accès MCP
+```
+
+<div id="session-binding-requirements">
+  #### Exigences de liaison de session
+</div>
+
+Les serveurs MCP qui implémentent une autorisation tierce **DOIVENT** :
+
+1. Maintenir une correspondance sécurisée entre les jetons tiers et les jetons MCP émis
+2. Valider l’état des jetons tiers avant d’accepter les jetons MCP
+3. Mettre en place une gestion appropriée du cycle de vie des jetons
+4. Gérer l’expiration et le renouvellement des jetons tiers
+
+<div id="security-considerations">
+  #### Considérations de sécurité
+</div>
+
+Lors de la mise en œuvre d’une autorisation tierce, les serveurs DOIVENT :
+
+1. Valider tous les URI de redirection
+2. Stocker de manière sécurisée les identifiants tiers
+3. Mettre en place une gestion appropriée de l’expiration des sessions
+4. Prendre en compte les implications de sécurité de l’enchaînement de jetons
+5. Mettre en œuvre une gestion appropriée des erreurs en cas d’échec de l’authentification tierce
+
+<div id="best-practices">
+  ## Bonnes pratiques
+</div>
+
+<div id="local-clients-as-public-oauth-21-clients">
+  #### Clients locaux comme clients publics OAuth 2.1
+</div>
+
+Nous recommandons vivement que les clients locaux implémentent OAuth 2.1 en tant que clients publics :
+
+1. Utiliser des défis de code (PKCE) pour les requêtes d’autorisation afin de prévenir les attaques d’interception
+2. Mettre en place un stockage sécurisé des jetons, adapté au système local
+3. Suivre les pratiques exemplaires de renouvellement des jetons pour maintenir les sessions
+4. Gérer correctement l’expiration et le renouvellement des jetons
+
+<div id="authorization-metadata-discovery">
+  #### Découverte des métadonnées d’autorisation
+</div>
+
+Nous recommandons fortement à tous les clients de prendre en charge la découverte des métadonnées. Cela réduit la nécessité pour les utilisateurs de saisir manuellement les points de terminaison ou pour les clients de se rabattre sur les valeurs par défaut définies.
+
+<div id="dynamic-client-registration">
+  #### Inscription dynamique du client
+</div>
+
+Puisque les clients ne connaissent pas à l’avance l’ensemble des Serveurs MCP, nous recommandons fortement la mise en œuvre de l’inscription dynamique du client. Cela permet aux applications de s’inscrire automatiquement auprès du Serveur MCP et élimine la nécessité pour les utilisateurs d’obtenir des identifiants de client manuellement.

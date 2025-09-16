@@ -1,0 +1,141 @@
+---
+title: 规范
+---
+
+[Model Context Protocol](https://modelcontextprotocol.io)（MCP）是一种开放协议，
+可在 LLM 应用与外部数据源和工具之间实现无缝集成。无论你是在构建由 AI 驱动的 IDE、增强聊天界面，还是创建
+自定义 AI 工作流，MCP 都提供了一种标准化方式，将 LLM 与其所需的上下文连接起来。
+
+本规范基于
+TypeScript 模式定义
+[schema.ts](https://github.com/modelcontextprotocol/specification/blob/main/schema/2025-03-26/schema.ts)，给出了权威的协议要求。
+
+有关实现指南和示例，请访问
+[modelcontextprotocol.io](https://modelcontextprotocol.io)。
+
+本文档中的关键字“MUST”、“MUST NOT”、“REQUIRED”、“SHALL”、“SHALL NOT”、“SHOULD”、“SHOULD
+NOT”、“RECOMMENDED”、“NOT RECOMMENDED”、“MAY”和“OPTIONAL”的含义应按 [BCP 14](https://datatracker.ietf.org/doc/html/bcp14)
+[[RFC2119](https://datatracker.ietf.org/doc/html/rfc2119)]
+[[RFC8174](https://datatracker.ietf.org/doc/html/rfc8174)] 的说明进行解释，且仅当它们以全大写形式出现时，如本文所示。
+
+<div id="overview">
+  ## 概览
+</div>
+
+MCP 为应用程序提供了一种标准化方式来：
+
+* 与语言模型共享上下文信息
+* 向 AI 系统公开工具与能力
+* 构建可组合的集成与工作流
+
+该协议使用 [JSON-RPC](https://www.jsonrpc.org/) 2.0 消息来建立以下组件之间的通信：
+
+* **主机**：发起连接的 LLM 应用
+* **客户端**：主机应用中的连接器
+* **服务器**：提供上下文与能力的服务
+
+MCP 部分借鉴了
+[语言服务器协议（Language Server Protocol）](https://microsoft.github.io/language-server-protocol/)，该协议
+标准化了如何在整个开发工具生态中为编程语言添加支持。以类似方式，MCP 标准化了如何将额外的上下文
+和工具集成到 AI 应用生态中。
+
+<div id="key-details">
+  ## 关键信息
+</div>
+
+<div id="base-protocol">
+  ### 基础协议
+</div>
+
+* [JSON-RPC](https://www.jsonrpc.org/) 消息格式
+* 有状态连接
+* 服务器与客户端的能力协商
+
+<div id="features">
+  ### 功能
+</div>
+
+服务器可向客户端提供以下功能：
+
+* **资源**：供用户或 AI 模型使用的上下文和数据
+* **提示模板**：面向用户的模板化消息与工作流
+* **工具**：供 AI 模型调用的函数
+
+客户端可向服务器提供以下功能：
+
+* **采样**：由服务器发起的代理式行为与递归式 LLM 交互
+
+<div id="additional-utilities">
+  ### 其他辅助功能
+</div>
+
+* 配置
+* 进度跟踪
+* 取消
+* 错误报告
+* 日志记录
+
+<div id="security-and-trust-safety">
+  ## 安全与信任与安全
+</div>
+
+模型上下文协议（MCP）通过任意数据访问与代码执行路径提供了强大的能力。伴随这种能力而来的，是所有实现者都必须谨慎应对的重要安全与信任方面的考量。
+
+<div id="key-principles">
+  ### 关键原则
+</div>
+
+1. **用户同意与控制**
+   * 用户必须在明确知情的前提下同意所有数据访问与操作
+   * 用户必须始终掌控共享哪些数据以及将采取哪些操作
+   * 实施方应提供清晰的界面，便于审阅与授权各项活动
+
+2. **数据隐私**
+   * MCP 主机在向服务器暴露用户数据前必须获得用户的明确同意
+   * 未经用户同意，MCP 主机不得将资源数据传输至其他位置
+   * 应通过恰当的访问控制保护用户数据
+
+3. **工具安全**
+   * 工具意味着可执行任意代码，必须予以高度谨慎对待。
+     * 尤其是，关于工具行为的描述（如注释）在未来源于可信服务器时应被视为不可信。
+   * MCP 主机在调用任何工具之前必须获得用户的明确同意
+   * 用户在授权使用工具之前应了解每个工具的具体功能
+
+4. **LLM 采样控制**
+   * 用户必须明确批准任何 LLM 采样请求
+   * 用户应能控制：
+     * 是否进行采样
+     * 实际将要发送的提示
+     * 服务器可见的结果范围
+   * 协议有意限制服务器对提示的可见性
+
+<div id="implementation-guidelines">
+  ### 实施指南
+</div>
+
+鉴于 MCP 本身无法在协议层面强制执行这些安全原则，
+实现者**应**：
+
+1. 在应用中构建健全的同意与授权流程
+2. 提供清晰的安全影响说明文档
+3. 实施适当的访问控制与数据保护措施
+4. 在集成中遵循安全最佳实践
+5. 在功能设计中充分考虑隐私影响
+
+<div id="learn-more">
+  ## 了解更多
+</div>
+
+查看每个协议组件的详细规范：
+
+<CardGroup cols={5}>
+  <Card title="架构" icon="sitemap" href="/zh/specification/2025-03-26/architecture" />
+
+  <Card title="基础协议" icon="code" href="/zh/specification/2025-03-26/basic" />
+
+  <Card title="服务器特性" icon="server" href="/zh/specification/2025-03-26/server" />
+
+  <Card title="客户端特性" icon="user" href="/zh/specification/2025-03-26/client" />
+
+  <Card title="参与贡献" icon="pencil" href="/zh/development/contributing" />
+</CardGroup>

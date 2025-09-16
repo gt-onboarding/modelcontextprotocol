@@ -1,0 +1,73 @@
+---
+title: メッセージ
+type: docs
+weight: 20
+---
+
+<Info>**プロトコル改訂**: 2024-11-05</Info>
+
+MCP のすべてのメッセージは、[JSON-RPC 2.0](https://www.jsonrpc.org/specification) 仕様に**準拠する必要があります（MUST）**。このプロトコルでは、メッセージの種類を次の3つに定義しています：
+
+<div id="requests">
+  ## リクエスト
+</div>
+
+リクエストはクライアントからサーバーへ、またはその逆方向に送信されます。
+
+```typescript
+{
+  jsonrpc: "2.0";
+  id: string | number;
+  method: string;
+  params?: {
+    [key: string]: unknown;
+  };
+}
+```
+
+- リクエストには文字列または整数のIDを含めることが**必須**です。
+- 基本のJSON-RPCと異なり、IDを`null`にしては**なりません**。
+- リクエストIDは、同一セッション内でリクエスト送信者が以前に使用したものと重複しては**なりません**。
+
+<div id="responses">
+  ## 応答
+</div>
+
+応答はリクエストへの返信として送信されます。
+
+```typescript
+{
+  jsonrpc: "2.0";
+  id: string | number;
+  result?: {
+    [key: string]: unknown;
+  }
+  error?: {
+    code: number;
+    message: string;
+    data?: unknown;
+  }
+}
+```
+
+- 応答は、対応するリクエストと同一の ID を含める必要があります（MUST）。
+- `result` または `error` のいずれか一方を設定する必要があります（MUST）。両方を同時に設定してはなりません（MUST NOT）。
+- エラーコードは整数でなければなりません（MUST）。
+
+<div id="notifications">
+  ## 通知
+</div>
+
+通知はクライアントからサーバーへ、またはその逆方向に送信されます。応答は要求しません。
+
+```typescript
+{
+  jsonrpc: "2.0";
+  method: string;
+  params?: {
+    [key: string]: unknown;
+  };
+}
+```
+
+- 通知にIDを含めてはなりません（**MUST NOT**）。

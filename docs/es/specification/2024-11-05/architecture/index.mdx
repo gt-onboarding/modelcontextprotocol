@@ -1,0 +1,189 @@
+---
+title: Arquitectura
+---
+
+El Protocolo de Contexto de Modelo (MCP) sigue una arquitectura cliente-anfitrión-servidor en la que cada
+anfitrión puede ejecutar múltiples instancias de cliente. Esta arquitectura permite a los usuarios integrar
+capacidades de IA en diversas aplicaciones manteniendo límites de seguridad claros y
+separando las responsabilidades. Basado en JSON-RPC 2.0, MCP proporciona un protocolo de sesiones con estado centrado
+en el intercambio de contexto y la coordinación del muestreo entre clientes y servidores.
+
+<div id="core-components">
+  ## Componentes principales
+</div>
+
+```mermaid
+graph LR
+    subgraph "Proceso del anfitrión de la aplicación"
+        H[Anfitrión]
+        C1[Cliente 1]
+        C2[Cliente 2]
+        C3[Cliente 3]
+        H --> C1
+        H --> C2
+        H --> C3
+    end
+
+    subgraph "Máquina local"
+        S1[Servidor 1<br>Archivos y Git]
+        S2[Servidor 2<br>Base de datos]
+        R1[("Recurso<br>local A")]
+        R2[("Recurso<br>local B")]
+
+        C1 --> S1
+        C2 --> S2
+        S1 <--> R1
+        S2 <--> R2
+    end
+
+    subgraph "Internet"
+        S3[Servidor 3<br>APIs externas]
+        R3[("Recurso<br>remoto C")]
+
+        C3 --> S3
+        S3 <--> R3
+    end
+```
+
+<div id="host">
+  ### Anfitrión
+</div>
+
+El proceso del anfitrión actúa como contenedor y coordinador:
+
+* Crea y gestiona múltiples instancias de clientes
+* Controla los permisos de conexión de los clientes y su ciclo de vida
+* Aplica políticas de seguridad y requisitos de consentimiento
+* Gestiona las decisiones de autorización del usuario
+* Coordina la integración con IA/LLM y el muestreo
+* Gestiona la agregación de contexto entre clientes
+
+<div id="clients">
+  ### Clientes
+</div>
+
+Cada cliente es creado por el Anfitrión MCP y mantiene una conexión aislada con un servidor:
+
+* Establece una sesión con estado por servidor
+* Gestiona la negociación del protocolo y el intercambio de capacidades
+* Enruta mensajes del protocolo en ambos sentidos
+* Administra suscripciones y notificaciones
+* Mantiene límites de seguridad entre servidores
+
+Una aplicación Anfitrión MCP crea y gestiona múltiples clientes, y cada cliente mantiene una relación 1:1
+con un servidor concreto.
+
+<div id="servers">
+  ### Servidores
+</div>
+
+Los servidores proporcionan contexto y capacidades especializadas:
+
+* Exponen recursos, herramientas e indicaciones mediante primitivas de MCP
+* Operan de forma independiente con responsabilidades específicas
+* Solicitan muestreo a través de interfaces del cliente
+* Deben respetar las restricciones de seguridad
+* Pueden ser procesos locales o servicios remotos
+
+<div id="design-principles">
+  ## Principios de diseño
+</div>
+
+MCP se basa en varios principios de diseño clave que guían su arquitectura e
+implementación:
+
+1. **Los servidores deben ser extremadamente fáciles de crear**
+   * Las aplicaciones anfitrionas se encargan de la orquestación compleja
+   * Los servidores se enfocan en capacidades específicas y bien definidas
+   * Interfaces sencillas minimizan el esfuerzo de implementación
+   * Una separación clara permite código fácil de mantener
+
+2. **Los servidores deben ser altamente componibles**
+   * Cada servidor ofrece funcionalidad enfocada de forma aislada
+   * Múltiples servidores pueden combinarse sin fricciones
+   * Un protocolo compartido habilita la interoperabilidad
+   * El diseño modular favorece la extensibilidad
+
+3. **Los servidores no deben poder leer toda la conversación ni “ver” a otros
+   servidores**
+   * Los servidores reciben solo la información contextual necesaria
+   * El historial completo de la conversación permanece con el anfitrión
+   * Cada conexión de servidor mantiene el aislamiento
+   * Las interacciones entre servidores están controladas por el anfitrión
+   * El proceso del anfitrión aplica los límites de seguridad
+
+4. **Las funciones pueden añadirse a servidores y clientes de forma progresiva**
+   * El protocolo núcleo proporciona la funcionalidad mínima requerida
+   * Capacidades adicionales pueden negociarse según sea necesario
+   * Servidores y clientes evolucionan de manera independiente
+   * El protocolo está diseñado para ser extensible en el futuro
+   * Se mantiene la compatibilidad retroactiva
+
+<div id="message-types">
+  ## Tipos de mensajes
+</div>
+
+MCP define tres tipos de mensajes principales basados en
+[JSON-RPC 2.0](https://www.jsonrpc.org/specification):
+
+* **Solicitudes**: Mensajes bidireccionales con un método y parámetros que esperan una respuesta
+* **Respuestas**: Resultados satisfactorios o errores que corresponden a IDs de solicitud específicos
+* **Notificaciones**: Mensajes unidireccionales que no requieren respuesta
+
+Cada tipo de mensaje sigue la especificación de JSON-RPC 2.0 para la estructura y la semántica de entrega.
+
+<div id="capability-negotiation">
+  ## Negociación de capacidades
+</div>
+
+El Protocolo de Contexto de Modelo (MCP) utiliza un sistema de negociación basado en capacidades, donde clientes y servidores declaran explícitamente las funciones que admiten durante la inicialización. Las capacidades determinan qué funciones y primitivas del protocolo están disponibles durante una sesión.
+
+* Los servidores declaran capacidades como suscripciones a Recursos, compatibilidad con Herramientas y plantillas de Indicaciones
+* Los clientes declaran capacidades como compatibilidad con Muestreo y manejo de notificaciones
+* Ambas partes deben respetar las capacidades declaradas durante toda la sesión
+* Se pueden negociar capacidades adicionales mediante extensiones del protocolo
+
+```mermaid
+sequenceDiagram
+    participant Host
+    participant Client
+    participant Server
+
+    Host->>+Client: Initialize client
+    Client->>+Server: Initialize session with capabilities
+    Server-->>Client: Respond with supported capabilities
+
+    Note over Host,Server: Active Session with Negotiated Features
+
+    loop Client Requests
+        Host->>Client: User- or model-initiated action
+        Client->>Server: Request (tools/resources)
+        Server-->>Client: Response
+        Client-->>Host: Update UI or respond to model
+    end
+
+    loop Server Requests
+        Server->>Client: Request (sampling)
+        Client->>Host: Forward to AI
+        Host-->>Client: AI response
+        Client-->>Server: Response
+    end
+
+    loop Notifications
+        Server--)Client: Resource updates
+        Client--)Server: Status changes
+    end
+
+    Host->>Client: Terminate
+    Client->>-Server: End session
+    deactivate Server
+```
+
+Cada capacidad habilita funciones específicas del protocolo para usar durante la sesión. Por ejemplo:
+
+* Las [funciones del servidor](/es/specification/2024-11-05/server) implementadas deben anunciarse en las capacidades del servidor
+* Emitir notificaciones de suscripción a Recursos requiere que el servidor declare compatibilidad con suscripciones
+* La invocación de Herramientas requiere que el servidor declare capacidades de Herramientas
+* El [Muestreo](/es/specification/2024-11-05/client) requiere que el cliente declare compatibilidad en sus capacidades
+
+Esta negociación de capacidades garantiza que clientes y servidores tengan un entendimiento claro de la funcionalidad admitida, a la vez que se mantiene la extensibilidad del protocolo.

@@ -1,0 +1,71 @@
+---
+title: Feuille de route
+description: Nos plans pour faire évoluer le Protocole de contexte de modèle
+---
+
+<Info>Dernière mise à jour : **2025-07-22**</Info>
+
+Le Protocole de contexte de modèle évolue rapidement. Cette page présente notre réflexion actuelle sur les priorités clés et l’orientation pour environ **les six prochains mois**, bien que celles-ci puissent changer de façon significative à mesure que le projet progresse. Pour voir ce qui a changé récemment, consultez le **[journal des modifications de la spécification](/fr-CA/specification/2025-06-18/changelog/)**.
+
+<Note>
+  Les idées présentées ici ne constituent pas des engagements — nous pourrions relever ces défis différemment de ce qui est décrit, et certains pourraient ne jamais se concrétiser. Il ne s’agit pas non plus d’une liste *exhaustive*; nous pourrions intégrer du travail qui n’est pas mentionné ici.
+</Note>
+
+La participation de la communauté nous tient à cœur! Chaque section renvoie à des discussions pertinentes où vous pouvez en apprendre davantage et partager vos idées.
+
+Pour une vue technique de notre processus de normalisation, visitez le [Standards Track](https://github.com/orgs/modelcontextprotocol/projects/2/views/2) sur GitHub, qui suit la progression des propositions vers leur inclusion dans la [spécification MCP](https://spec.modelcontextprotocol.io) officielle.
+
+<div id="agents">
+  ## Agents
+</div>
+
+À mesure que le MCP s’intègre de plus en plus aux flux de travail d’agents, nous mettons l’accent sur des améliorations clés :
+
+* **Opérations asynchrones** : prise en charge d’opérations longues pouvant s’étendre sur de longues périodes, avec une gestion résiliente des déconnexions et des reconnexions
+
+<div id="authentication-and-security">
+  ## Authentification et sécurité
+</div>
+
+Nous faisons évoluer nos ressources d’autorisation et de sécurité pour améliorer la sécurité des utilisateurs et offrir une meilleure expérience aux développeurs :
+
+* **Guides et pratiques exemplaires** : documentation des particularités du déploiement sécurisé du MCP sous forme de guides et de pratiques exemplaires pour aider les développeurs à éviter les écueils courants.
+* **Alternatives à l’enregistrement dynamique de client (DCR)** : exploration d’alternatives au DCR, visant à résoudre les défis opérationnels tout en préservant une expérience utilisateur fluide.
+* **Autorisation granulaire** : élaboration de mécanismes et de lignes directrices pour une autorisation de base des actions sensibles.
+* **Autorisation gérée par l’entreprise** : ajout de la capacité pour les entreprises de simplifier l’autorisation du Serveur MCP à l’aide de l’authentification unique (SSO).
+* **Élicitation d’autorisation sécurisée** : permettre aux développeurs d’intégrer des parcours d’autorisation sécurisés pour les API en aval, en dehors de l’autorisation principale du Serveur MCP.
+
+<div id="validation">
+  ## Validation
+</div>
+
+Pour favoriser un écosystème de développement robuste, nous prévoyons d’investir dans :
+
+* **Implémentations de client de référence** : démonstrations des fonctionnalités du protocole au moyen d’applications d’IA de haute qualité
+* **Implémentation de serveur de référence** : présentation de modèles d’authentification et de pratiques exemplaires pour le déploiement à distance
+* **Suites de tests de conformité** : vérifications automatisées confirmant que les clients, serveurs et SDK mettent correctement en œuvre la spécification
+
+Ces outils aideront les développeurs à mettre en œuvre le Protocole de contexte de modèle (MCP) en toute confiance, tout en assurant un comportement cohérent dans l’écosystème.
+
+<div id="registry">
+  ## Registre
+</div>
+
+Pour que le MCP atteigne son plein potentiel, nous avons besoin de moyens simplifiés pour distribuer et découvrir des serveurs MCP.
+
+Nous prévoyons de développer un [**registre MCP**](https://github.com/orgs/modelcontextprotocol/discussions/159) qui permettra la découverte centralisée des serveurs et de leurs métadonnées. Ce registre servira principalement de couche d’API sur laquelle des places de marché tierces et des services de découverte pourront s’appuyer.
+
+<div id="multimodality">
+  ## Multimodalité
+</div>
+
+Prise en charge de l’ensemble des capacités d’IA dans le MCP, notamment :
+
+* **Modalités supplémentaires** : vidéo et autres types de médias
+* **[Diffusion en continu](https://github.com/modelcontextprotocol/specification/issues/117)** : messages multiparties, segmentés, et communication bidirectionnelle pour des expériences interactives
+
+<div id="get-involved">
+  ## Participez
+</div>
+
+Nous accueillons vos contributions à l’avenir du MCP ! Joignez-vous à nos [discussions GitHub](https://github.com/orgs/modelcontextprotocol/discussions) pour partager des idées, donner votre avis ou participer au processus de développement.

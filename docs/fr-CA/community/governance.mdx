@@ -1,0 +1,214 @@
+---
+title: Gouvernance et gérance
+description: Découvrez la structure de gouvernance du Protocole de contexte de modèle (MCP) et comment participer à la communauté
+---
+
+Le Protocole de contexte de modèle (MCP) suit un modèle de gouvernance formel afin d’assurer une prise de décision transparente et de favoriser la participation de la communauté. Ce document présente l’organisation du projet et la façon dont les décisions sont prises.
+
+<div id="technical-governance">
+  ## Gouvernance technique
+</div>
+
+Le projet MCP adopte une structure hiérarchique, semblable à Python, PyTorch et à d’autres projets open source :
+
+* Une communauté de **contributeurs** qui ouvrent des enjeux (issues), soumettent des demandes de tirage (pull requests) et contribuent au projet.
+* Un petit groupe de **mainteneurs** pilotent des composants au sein du projet MCP, comme les SDK, la documentation et d’autres.
+* Les contributeurs et les mainteneurs sont encadrés par des **mainteneurs principaux**, qui orientent la direction globale du projet.
+* Les mainteneurs principaux comptent deux **mainteneurs principaux en chef** qui sont les décideurs en dernier ressort.
+* Les mainteneurs, les mainteneurs principaux et les mainteneurs principaux en chef forment le **groupe de pilotage MCP**.
+
+On s’attend à ce que tous les mainteneurs adhèrent fortement à la philosophie de conception du MCP. L’adhésion au processus de gouvernance technique s’adresse aux individus, et non aux entreprises. Autrement dit, aucun siège n’est réservé à des entreprises spécifiques, et l’adhésion est associée à la personne plutôt qu’à l’entreprise qui l’emploie. Cela garantit que les mainteneurs agissent dans l’intérêt du protocole lui-même et de la communauté open source.
+
+<div id="channels">
+  ### Canaux
+</div>
+
+La gouvernance technique est assurée via un [serveur Discord](/fr-CA/community/communication#discord) commun à tous les **maintainers, core maintainers** et **lead maintainers**. Chaque groupe de maintainers peut choisir des canaux de communication supplémentaires, mais toutes les décisions et les discussions à l’appui doivent être consignées et rendues disponibles de façon transparente sur le serveur Discord.
+
+<div id="maintainers">
+  ### Responsables
+</div>
+
+Les responsables sont chargés de projets individuels ou de groupes de travail techniques au sein du projet MCP. Il s’agit généralement de dépôts indépendants, comme des SDK propres à un langage, mais cela peut aussi s’étendre à des sous-répertoires d’un dépôt, comme la documentation du MCP. Les responsables peuvent adopter leurs propres règles et procédures pour la prise de décision. Ils sont censés prendre des décisions de façon autonome pour leurs projets respectifs, mais peuvent demander l’arbitrage des responsables principaux ou leur soumettre des dossiers au besoin.
+
+Les responsables sont chargés de :
+
+* Entretenir une collaboration réfléchie et productive avec les contributeurs de la communauté,
+* Maintenir et améliorer leur domaine respectif du projet MCP,
+* Appuyer la documentation, les feuilles de route et d’autres volets connexes du projet MCP,
+* Présenter les idées de la communauté aux responsables principaux.
+
+Il est recommandé aux responsables de proposer d’autres responsables au besoin. Les responsables ne peuvent être nommés ou révoqués que par les responsables principaux ou les responsables principaux en chef, en tout temps et sans motif.
+
+Les responsables disposent d’un accès en écriture et/ou d’un accès d’administration à leurs dépôts respectifs.
+
+<div id="core-maintainers">
+  ### Mainteneurs principaux
+</div>
+
+Les mainteneurs principaux doivent avoir une compréhension approfondie du Protocole de contexte de modèle (MCP) et de sa spécification. Leurs responsabilités comprennent :
+
+* Concevoir, examiner et orienter l’évolution de la spécification du MCP, ainsi que toutes les autres parties du projet MCP, comme la documentation,
+* Formuler une vision cohérente à long terme pour le projet,
+* Assurer la médiation et résoudre les enjeux litigieux avec équité et transparence, en recherchant le consensus lorsque possible tout en prenant des décisions fermes au besoin,
+* Nommer ou destituer des mainteneurs,
+* Assurer la gérance du projet MCP dans l’intérêt supérieur de MCP.
+
+Les mainteneurs principaux, en tant que groupe, ont le pouvoir d’opposer leur veto à toute décision prise par des mainteneurs, par vote majoritaire. Les mainteneurs principaux ont le pouvoir de résoudre les différends comme ils l’estiment approprié. Les mainteneurs principaux devraient expliquer publiquement leur processus décisionnel. Le groupe principal est responsable d’adopter ses propres procédures de prise de décisions.
+
+Les mainteneurs principaux disposent généralement d’un accès en écriture et d’un accès administrateur à tous les dépôts du MCP, mais devraient utiliser le même mécanisme de contribution (habituellement des demandes de tirage) que les contributeurs externes. Des exceptions peuvent être faites pour des raisons de sécurité.
+
+<div id="lead-maintainers-bdfl">
+  ### Mainteneurs principaux (BDFL)
+</div>
+
+Le MCP compte deux mainteneurs principaux : Justin Spahr-Summers et David Soria Parra. Les mainteneurs principaux peuvent opposer leur veto à toute décision des mainteneurs du noyau ou des autres mainteneurs. Ce modèle est également couramment appelé Benevolent Dictator for Life (BDFL) dans la communauté open source. Les mainteneurs principaux doivent expliquer publiquement leur prise de décision et fournir des justifications claires pour leurs décisions. Les mainteneurs principaux font partie du groupe des mainteneurs du noyau.
+
+Les mainteneurs principaux sont responsables de confirmer ou de retirer les mainteneurs du noyau.
+
+Les mainteneurs principaux sont administrateurs de toute l’infrastructure du projet MCP lorsque c’est possible. Cela inclut, sans s’y limiter, tous les canaux de communication, les organisations GitHub et les dépôts.
+
+<div id="decision-process">
+  ### Processus décisionnel
+</div>
+
+Le groupe des responsables principaux se réunit toutes les deux semaines pour discuter et voter sur des propositions, ainsi que pour aborder tout autre sujet nécessaire. Le serveur Discord partagé peut être utilisé pour discuter et voter sur de plus petites propositions au besoin.
+
+Le responsable en chef, les responsables principaux et le groupe des responsables devraient tenter de se rencontrer en personne tous les trois à six mois.
+
+<div id="processes">
+  ## Processus
+</div>
+
+Les responsables principaux et les mainteneurs principaux sont responsables de tous les aspects du Protocole de contexte de modèle (MCP), y compris la documentation, les problèmes, les suggestions de contenu et toutes les autres parties relevant du [projet MCP](https://github.com/modelcontextprotocol). Les mainteneurs sont responsables de la documentation, des problèmes et des suggestions de contenu pour leur domaine du projet MCP, et sont encouragés à contribuer à l’entretien général des projets MCP. Les mainteneurs, les mainteneurs principaux et les responsables principaux devraient suivre le même processus de contribution que les contributeurs externes, plutôt que d’apporter des modifications directement aux dépôts. Cela permet de clarifier les intentions et d’offrir des occasions de discussion.
+
+<div id="projects-and-working-groups">
+  ### Projets et groupes de travail
+</div>
+
+Le projet MCP est organisé en deux grandes structures : des projets et des groupes de travail.
+
+Les projets sont des composants concrets gérés dans des dépôts dédiés. Ils comprennent la Spécification, le SDK TypeScript, le SDK Go, l’Inspector et d’autres artefacts d’implémentation.
+
+Les groupes de travail sont des espaces de collaboration où les parties intéressées discutent d’aspects précis de MCP sans gérer de dépôts de code. Ils incluent des groupes axés sur les protocoles de transport, l’implémentation du client et d’autres enjeux transversaux.
+
+<div id="governance-principles">
+  #### Principes de gouvernance
+</div>
+
+Tous les projets et groupes de travail sont autogérés tout en respectant ces principes fondamentaux :
+
+1. Processus clairs de contribution et de prise de décision
+2. Communication ouverte et décisions transparentes
+
+Les deux doivent :
+
+* Documenter leur processus de contribution
+* Maintenir une communication transparente
+* Prendre des décisions publiquement (les groupes de travail doivent publier des comptes rendus de réunion et des propositions)
+
+Les projets et groupes de travail sans processus spécifié utilisent par défaut :
+
+* Des demandes de tirage (pull requests) et des enjeux (issues) GitHub pour les contributions
+* Un canal public dans le [serveur Discord des contributeurs MCP](/fr-CA/community/communication#discord) officiel
+
+<div id="maintenance-responsibilities">
+  #### Responsabilités de maintenance
+</div>
+
+Les composants sans responsables attitrés (comme la documentation) relèvent des responsables principaux. Les contributions suivent les directives standard via des pull requests; les responsables effectuent les examens et sollicitent, au besoin, un examen par un responsable principal pour tout changement important.
+
+Les responsables principaux comme les responsables sont invités à améliorer toute partie du projet MCP, indépendamment des attributions formelles de maintenance.
+
+<div id="specification-project">
+  ### Projet de spécifications
+</div>
+
+<div id="specification-enhancement-proposal-sep">
+  #### Proposition d’amélioration de la spécification (SEP)
+</div>
+
+Les modifications proposées à la spécification doivent prendre la forme d’un document écrit, débutant par un résumé de la proposition, décrivant le **problème** visé, proposant une **solution**, des **solutions de rechange**, des **considérations, résultats** et des **risques**. Les [lignes directrices sur les SEP](/fr-CA/community/sep-guidelines) précisent la structure attendue des SEP. Les SEP doivent être créées sous forme de « issues » dans le [dépôt de la spécification](https://github.com/modelcontextprotocol/specification) et marquées des étiquettes `proposal, sep`.
+
+Toutes les propositions doivent avoir un **commanditaire** du groupe de pilotage MCP (maintainer, core maintainer ou lead core maintainer). Le commanditaire est responsable de s’assurer que la proposition est activement développée, qu’elle respecte les normes de qualité applicables et de la présenter et en discuter lors des réunions des core maintainers. Les groupes Maintainer et Core Maintainer devraient examiner à intervalles réguliers les propositions ouvertes sans commanditaire. Les propositions qui ne trouvent pas de commanditaire dans les six mois sont automatiquement rejetées.
+
+Une fois qu’elles ont un commanditaire, les propositions lui sont attribuées et étiquetées `draft`.
+
+<div id="communication">
+  ## Communication
+</div>
+
+<div id="core-maintainer-meetings">
+  ### Réunions des responsables principaux
+</div>
+
+Le groupe des responsables principaux se réunit toutes les deux semaines pour discuter des propositions et du projet. Les notes relatives aux propositions devraient être rendues publiques. Le groupe des responsables principaux s’efforcera de se rencontrer en personne tous les trois à six mois.
+
+<div id="public-chat">
+  ### Discussions publiques
+</div>
+
+Le projet MCP maintient un [serveur Discord public](/fr-CA/community/communication#discord) avec des discussions ouvertes pour des groupes d’intérêt. Le projet MCP peut également avoir des canaux privés pour certaines communications.
+
+<div id="nominating-confirming-and-removing-maintainers">
+  ## Nomination, confirmation et destitution des responsables
+</div>
+
+<div id="the-principles">
+  ### Les principes
+</div>
+
+* L’adhésion aux groupes de responsables de modules est accordée aux **personnes** sur la base du mérite, après qu’elles ont démontré une solide expertise dans leur domaine grâce à des contributions, des examens et des discussions, et qu’elles sont alignées sur l’orientation générale du MCP.
+* Pour faire partie du groupe des **responsables**, la personne doit démontrer un alignement fort et soutenu avec les principes généraux du MCP.
+* Aucune limite de mandat pour les responsables de modules ou les responsables principaux
+* Critères souples pour faire passer la maintenance d’un groupe de travail ou d’un sous-projet au statut « émérite » en cas d’inactivité prolongée. Chaque groupe de responsables peut définir la période d’inactivité appropriée à son domaine.
+* L’adhésion est individuelle, et non liée à une entreprise.
+
+<div id="nomination-and-removal">
+  ### Nomination et révocation
+</div>
+
+* Les responsables principaux sont chargés d’ajouter et de retirer des responsables. Ils tiendront compte de l’avis des responsables en place.
+* Les responsables en chef sont chargés d’ajouter et de retirer les responsables principaux.
+
+<div id="nomination-process">
+  #### Processus de nomination
+</div>
+
+Si un mainteneur (ou un mainteneur principal/chef) souhaite proposer une nomination à l’attention des mainteneurs principaux/chefs, il devrait suivre le processus suivant :
+
+1. Rassembler les éléments à l’appui de la nomination. Il s’agira généralement d’un historique de PR fusionnées dans les dépôts pour lesquels on envisage la prise en charge du rôle de mainteneur.
+2. Discuter entre mainteneurs du ou des groupes concernés afin de déterminer s’ils appuieraient l’approbation de la nomination.
+3. Envoyer un DM à un Community Moderator ou à un Core Maintainer pour créer un canal privé dans Discord, au format `nomination-{name}-{group}`. Ajouter tous les core maintainers, lead maintainers et co-maintainers du groupe concerné.
+4. Fournir le contexte concernant la personne proposée. Voir ci-dessous des suggestions sur ce qu’il convient d’inclure.
+5. Créer un sondage Discord et demander aux mainteneurs principaux/chefs de voter Oui/Non sur la nomination. Parvenir à un consensus est encouragé, mais non obligatoire.
+6. Après discussion et/ou vote des mainteneurs principaux/chefs, si la nomination est favorable, les membres pertinents ayant les permissions pour mettre à jour les rôles GitHub et Discord ajouteront la personne nommée aux groupes appropriés. Le proposant devrait annoncer la nouvelle prise de rôle de mainteneur dans le canal Discord concerné.
+7. Le canal Discord temporaire sera supprimé une semaine plus tard.
+
+Suggestions quant au type d’informations à partager avec les mainteneurs principaux lors de la nomination de quelqu’un :
+
+* Lien vers le profil GitHub, lien vers le profil LinkedIn, nom d’utilisateur Discord
+* Pour quel(s) groupe(s) vous proposez la personne au rôle de mainteneur
+* Si le ou les groupes conviennent que cette personne devrait être élevée au rôle de mainteneur
+* Description de ses contributions à ce jour (y compris des liens vers les contributions les plus importantes)
+* Description des contributions attendues à l’avenir (p. ex., sont‑ils enthousiastes à l’idée d’être mainteneur? Auront‑ils la capacité de le faire?)
+* Autre contexte à propos de la personne (p. ex., employeur actuel, motivations derrière l’implication dans le MCP)
+* Tout autre élément que vous jugez pertinent à considérer pour la nomination
+
+<div id="current-core-maintainers">
+  ## Principaux responsables actuels
+</div>
+
+* Inna Harper
+* Basil Hosmer
+* Paul Carleton
+* Nick Cooper
+* Nick Aldridge
+* Che Liu
+* Den Delimarsky
+
+<div id="current-maintainers-and-working-groups">
+  ## Mainteneurs actuels et groupes de travail
+</div>
+
+Consultez la [liste des mainteneurs](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/main/MAINTAINERS.md).

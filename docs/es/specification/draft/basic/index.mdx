@@ -1,0 +1,217 @@
+---
+title: Descripción general
+---
+
+<div id="enable-section-numbers" />
+
+<Info>**Revisión del protocolo**: borrador</Info>
+
+El Protocolo de Contexto de Modelo (MCP) consta de varios componentes clave que trabajan en conjunto:
+
+* **Protocolo base**: tipos de mensajes fundamentales de JSON-RPC
+* **Gestión del ciclo de vida**: inicialización de conexión, negociación de capacidades y
+  control de sesión
+* **Autorización**: marco de autenticación y autorización para transportes basados en HTTP
+* **Funciones del servidor**: Recursos, Indicaciones y Herramientas expuestos por los servidores
+* **Funciones del cliente**: Muestreo y listas de Raíces proporcionadas por los clientes
+* **Utilidades**: aspectos transversales como el registro y el autocompletado de argumentos
+
+Todas las implementaciones **DEBEN** admitir el protocolo base y los componentes de gestión del
+ciclo de vida. Otros componentes **PUEDEN** implementarse según las necesidades específicas de la
+aplicación.
+
+Estas capas del protocolo establecen una separación clara de responsabilidades a la vez que habilitan
+interacciones avanzadas entre clientes y servidores. El diseño modular permite que las implementaciones
+admitan exactamente las funciones que necesitan.
+
+<div id="messages">
+  ## Mensajes
+</div>
+
+Todos los mensajes entre Clientes MCP y Servidores MCP **DEBEN** seguir la especificación
+[JSON-RPC 2.0](https://www.jsonrpc.org/specification). El protocolo define
+estos tipos de mensajes:
+
+<div id="requests">
+  ### Solicitudes
+</div>
+
+Las solicitudes se envían del cliente al servidor o viceversa para iniciar una operación.
+
+```typescript
+{
+  jsonrpc: "2.0";
+  id: string | number;
+  method: string;
+  params?: {
+    [key: string]: unknown;
+  };
+}
+```
+
+* Las solicitudes **DEBEN** incluir un identificador de tipo cadena o entero.
+* A diferencia de JSON-RPC básico, el identificador **NO DEBE** ser `null`.
+* El identificador de la solicitud **NO DEBE** haberse utilizado previamente por quien la inició dentro de la misma sesión.
+
+<div id="responses">
+  ### Respuestas
+</div>
+
+Las respuestas se envían como contestación a solicitudes y contienen el resultado o el error de la operación.
+
+```typescript
+{
+  jsonrpc: "2.0";
+  id: string | number;
+  result?: {
+    [key: string]: unknown;
+  }
+  error?: {
+    code: number;
+    message: string;
+    data?: unknown;
+  }
+}
+```
+
+* Las respuestas **DEBEN** incluir el mismo ID que la solicitud a la que corresponden.
+* Las **respuestas** se clasifican además en **resultados satisfactorios** o
+  **errores**. Se **DEBE** establecer un `result` o un `error`. Una respuesta **NO DEBE**
+  establecer ambos.
+* Los resultados **PUEDEN** seguir cualquier estructura de objeto JSON, mientras que los errores **DEBEN** incluir, como mínimo, un
+  código de error y un mensaje.
+* Los códigos de error **DEBEN** ser enteros.
+
+<div id="notifications">
+  ### Notificaciones
+</div>
+
+Las notificaciones se envían del cliente al servidor o viceversa, como mensajes unidireccionales.
+El receptor **NO DEBE** enviar una respuesta.
+
+```typescript
+{
+  jsonrpc: "2.0";
+  method: string;
+  params?: {
+    [key: string]: unknown;
+  };
+}
+```
+
+* Las notificaciones **NO DEBEN** incluir un ID.
+
+<div id="auth">
+  ## Autenticación
+</div>
+
+MCP proporciona un marco de [Autorización](/es/specification/draft/basic/authorization) para usar con HTTP.
+Las implementaciones que utilicen un transporte basado en HTTP **DEBERÍAN** ajustarse a esta especificación,
+mientras que las implementaciones que utilicen el transporte STDIO **NO DEBERÍAN** seguir esta especificación
+y, en su lugar, obtener las credenciales del entorno.
+
+Además, clientes y servidores **PUEDEN** negociar sus propias estrategias personalizadas de autenticación y
+autorización.
+
+Para más debates y contribuciones a la evolución de los mecanismos de autenticación de MCP, únete
+a la conversación en
+[GitHub Discussions](https://github.com/modelcontextprotocol/specification/discussions)
+para ayudar a definir el futuro del protocolo.
+
+<div id="schema">
+  ## Esquema
+</div>
+
+La especificación completa del protocolo está definida como un
+[esquema de TypeScript](https://github.com/modelcontextprotocol/specification/blob/main/schema/draft/schema.ts).
+Esta es la fuente oficial para todos los mensajes y estructuras del protocolo.
+
+También hay un
+[JSON Schema](https://github.com/modelcontextprotocol/specification/blob/main/schema/draft/schema.json),
+que se genera automáticamente a partir de la fuente oficial en TypeScript, para su uso con
+diversas herramientas automatizadas.
+
+<div id="general-fields">
+  ### Campos generales
+</div>
+
+<div id="_meta">
+  #### `_meta`
+</div>
+
+La propiedad/parámetro `_meta` está reservada por MCP para permitir que los clientes y los servidores
+adjunten metadatos adicionales a sus interacciones.
+
+Ciertos nombres de clave están reservados por MCP para metadatos a nivel de protocolo, como se especifica a continuación;
+las implementaciones NO DEBEN hacer suposiciones sobre los valores en estas claves.
+
+Además, las definiciones en el [schema](https://github.com/modelcontextprotocol/specification/blob/main/schema/draft/schema.ts)
+pueden reservar nombres concretos para metadatos específicos de un propósito, según lo declarado en esas definiciones.
+
+Nombre de clave: los nombres de clave válidos de `_meta` constan de dos segmentos: un **prefijo** opcional y un **nombre**.
+
+Prefijo:
+
+* Si se especifica, DEBE ser una serie de etiquetas separadas por puntos (`.`), seguida de una barra (`/`).
+  * Las etiquetas DEBEN comenzar con una letra y terminar con una letra o un dígito; los caracteres intermedios pueden ser letras, dígitos o guiones (`-`).
+* Cualquier prefijo que comience con cero o más etiquetas válidas, seguido de `modelcontextprotocol` o `mcp`, y luego cualquier etiqueta válida,
+  está reservado para uso de MCP.
+  * Por ejemplo: `modelcontextprotocol.io/`, `mcp.dev/`, `api.modelcontextprotocol.org/` y `tools.mcp.com/` están reservados.
+
+Nombre:
+
+* A menos que esté vacío, DEBE comenzar y terminar con un carácter alfanumérico (`[a-z0-9A-Z]`).
+* PUEDE contener guiones (`-`), guiones bajos (`_`), puntos (`.`) y caracteres alfanuméricos en medio.
+
+<div id="icons">
+  #### `icons`
+</div>
+
+La propiedad `icons` proporciona una forma estandarizada para que los servidores expongan identificadores visuales de sus Recursos, Herramientas, Indicaciones e implementaciones. Los iconos mejoran las interfaces de usuario al aportar contexto visual y facilitar el descubrimiento de la funcionalidad disponible.
+
+Los iconos se representan como un array de objetos `Icon`, donde cada icono incluye:
+
+* `src`: Un URI que apunta al recurso del icono (obligatorio). Puede ser:
+  * Una URL HTTP/HTTPS que apunte a un archivo de imagen
+  * Un data URI con datos de imagen codificados en base64
+* `mimeType`: Tipo MIME opcional si el tipo del servidor falta o es genérico
+* `sizes`: Especificación de tamaño opcional (p. ej., &quot;48x48&quot;; &quot;any&quot; para formatos escalables como SVG; o &quot;48x48 96x96&quot; para múltiples tamaños)
+
+**Compatibilidad requerida de tipos MIME:**
+
+Los clientes que admitan el renderizado de iconos **DEBEN** admitir al menos los siguientes tipos MIME:
+
+* `image/png` - Imágenes PNG (seguras, compatibilidad universal)
+* `image/jpeg` (y `image/jpg`) - Imágenes JPEG (seguras, compatibilidad universal)
+
+Los clientes que admitan el renderizado de iconos **DEBERÍAN** también admitir:
+
+* `image/svg+xml` - Imágenes SVG (escalables, pero requieren precauciones de seguridad como se indica a continuación)
+* `image/webp` - Imágenes WebP (formato moderno y eficiente)
+
+**Consideraciones de seguridad:**
+
+Quienes consuman metadatos de iconos **DEBEN** tomar las precauciones de seguridad adecuadas al manejarlos para evitar compromisos:
+
+* Trate los metadatos y los bytes de los iconos como entradas no confiables y protéjase frente a riesgos de red, privacidad y análisis.
+* Asegúrese de que el URI del icono sea HTTPS o un URI `data:`. Los clientes **DEBEN** rechazar URIs de iconos que usen esquemas y redirecciones inseguras, como `javascript:`, `file:`, `ftp:`, `ws:` o esquemas de URI de aplicaciones locales.
+  * No permita cambios de esquema ni redirecciones a hosts con orígenes diferentes.
+* Sea resistente frente a ataques de agotamiento de recursos por imágenes demasiado grandes, dimensiones excesivas o demasiados fotogramas (p. ej., en GIF).
+  * Los consumidores **PUEDEN** establecer límites para el tamaño de la imagen y del contenido.
+* Obtenga los iconos sin credenciales. No envíe cookies, encabezados `Authorization` ni credenciales del cliente.
+* Verifique que los URIs de los iconos sean del mismo origen que el servidor. Esto reduce el riesgo de exponer datos o información de seguimiento a terceros.
+* Extreme la precaución al obtener y renderizar iconos, ya que la carga útil **PUEDE** contener contenido ejecutable (p. ej., SVG con [JavaScript incrustado](https://www.w3.org/TR/SVG11/script.html) o [capacidades ampliadas](https://www.w3.org/TR/SVG11/extend.html)).
+  * Los consumidores **PUEDEN** optar por no permitir tipos de archivo específicos o, de lo contrario, sanear los archivos de iconos antes de renderizarlos.
+* Valide los tipos MIME y el contenido de los archivos antes de renderizar. Considere la información del tipo MIME como orientativa. Detecte el tipo de contenido mediante magic bytes; rechace si hay discrepancia o tipos desconocidos.
+  * Mantenga una lista de permitidos estricta de tipos de imagen.
+
+**Uso:**
+
+Los iconos se pueden adjuntar a:
+
+* `Implementation`: Identificador visual de la implementación del Servidor MCP/Cliente MCP
+* `Tool`: Representación visual de la funcionalidad de la herramienta
+* `Prompt`: Icono para mostrar junto a las plantillas de indicaciones
+* `Resource`: Indicador visual para distintos tipos de recursos
+
+Se pueden proporcionar múltiples iconos para admitir distintos contextos de visualización y resoluciones. Los clientes deben seleccionar el icono más adecuado según los requisitos de su interfaz de usuario.

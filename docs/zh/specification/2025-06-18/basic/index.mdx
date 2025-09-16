@@ -1,0 +1,154 @@
+---
+title: 概览
+---
+
+<div id="enable-section-numbers" />
+
+<Info>**协议修订**：2025-06-18</Info>
+
+模型上下文协议（MCP）由多个关键组件构成，并协同运作：
+
+* **基础协议**：核心 JSON-RPC 消息类型
+* **生命周期管理**：连接初始化、能力协商与会话控制
+* **授权**：面向可流式 HTTP 等传输方式的身份验证与授权框架
+* **服务器功能**：MCP 服务器暴露的资源、提示模板与工具
+* **客户端功能**：MCP 客户端提供的采样与根路径列表
+* **通用实用项**：日志记录、参数补全等跨领域能力
+
+所有实现**必须**支持基础协议和生命周期管理组件。其他组件**可以**根据具体应用需求选择性实现。
+
+这些协议层既实现了清晰的关注点分离，又促成了客户端与服务器之间的丰富交互。模块化设计使实现能够精准支持所需功能。
+
+<div id="messages">
+  ## 消息
+</div>
+
+MCP 客户端与服务器之间的所有消息**必须**遵循
+[JSON-RPC 2.0](https://www.jsonrpc.org/specification) 规范。该协议定义了以下几类消息：
+
+<div id="requests">
+  ### 请求
+</div>
+
+请求由客户端发送到服务器，或反之，用于启动某个操作。
+
+```typescript
+{
+  jsonrpc: "2.0";
+  id: string | number;
+  method: string;
+  params?: {
+    [key: string]: unknown;
+  };
+}
+```
+
+* 请求**必须**包含字符串或整数类型的 ID。
+* 与基础 JSON-RPC 不同，ID **不得**为 `null`。
+* 在同一会话中，请求方**不得**重复使用该请求 ID。
+
+<div id="responses">
+  ### 响应
+</div>
+
+响应作为对请求的回复发送，包含操作的结果或错误。
+
+```typescript
+{
+  jsonrpc: "2.0";
+  id: string | number;
+  result?: {
+    [key: string]: unknown;
+  }
+  error?: {
+    code: number;
+    message: string;
+    data?: unknown;
+  }
+}
+```
+
+* 响应**必须**包含与其对应请求相同的 ID。
+* **响应**进一步分为**成功结果**或**错误**两类。`result` 或 `error` 必须设置其一，响应**不得**同时设置二者。
+* 结果**可以**采用任意 JSON 对象结构，而错误**必须**至少包含错误代码和消息。
+* 错误代码**必须**为整数。
+
+<div id="notifications">
+  ### 通知
+</div>
+
+通知是从客户端发送到服务器，或反之亦然的单向消息。
+接收方**不得**发送响应。
+
+```typescript
+{
+  jsonrpc: "2.0";
+  method: string;
+  params?: {
+    [key: string]: unknown;
+  };
+}
+```
+
+* 通知**不得**包含 ID。
+
+<div id="auth">
+  ## 认证
+</div>
+
+MCP 提供了一个用于 HTTP 的[授权](/zh/specification/2025-06-18/basic/authorization)框架。
+采用基于 HTTP 的传输方式的实现**应**遵循该规范，
+而采用 STDIO 传输的实现**不应**遵循该规范，
+而应从环境中获取凭据。
+
+此外，客户端和服务器**可以**协商各自的自定义身份验证与
+授权策略。
+
+如需进一步讨论并为 MCP 认证机制的演进做出贡献，欢迎加入
+我们的
+[GitHub Discussions](https://github.com/modelcontextprotocol/specification/discussions)
+共同塑造该协议的未来！
+
+<div id="schema">
+  ## 架构
+</div>
+
+该协议的完整规范定义为
+[TypeScript 架构](https://github.com/modelcontextprotocol/specification/blob/main/schema/2025-06-18/schema.ts)。
+这是所有协议消息和结构的权威来源。
+
+另外还有一个
+[JSON Schema](https://github.com/modelcontextprotocol/specification/blob/main/schema/2025-06-18/schema.json)，
+它从上述 TypeScript 权威来源自动生成，供各种自动化工具使用。
+
+<div id="general-fields">
+  ### 常用字段
+</div>
+
+<div id="_meta">
+  #### `_meta`
+</div>
+
+`_meta` 属性/参数由 MCP 保留，用于让客户端和服务器
+在交互中附加额外的元数据。
+
+某些键名由 MCP 保留用于协议层面的元数据，如下所述；
+实现不得对这些键的取值作出任何假设。
+
+此外，[schema](https://github.com/modelcontextprotocol/specification/blob/main/schema/2025-06-18/schema.ts) 中的定义
+可能会为特定用途的元数据保留特定名称，并在这些定义中加以声明。
+
+**键名格式：** 有效的 `_meta` 键名由两部分组成：可选的**前缀**和**名称**。
+
+**前缀：**
+
+* 如有指定，必须是由点（`.`）分隔的一系列标签，后跟一个斜杠（`/`）。
+  * 标签必须以字母开头，并以字母或数字结尾；中间字符可以是字母、数字或连字符（`-`）。
+* 任何以前零个或多个有效标签开始，随后是 `modelcontextprotocol` 或 `mcp`，再随后任意有效标签的前缀，
+  均为 MCP 保留。
+  * 例如：`modelcontextprotocol.io/`、`mcp.dev/`、`api.modelcontextprotocol.org/` 和 `tools.mcp.com/` 均为保留。
+
+**名称：**
+
+* 非空时，必须以字母数字字符（`[a-z0-9A-Z]`）开头并以其结尾。
+* 中间可以包含连字符（`-`）、下划线（`_`）、点（`.`）以及字母数字字符。

@@ -1,0 +1,153 @@
+---
+title: Finalización
+---
+
+<Info>**Revisión del protocolo**: 2024-11-05</Info>
+
+El Protocolo de Contexto de Modelo (MCP) ofrece una forma estandarizada para que los servidores proporcionen
+sugerencias de autocompletado de argumentos para Indicaciones y URIs de Recursos. Esto habilita experiencias
+ricas, similares a las de un IDE, donde los usuarios reciben sugerencias contextuales mientras introducen valores
+de argumentos.
+
+<div id="user-interaction-model">
+  ## Modelo de interacción con el usuario
+</div>
+
+La completación en MCP está diseñada para admitir experiencias interactivas similares a la autocompletación de código en un IDE.
+
+Por ejemplo, las aplicaciones pueden mostrar sugerencias de completado en un menú desplegable o emergente mientras los usuarios escriben, con la posibilidad de filtrar y seleccionar entre las opciones disponibles.
+
+No obstante, las implementaciones pueden exponer la completación mediante cualquier patrón de interfaz que se ajuste a sus necesidades: el protocolo en sí no impone ningún modelo específico de interacción con el usuario.
+
+<div id="protocol-messages">
+  ## Mensajes del protocolo
+</div>
+
+<div id="requesting-completions">
+  ### Solicitar completions
+</div>
+
+Para obtener sugerencias de completion, los clientes envían una solicitud `completion/complete` especificando qué se está completando mediante un tipo de referencia:
+
+**Solicitud:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "completion/complete",
+  "params": {
+    "ref": {
+      "type": "ref/prompt",
+      "name": "code_review"
+    },
+    "argument": {
+      "name": "language",
+      "value": "py"
+    }
+  }
+}
+```
+
+**Respuesta:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "completion": {
+      "values": ["python", "pytorch", "pyside"],
+      "total": 10,
+      "hasMore": true
+    }
+  }
+}
+```
+
+<div id="reference-types">
+  ### Tipos de referencia
+</div>
+
+El protocolo admite dos tipos de referencias de finalización:
+
+| Tipo           | Descripción                              | Ejemplo                                             |
+| -------------- | ---------------------------------------- | --------------------------------------------------- |
+| `ref/prompt`   | Referencia una indicación por nombre     | `{"type": "ref/prompt", "name": "code_review"}`     |
+| `ref/resource` | Referencia un URI de recurso             | `{"type": "ref/resource", "uri": "file:///{path}"}` |
+
+<div id="completion-results">
+  ### Resultados de completado
+</div>
+
+Los servidores devuelven una lista de valores de completado ordenados por relevancia, con:
+
+- Hasta 100 elementos por respuesta
+- Número total opcional de coincidencias disponibles
+- Valor booleano que indica si existen resultados adicionales
+
+<div id="message-flow">
+  ## Flujo de mensajes
+</div>
+
+```mermaid
+sequenceDiagram
+    participant Cliente
+    participant Servidor
+
+    Note over Cliente: El usuario escribe un argumento
+    Cliente->>Servidor: completion/complete
+    Servidor-->>Cliente: Sugerencias de autocompletado
+
+    Note over Cliente: El usuario sigue escribiendo
+    Cliente->>Servidor: completion/complete
+    Servidor-->>Cliente: Sugerencias refinadas
+```
+
+<div id="data-types">
+  ## Tipos de datos
+</div>
+
+<div id="completerequest">
+  ### CompleteRequest
+</div>
+
+- `ref`: Una `PromptReference` o `ResourceReference`
+- `argument`: Objeto que contiene:
+  - `name`: Nombre del argumento
+  - `value`: Valor actual
+
+<div id="completeresult">
+  ### CompleteResult
+</div>
+
+- `completion`: Objeto que contiene:
+  - `values`: Lista de sugerencias (máx. 100)
+  - `total`: Total opcional de coincidencias
+  - `hasMore`: Indicador de que hay más resultados
+
+<div id="implementation-considerations">
+  ## Consideraciones de implementación
+</div>
+
+1. Los servidores **DEBERÍAN**:
+   - Devolver sugerencias ordenadas por relevancia
+   - Implementar coincidencia difusa cuando corresponda
+   - Limitar la frecuencia de las solicitudes de autocompletado
+   - Validar todas las entradas
+
+2. Los clientes **DEBERÍAN**:
+   - Desacoplar (debounce) las solicitudes rápidas de autocompletado
+   - Almacenar en caché los resultados de autocompletado cuando corresponda
+   - Manejar con soltura resultados ausentes o parciales
+
+<div id="security">
+  ## Seguridad
+</div>
+
+Las implementaciones **DEBEN**:
+
+- Validar todas las entradas de completado
+- Implementar límites de tasa adecuados
+- Controlar el acceso a sugerencias sensibles
+- Prevenir la divulgación de información basada en completados

@@ -1,0 +1,171 @@
+---
+title: 架构
+---
+
+<div id="enable-section-numbers" />
+
+模型上下文协议（MCP）采用客户端-主机-服务器架构，每个 MCP 主机都可以运行多个 MCP 客户端实例。该架构使用户能够在各类应用中集成 AI 能力，同时保持清晰的安全边界并实现关注点隔离。基于 JSON-RPC 2.0，MCP 提供一种有状态的会话协议，聚焦于客户端与服务器之间的上下文交换与采样协调。
+
+<div id="core-components">
+  ## 核心组件
+</div>
+
+```mermaid
+graph LR
+    subgraph "应用主机进程"
+        H[主机]
+        C1[客户端 1]
+        C2[客户端 2]
+        C3[客户端 3]
+        H --> C1
+        H --> C2
+        H --> C3
+    end
+
+    subgraph "本地机器"
+        S1[服务器 1<br>文件与 Git]
+        S2[服务器 2<br>数据库]
+        R1[("本地<br>资源 A")]
+        R2[("本地<br>资源 B")]
+
+        C1 --> S1
+        C2 --> S2
+        S1 <--> R1
+        S2 <--> R2
+    end
+
+    subgraph "互联网"
+        S3[服务器 3<br>外部 API]
+        R3[("远程<br>资源 C")]
+
+        C3 --> S3
+        S3 <--> R3
+    end
+```
+
+<div id="host">
+  ### 主机
+</div>
+
+主机进程充当容器与协调者：
+
+* 创建并管理多个客户端实例
+* 管控客户端的连接权限与生命周期
+* 执行安全策略与同意要求
+* 处理用户授权决策
+* 协调 AI/LLM 集成与采样
+* 在多个客户端间管理上下文聚合
+
+<div id="clients">
+  ### 客户端
+</div>
+
+每个客户端由主机创建，并维护与服务器的独立连接：
+
+* 为每个服务器建立一个有状态会话
+* 处理协议协商与能力交换
+* 双向路由协议消息
+* 管理订阅与通知
+* 在服务器之间保持安全边界
+
+主机应用会创建并管理多个客户端，每个客户端与特定服务器保持 1:1 的对应关系。
+
+<div id="servers">
+  ### 服务器
+</div>
+
+服务器提供专用的上下文与能力：
+
+* 通过 MCP 原语公开资源、工具和提示模板
+* 独立运行，职责聚焦
+* 可通过客户端接口请求采样
+* 必须遵循安全约束
+* 可作为本地进程或远程服务运行
+
+<div id="design-principles">
+  ## 设计原则
+</div>
+
+MCP 建立在若干关键设计原则之上，这些原则指导其架构与实现：
+
+1. **服务器应当非常易于构建**
+   * 主机应用负责复杂的编排工作
+   * 服务器聚焦于具体且明确定义的能力
+   * 简洁的接口将实现开销降至最低
+   * 清晰的职责分离带来可维护的代码
+
+2. **服务器应当具备高度可组合性**
+   * 每台服务器在隔离环境中提供聚焦的功能
+   * 多台服务器可以无缝组合
+   * 共享协议实现互操作性
+   * 模块化设计支持可扩展
+
+3. **服务器不应读取完整对话，也不应“窥视”其他服务器**
+   * 服务器仅接收必要的上下文信息
+   * 完整的对话历史保留在主机端
+   * 每个服务器连接保持隔离
+   * 跨服务器交互由主机控制
+   * 主机进程强制执行安全边界
+
+4. **功能可在服务器与客户端上逐步演进**
+   * 核心协议仅提供最小必需功能
+   * 额外能力可按需协商
+   * 服务器与客户端可独立演进
+   * 协议面向未来扩展而设计
+   * 保持向后兼容性
+
+<div id="capability-negotiation">
+  ## 能力协商
+</div>
+
+模型上下文协议（MCP）采用基于能力的协商机制，客户端和服务器会在初始化时明确声明其支持的功能。已声明的能力决定了会话期间可用的协议特性与原语。
+
+* 服务器声明诸如资源订阅、工具支持和提示模板等能力
+* 客户端声明诸如采样支持和通知处理等能力
+* 会话全程双方都必须遵守已声明的能力
+* 可通过协议扩展协商追加能力
+
+```mermaid
+sequenceDiagram
+    participant Host
+    participant Client
+    participant Server
+
+    Host->>+Client: Initialize client
+    Client->>+Server: Initialize session with capabilities
+    Server-->>Client: Respond with supported capabilities
+
+    Note over Host,Server: Active Session with Negotiated Features
+
+    loop Client Requests
+        Host->>Client: User- or model-initiated action
+        Client->>Server: Request (tools/resources)
+        Server-->>Client: Response
+        Client-->>Host: Update UI or respond to model
+    end
+
+    loop Server Requests
+        Server->>Client: Request (sampling)
+        Client->>Host: Forward to AI
+        Host-->>Client: AI response
+        Client-->>Server: Response
+    end
+
+    loop Notifications
+        Server--)Client: Resource updates
+        Client--)Server: Status changes
+    end
+
+    Host->>Client: Terminate
+    Client->>-Server: End session
+    deactivate Server
+```
+
+每项能力都会在会话期间解锁对应的协议功能。例如：
+
+* 已实现的[服务器功能](/zh/specification/2025-06-18/server)必须在服务器声明的能力中予以标明
+* 发送资源订阅通知要求服务器声明订阅支持
+* 调用工具要求服务器声明工具能力
+* [采样](/zh/specification/2025-06-18/client)要求客户端在其能力中声明支持
+
+这种能力协商确保在保持协议可扩展性的同时，客户端与服务器对受支持的功能有清晰的一致理解。

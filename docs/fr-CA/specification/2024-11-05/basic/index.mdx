@@ -1,0 +1,75 @@
+---
+title: Aperçu
+---
+
+<Info>**Révision du protocole** : 2024-11-05</Info>
+
+Tous les messages entre les Clients MCP et les Serveurs MCP **DOIVENT** respecter la
+spécification [JSON-RPC 2.0](https://www.jsonrpc.org/specification). Le protocole définit
+trois types fondamentaux de messages :
+
+| Type            | Description                                   | Exigences                                  |
+| --------------- | --------------------------------------------- | ------------------------------------------ |
+| `Requests`      | Messages envoyés pour initier une opération   | Doivent inclure un identifiant unique et le nom de la méthode |
+| `Responses`     | Messages envoyés en réponse aux requêtes      | Doivent inclure le même identifiant que la requête |
+| `Notifications` | Messages unidirectionnels sans réponse attendue | Ne doivent pas inclure d’identifiant        |
+
+Les **Responses** sont ensuite subdivisées en **résultats réussis** ou **erreurs**.
+Les résultats peuvent suivre n’importe quelle structure d’objet JSON, tandis que les erreurs doivent inclure au minimum un code d’erreur et un message.
+
+<div id="protocol-layers">
+  ## Couches du protocole
+</div>
+
+Le Protocole de contexte de modèle (MCP) comprend plusieurs composantes clés qui fonctionnent de concert :
+
+* **Protocole de base** : Types de messages JSON-RPC fondamentaux
+* **Gestion du cycle de vie** : Initialisation de la connexion, négociation des capacités et
+  contrôle de la session
+* **Fonctionnalités du serveur** : Ressources, invites et outils exposés par les serveurs
+* **Fonctionnalités du client** : Échantillonnage et listes de répertoires racines fournies par les clients
+* **Utilitaires** : Aspects transversaux comme la journalisation et l’autocomplétion des arguments
+
+Toutes les implémentations **DOIVENT** prendre en charge le protocole de base et les composantes de gestion du cycle de vie. Les autres composantes **PEUVENT** être implémentées selon les besoins spécifiques de l’application.
+
+Ces couches de protocole établissent une séparation claire des responsabilités tout en permettant des interactions riches entre clients et serveurs. La conception modulaire permet aux implémentations de prendre en charge exactement les fonctionnalités nécessaires.
+
+Consultez les pages suivantes pour plus de détails sur les différentes composantes :
+
+<CardGroup cols={3}>
+  <Card title="Cycle de vie" icon="arrows-rotate" href="/fr-CA/specification/2024-11-05/basic/lifecycle" />
+
+  <Card title="Ressources" icon="file-lines" href="/fr-CA/specification/2024-11-05/server/resources" />
+
+  <Card title="Invites" icon="message" href="/fr-CA/specification/2024-11-05/server/prompts" />
+
+  <Card title="Outils" icon="wrench" href="/fr-CA/specification/2024-11-05/server/tools" />
+
+  <Card title="Journalisation" icon="rectangle-list" href="/fr-CA/specification/2024-11-05/server/utilities/logging" />
+
+  <Card title="Échantillonnage" icon="code" href="/fr-CA/specification/2024-11-05/client/sampling" />
+</CardGroup>
+
+<div id="auth">
+  ## Auth
+</div>
+
+L’authentification et l’autorisation ne font pas partie de la spécification MCP de base pour le moment,
+mais nous envisageons des moyens de les intégrer à l’avenir. Joignez-vous à nous sur
+[GitHub Discussions](https://github.com/modelcontextprotocol/specification/discussions)
+pour contribuer à façonner l’avenir du protocole!
+
+Les Clients MCP et les Serveurs MCP **PEUVENT** négocier leurs propres stratégies d’authentification et d’autorisation.
+
+<div id="schema">
+  ## Schéma
+</div>
+
+La spécification complète du protocole est définie par un
+[schéma TypeScript](http://github.com/modelcontextprotocol/specification/tree/main/schema/2024-11-05/schema.ts).
+C’est la référence faisant autorité pour tous les messages et structures du protocole.
+
+Il existe aussi un
+[schéma JSON](http://github.com/modelcontextprotocol/specification/tree/main/schema/2024-11-05/schema.json),
+généré automatiquement à partir de la référence TypeScript, destiné à être utilisé avec
+différents outils d’automatisation.

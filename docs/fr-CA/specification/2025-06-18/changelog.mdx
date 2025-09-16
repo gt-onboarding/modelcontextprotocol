@@ -1,0 +1,51 @@
+---
+title: Principales modifications
+---
+
+<div id="enable-section-numbers" />
+
+Ce document présente les modifications apportées à la spécification du Protocole de contexte de modèle (MCP) depuis
+la version précédente, [2025-03-26](/fr-CA/specification/2025-03-26).
+
+<div id="major-changes">
+  ## Changements majeurs
+</div>
+
+1. Retirer la prise en charge du **[traitement par lots](https://www.jsonrpc.org/specification#batch) JSON-RPC**
+   (PR [#416](https://github.com/modelcontextprotocol/specification/pull/416))
+2. Ajouter la prise en charge de la [sortie d’outil structurée](/fr-CA/specification/2025-06-18/server/tools#structured-content)
+   (PR [#371](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/371))
+3. Classer les serveurs MCP comme [serveurs de ressources OAuth](/fr-CA/specification/2025-06-18/basic/authorization#authorization-server-discovery),
+   en ajoutant des métadonnées de ressources protégées pour découvrir le serveur d’autorisation correspondant.
+   (PR [#338](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/338))
+4. Exiger que les clients MCP implémentent les Resource Indicators, comme décrit dans la [RFC 8707](https://www.rfc-editor.org/rfc/rfc8707.html), afin d’empêcher
+   les serveurs malveillants d’obtenir des jetons d’accès.
+   (PR [#734](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/734))
+5. Préciser les [considérations de sécurité](/fr-CA/specification/2025-06-18/basic/authorization#security-considerations) et les pratiques exemplaires
+   dans la spécification d’autorisation, ainsi que dans une nouvelle [page des pratiques exemplaires de sécurité](/fr-CA/specification/2025-06-18/basic/security_best_practices).
+6. Ajouter la prise en charge de l’**[élicitation](/fr-CA/specification/2025-06-18/client/elicitation)**, permettant aux serveurs de demander des
+   informations supplémentaires aux utilisateurs pendant les interactions.
+   (PR [#382](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/382))
+7. Ajouter la prise en charge des **[liens de ressources](/fr-CA/specification/2025-06-18/server/tools#resource-links)** dans
+   les résultats d’appels d’outils. (PR [#603](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/603))
+8. Exiger que la [version de protocole négociée soit spécifiée](/fr-CA/specification/2025-06-18/basic/transports#protocol-version-header)
+   via l’en-tête « MCP-Protocol-Version » dans les requêtes subséquentes lors de l’utilisation de HTTP (PR [#548](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/548)).
+9. Remplacer « SHOULD » par « MUST » dans [Lifecycle Operation](/fr-CA/specification/2025-06-18/basic/lifecycle#operation)
+
+<div id="other-schema-changes">
+  ## Autres modifications du schéma
+</div>
+
+1. Ajouter le champ `_meta` à d’autres types d’interface (PR [#710](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/710)),
+   et préciser [la manière appropriée de l’utiliser](/fr-CA/specification/2025-06-18/basic#meta).
+2. Ajouter le champ `context` à `CompletionRequest`, permettant aux requêtes d’achèvement d’inclure
+   des variables déjà résolues (PR [#598](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/598)).
+3. Ajouter le champ `title` pour des noms d’affichage conviviaux, afin que `name` puisse être utilisé comme identifiant
+   destiné aux programmes (PR [#663](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/663))
+
+<div id="full-changelog">
+  ## Journal complet des modifications
+</div>
+
+Pour consulter la liste complète de toutes les modifications depuis la dernière révision du protocole,
+[voir sur GitHub](https://github.com/modelcontextprotocol/specification/compare/2025-03-26...2025-06-18).

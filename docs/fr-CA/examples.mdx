@@ -1,0 +1,145 @@
+---
+title: Serveurs d’exemples
+description: "Une liste de serveurs et d’implémentations d’exemples"
+---
+
+Cette page présente divers serveurs Model Context Protocol (MCP) qui démontrent les capacités et la polyvalence du protocole. Ces serveurs permettent aux grands modèles de langage (LLM) d’accéder de manière sécuritaire aux Outils et aux sources de données.
+
+<div id="reference-implementations">
+  ## Implémentations de référence
+</div>
+
+Ces serveurs de référence officiels présentent les fonctionnalités MCP essentielles et l’utilisation du SDK :
+
+<div id="current-reference-servers">
+  ### Serveurs de référence actuels
+</div>
+
+- **[Everything](https://github.com/modelcontextprotocol/servers/tree/main/src/everything)** - Serveur de référence/de test avec des invites, des ressources et des outils
+- **[Fetch](https://github.com/modelcontextprotocol/servers/tree/main/src/fetch)** - Récupération et conversion de contenu web pour une utilisation efficace des LLM
+- **[Filesystem](https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem)** - Opérations sur les fichiers sécurisées avec des contrôles d’accès configurables
+- **[Git](https://github.com/modelcontextprotocol/servers/tree/main/src/git)** - Outils pour lire, rechercher et manipuler des dépôts Git
+- **[Memory](https://github.com/modelcontextprotocol/servers/tree/main/src/memory)** - Système de mémoire persistante basé sur un graphe de connaissances
+- **[Sequential Thinking](https://github.com/modelcontextprotocol/servers/tree/main/src/sequentialthinking)** - Résolution de problèmes dynamique et réflexive par séquences de réflexion
+- **[Time](https://github.com/modelcontextprotocol/servers/tree/main/src/time)** - Conversion de l’heure et des fuseaux horaires
+
+<div id="archived-servers-historical-reference">
+  ### Serveurs archivés (référence historique)
+</div>
+
+⚠️ **Remarque** : Les serveurs suivants ont été déplacés vers le dépôt [servers-archived](https://github.com/modelcontextprotocol/servers-archived) et ne sont plus maintenus activement. Ils sont fournis uniquement à titre de référence historique.
+
+<div id="data-and-file-systems">
+  #### Systèmes de données et de fichiers
+</div>
+
+- **[PostgreSQL](https://github.com/modelcontextprotocol/servers-archived/tree/main/src/postgres)** - Accès en lecture seule à la base de données avec inspection du schéma
+- **[SQLite](https://github.com/modelcontextprotocol/servers-archived/tree/main/src/sqlite)** - Interaction avec la base de données et fonctionnalités d’intelligence d’affaires
+- **[Google Drive](https://github.com/modelcontextprotocol/servers-archived/tree/main/src/gdrive)** - Accès aux fichiers et fonctions de recherche pour Google Drive
+
+<div id="development-tools">
+  #### Outils de développement
+</div>
+
+- **[Git](https://github.com/modelcontextprotocol/servers-archived/tree/main/src/git)** - Outils pour lire, rechercher et manipuler des dépôts Git
+- **[GitHub](https://github.com/modelcontextprotocol/servers-archived/tree/main/src/github)** - Gestion des dépôts, opérations sur les fichiers et intégration à l’API GitHub
+- **[GitLab](https://github.com/modelcontextprotocol/servers-archived/tree/main/src/gitlab)** - Intégration à l’API GitLab pour la gestion de projets
+- **[Sentry](https://github.com/modelcontextprotocol/servers-archived/tree/main/src/sentry)** - Récupération et analyse des problèmes depuis Sentry.io
+
+<div id="web-and-browser-automation">
+  #### Automatisation du Web et des navigateurs
+</div>
+
+- **[Brave Search](https://github.com/modelcontextprotocol/servers-archived/tree/main/src/brave-search)** - Recherche sur le Web et en local à l'aide de l'API de recherche de Brave
+- **[Puppeteer](https://github.com/modelcontextprotocol/servers-archived/tree/main/src/puppeteer)** - Automatisation du navigateur et extraction de données Web
+
+<div id="productivity-and-communication">
+  #### Productivité et communication
+</div>
+
+- **[Slack](https://github.com/modelcontextprotocol/servers-archived/tree/main/src/slack)** - Gestion des canaux et messagerie
+- **[Google Maps](https://github.com/modelcontextprotocol/servers-archived/tree/main/src/google-maps)** - Services de localisation, itinéraires et informations sur les lieux
+
+<div id="ai-and-specialized-tools">
+  #### IA et outils spécialisés
+</div>
+
+- **[EverArt](https://github.com/modelcontextprotocol/servers-archived/tree/main/src/everart)** - Génération d’images par IA avec différents modèles
+- **[AWS KB Retrieval](https://github.com/modelcontextprotocol/servers-archived/tree/main/src/aws-kb-retrieval-server)** - Extraction à partir d’AWS Knowledge Base à l’aide de Bedrock Agent Runtime
+
+<div id="official-integrations">
+  ## Intégrations officielles
+</div>
+
+Consultez le [dépôt MCP Servers (section « Intégrations officielles »)](https://github.com/modelcontextprotocol/servers?tab=readme-ov-file#%EF%B8%8F-official-integrations) pour obtenir la liste des Serveurs MCP maintenus par des entreprises pour leurs plateformes.
+
+<div id="community-implementations">
+  ## Implémentations communautaires
+</div>
+
+Consultez le [dépôt MCP Servers (section Communauté)](https://github.com/modelcontextprotocol/servers?tab=readme-ov-file#-community-servers) pour la liste des Serveurs MCP maintenus par des membres de la communauté.
+
+<div id="getting-started">
+  ## Premiers pas
+</div>
+
+<div id="using-reference-servers">
+  ### Utiliser des serveurs de référence
+</div>
+
+Les serveurs écrits en TypeScript peuvent être utilisés directement avec `npx` :
+
+```bash
+npx -y @modelcontextprotocol/server-memory
+```
+
+Les serveurs écrits en Python peuvent être utilisés avec `uvx` (recommandé) ou `pip` :
+
+```bash
+# Avec uvx
+uvx mcp-server-git
+
+# Avec pip
+pip install mcp-server-git
+python -m mcp_server_git
+```
+
+<div id="configuring-with-claude">
+  ### Configuration avec Claude
+</div>
+
+Pour utiliser un Serveur MCP avec Claude, ajoutez-le à votre configuration :
+
+```json
+{
+  "mcpServers": {
+    "memory": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"]
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/path/to/allowed/files"
+      ]
+    },
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "<YOUR_TOKEN>"
+      }
+    }
+  }
+}
+```
+
+<div id="additional-resources">
+  ## Ressources supplémentaires
+</div>
+
+Consultez le [dépôt MCP Servers (section Ressources)](https://github.com/modelcontextprotocol/servers?tab=readme-ov-file#-resources) pour découvrir d’autres ressources et projets liés au Model Context Protocol (MCP).
+
+Rendez-vous sur nos [discussions GitHub](https://github.com/orgs/modelcontextprotocol/discussions) pour échanger avec la communauté MCP.

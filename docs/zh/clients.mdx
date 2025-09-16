@@ -1,0 +1,1385 @@
+---
+title: "示例客户端"
+description: "支持 MCP 集成的应用程序列表"
+---
+
+本页概述了支持模型上下文协议（MCP）的应用程序。不同客户端可能支持不同的 MCP 功能，因此与 MCP 服务器的集成深度也会有所差异。
+
+<div id="feature-support-matrix">
+  ## 功能支持矩阵
+</div>
+
+<div id="feature-support-matrix-wrapper">
+  {/* prettier-ignore-start */}
+
+  | 客户端                                           | \[资源（Resources）] | \[提示（Prompts）] | \[工具（Tools）] | \[发现（Discovery）] | \[采样（Sampling）] | \[根目录（Roots）] | \[引导输入（Elicitation）] |
+  | ------------------------------------------------ | ------------------- | ----------------- | --------------- | -------------------- | ------------------ | ----------------- | ------------------------ |
+  | \[5ire]\[5ire]                                     | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[AgentAI]\[AgentAI]                               | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[AgenticFlow]\[AgenticFlow]                       | ✅          | ✅        | ✅      | ✅                     | ❌         | ❌    | ❓            |
+  | \[AIQL TUUI]\[AIQL TUUI]                           | ✅          | ✅        | ✅      | ✅                     | ✅         | ❌    | ❓            |
+  | \[Amazon Q CLI]\[Amazon Q CLI]                     | ❌          | ✅        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[Amazon Q IDE]\[Amazon Q IDE]                     | ❌          | ❌        | ✅      | ❌                     | ❌         | ❌    | ❓            |
+  | \[Amp]\[Amp]                                       | ✅          | ❌        | ✅      | ❌                     | ✅         | ❌    | ❓            |
+  | \[Apify MCP Tester]\[Apify MCP Tester]             | ❌          | ❌        | ✅      | ✅                     | ❌         | ❌    | ❓            |
+  | \[Augment Code]\[AugmentCode]                      | ❌          | ❌        | ✅      | ❌                     | ❌         | ❌    | ❓            |
+  | \[BeeAI Framework]\[BeeAI Framework]               | ❌          | ❌        | ✅      | ❌                     | ❌         | ❌    | ❓            |
+  | \[BoltAI]\[BoltAI]                                 | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[Call Chirp]\[Call Chirp]                         | ❌          | ✅        | ✅      | ❌                     | ❌         | ❌    | ❓            |\
+  | \[ChatGPT]\[ChatGPT]                               | ❌          | ❌        | ✅      | ❌                     | ❌         | ❌    | ❓            |
+  | \[ChatWise]\[ChatWise]                             | ❌          | ❌        | ✅      | ❌                     | ❌         | ❌    | ❓            |
+  | \[Claude.ai]\[Claude.ai]                           | ✅          | ✅        | ✅      | ❌                     | ❌         | ❌    | ❓            |
+  | \[Claude Code]\[Claude Code]                       | ✅          | ✅        | ✅      | ❌                     | ❌         | ✅    | ❓            |
+  | \[Claude Desktop App]\[Claude Desktop]             | ✅          | ✅        | ✅      | ❌                     | ❌         | ❌    | ❓            |
+  | \[Chorus]\[Chorus]                                 | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[Cline]\[Cline]                                   | ✅          | ❌        | ✅      | ✅                     | ❌         | ❌    | ❓            |
+  | \[CodeGPT]\[CodeGPT]                               | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[Continue]\[Continue]                             | ✅          | ✅        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[Copilot-MCP]\[CopilotMCP]                        | ✅          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[Cursor]\[Cursor]                                 | ❌          | ❌        | ✅      | ❌                     | ❌         | ❌    | ❓            |
+  | \[Daydreams Agents]\[Daydreams]                    | ✅          | ✅        | ✅      | ❌                     | ❌         | ❌    | ❓            |
+  | \[Emacs Mcp]\[Mcp.el]                              | ❌          | ❌        | ✅      | ❌                     | ❌         | ❌    | ❓            |
+  | \[fast-agent]\[fast-agent]                         | ✅          | ✅        | ✅      | ✅                     | ✅         | ✅    | ✅            |
+  | \[FlowDown]\[FlowDown]                             | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❌            |
+  | \[FLUJO]\[FLUJO]                                   | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[Genkit]\[Genkit]                                 | ⚠️          | ✅        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[Glama]\[Glama]                                   | ✅          | ✅        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[Gemini CLI]\[Gemini CLI]                         | ❌          | ✅        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[GenAIScript]\[GenAIScript]                       | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[GitHub Copilot 编码代理]\[GitHubCopilotCodingAgent]                       | ❌          | ❌        | ✅      | ❌                     | ❌         | ❌    | ❌            |
+  | \[Goose]\[Goose]                                   | ✅          | ✅        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[gptme]\[gptme]                                   | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[HyperAgent]\[HyperAgent]                         | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[JetBrains AI Assistant]\[JetBrains AI Assistant] | ❌          | ❌        | ✅      | ❌                     | ❌         | ❌    | ❓            |
+  | \[Kilo Code]\[Kilo Code]                           | ✅          | ❌        | ✅      | ✅                     | ❌         | ❌    | ❓            |
+  | \[Klavis AI Slack/Discord/Web]\[Klavis AI]         | ✅          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[Langflow]\[Langflow]                             | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[LibreChat]\[LibreChat]                           | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[LM Studio]\[LM Studio]                           | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[Lutra]\[Lutra]                                   | ✅          | ✅        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[mcp-agent]\[mcp-agent]                           | ✅          | ✅        | ✅      | ❓                     | ⚠️         | ✅    | ✅            |
+  | \[mcp-client-chatbot]\[mcp-client-chatbot]         | ❌          | ❌        | ✅      | ❌                     | ❌         | ❌    | ❓            |
+  | \[mcp-use]\[mcp-use]                               | ✅          | ✅        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[modelcontextchat.com]\[modelcontextchat.com]     | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[MCPHub]\[MCPHub]                                 | ✅          | ✅        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[MCPOmni-Connect]\[MCPOmni-Connect]               | ✅          | ✅        | ✅      | ❓                     | ✅         | ❌    | ❓            |
+  | \[Memex]\[Memex]                                   | ✅          | ✅        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[Microsoft Copilot Studio]                       | ❌          | ❌        | ✅      | ✅                     | ❌         | ❌    | ❓            |
+  | \[MindPal]\[MindPal]                               | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[MooPoint]\[MooPoint]                             | ❌          | ❌        | ✅      | ❓                     | ✅         | ❌    | ❓            |
+  | \[Msty Studio]\[Msty Studio]                       | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[NVIDIA Agent Intelligence toolkit]\[AIQ toolkit] | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[OpenSumi]\[OpenSumi]                             | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[oterm]\[oterm]                                   | ❌          | ✅        | ✅      | ❓                     | ✅         | ❌    | ❓            |
+  | \[Postman]\[postman]                               | ✅          | ✅        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[RecurseChat]\[RecurseChat]                       | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[Roo Code]\[Roo Code]                             | ✅          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[Shortwave]\[Shortwave]                           | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[Slack MCP Client]\[Slack MCP Client]             | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[Sourcegraph Cody]\[Cody]                         | ✅          | ❌        | ❌      | ❓                     | ❌         | ❌    | ❓            |
+  | \[SpinAI]\[SpinAI]                                 | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[Superinterface]\[Superinterface]                 | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[Superjoin]\[Superjoin]                           | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[systemprompt]\[systemprompt]                     | ✅          | ✅        | ✅      | ❓                     | ✅         | ❌    | ❓            |
+  | \[Tambo]\[Tambo]                                   | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[Tencent CloudBase AI DevKit]\[Tencent CloudBase AI DevKit] | ❌      | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[TheiaAI/TheiaIDE]\[TheiaAI/TheiaIDE]             | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[Tome]\[Tome]                                     | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[TypingMind App]\[TypingMind App]                 | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[VS Code GitHub Copilot]\[VS Code]                | ✅          | ✅        | ✅      | ✅                     | ✅         | ✅    | ✅            |
+  | \[Warp]\[Warp]                                     | ✅          | ❌        | ✅      | ✅                     | ❌         | ❌    | ❓            |
+  | \[WhatsMCP]\[WhatsMCP]                             | ❌          | ❌        | ✅      | ❌                     | ❌         | ❌    | ❓            |
+  | \[Windsurf Editor]\[Windsurf]                      | ❌          | ❌        | ✅      | ✅                     | ❌         | ❌    | ❓            |
+  | \[Witsy]\[Witsy]                                   | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[Zed]\[Zed]                                       | ❌          | ✅        | ✅      | ❌                     | ❌         | ❌    | ❓            |
+  | \[Zencoder]\[Zencoder]                             | ❌          | ❌        | ✅      | ❌                     | ❌         | ❌    | ❓            |
+
+  {/* prettier-ignore-end */}
+
+  [资源（Resources）]: /docs/concepts/resources
+
+  [提示（Prompts）]: /docs/concepts/prompts
+
+  [工具（Tools）]: /docs/concepts/tools
+
+  [发现（Discovery）]: /docs/concepts/tools#tool-discovery-and-updates
+
+  [采样（Sampling）]: /docs/concepts/sampling
+
+  [根目录（Roots）]: /docs/concepts/roots
+
+  [引导输入（Elicitation）]: /docs/concepts/elicitation
+
+  \[5ire]：https://github.com/nanbingxyz/5ire
+
+  \[AgentAI]：https://github.com/AdamStrojek/rust-agentai
+
+  \[AgenticFlow]：https://agenticflow.ai/mcp
+
+  [AIQ 工具包]: https://github.com/NVIDIA/AIQToolkit
+
+  \[AIQL TUUI]：https://github.com/AI-QL/tuui
+
+  \[Amazon Q CLI]：https://github.com/aws/amazon-q-developer-cli
+
+  \[Amazon Q IDE]：https://aws.amazon.com/q/developer
+
+  \[Amp]：https://ampcode.com
+
+  [Apify MCP 客户端测试器]: https://apify.com/jiri.spilka/tester-mcp-client
+
+  [AugmentCode]: https://augmentcode.com
+
+  \[BeeAI Framework]：https://i-am-bee.github.io/beeai-framework
+
+  \[BoltAI]：https://boltai.com
+
+  \[Call Chirp]： https://www.call-chirp.com
+
+  \[ChatGPT]：https://chatgpt.com
+
+  \[ChatWise]：https://chatwise.app
+
+  \[Claude.ai]：https://claude.ai
+
+  [Claude Code]: https://claude.ai/code
+
+  \[Claude 桌面版]：https://claude.ai/download
+
+  [Chorus]: https://chorus.sh
+
+  \[Cline]：https://github.com/cline/cline
+
+  \[CodeGPT]：https://codegpt.co
+
+  [Continue]: https://github.com/continuedev/continue
+
+  \[CopilotMCP]：https://github.com/VikashLoomba/copilot-mcp
+
+  \[Cursor]：https://cursor.com
+
+  \[Daydreams]：https://github.com/daydreamsai/daydreams
+
+  \[Klavis AI]：https://www.klavis.ai/
+
+  \[MCP.el]：https://github.com/lizqwerscott/mcp.el
+
+  \[fast-agent]：https://github.com/evalstate/fast-agent
+
+  \[FlowDown]：https://github.com/Lakr233/FlowDown
+
+  \[FLUJO]：https://github.com/mario-andreschak/flujo
+
+  \[Glama]：https://glama.ai/chat
+
+  \[Gemini CLI]：https://goo.gle/gemini-cli
+
+  \[Genkit]：https://github.com/firebase/genkit
+
+  \[GenAIScript]：https://microsoft.github.io/genaiscript/reference/scripts/mcp-tools/
+
+  [GitHub Copilot 编码代理（GitHubCopilotCodingAgent）]: https://docs.github.com/zh/enterprise-cloud@latest/copilot/concepts/about-copilot-coding-agent
+
+  \[Goose]：https://block.github.io/goose/docs/goose-architecture/#interoperability-with-extensions
+
+  \[JetBrains AI Assistant]：https://plugins.jetbrains.com/plugin/22282-jetbrains-ai-assistant
+
+  \[Kilo Code]：https://github.com/Kilo-Org/kilocode
+
+  \[LibreChat]：https://github.com/danny-avila/LibreChat
+
+  \[LM Studio]：https://lmstudio.ai
+
+  \[Lutra]：https://lutra.ai
+
+  [mcp-agent]: https://github.com/lastmile-ai/mcp-agent
+
+  \[mcp-client-chatbot]：https://github.com/cgoinglove/mcp-client-chatbot
+
+  \[mcp-use]：https://github.com/pietrozullo/mcp-use
+
+  [modelcontextchat.com]: https://modelcontextchat.com
+
+  [MCPHub]: https://github.com/ravitemer/mcphub.nvim
+
+  \[MCPOmni-Connect]：https://github.com/Abiorh001/mcp\_omni\_connect
+
+  \[Memex]：https://memex.tech/
+
+  \[Microsoft Copilot Studio]：https://learn.microsoft.com/en-us/microsoft-copilot-studio/agent-extend-action-mcp
+
+  \[MindPal]：https://mindpal.io
+
+  \[MooPoint]：https://moopoint.io
+
+  \[Msty Studio]：https://msty.ai
+
+  [OpenSumi]: https://github.com/opensumi/core
+
+  \[oterm]：https://github.com/ggozad/oterm
+
+  \[Postman]：https://postman.com/downloads
+
+  \[RecurseChat]：https://recurse.chat/
+
+  \[Roo Code]： https://roocode.com
+
+  \[Shortwave]：https://www.shortwave.com
+
+  [Slack MCP 客户端]: https://github.com/tuannvm/slack-mcp-client
+
+  \[Cody]：https://sourcegraph.com/cody
+
+  \[SpinAI]：https://spinai.dev
+
+  [Superinterface]: https://superinterface.ai
+
+  \[Superjoin]：https://superjoin.ai
+
+  [System Prompt]: https://systemprompt.io
+
+  \[Tambo]：https://tambo.co
+
+  [腾讯云 CloudBase AI 开发工具包（DevKit）]: https://docs.cloudbase.net/ai/agent/mcp
+
+  \[TheiaAI/TheiaIDE]：https://eclipsesource.com/blogs/2024/12/19/theia-ide-and-theia-ai-support-mcp/
+
+  [Tome]: https://github.com/runebookai/tome
+
+  [TypingMind 应用]: https://www.typingmind.com
+
+  \[VS Code]：https://code.visualstudio.com/
+
+  \[Windsurf]：https://codeium.com/windsurf
+
+  \[gptme]：https://github.com/gptme/gptme
+
+  \[Warp]：https://www.warp.dev/
+
+  \[WhatsMCP]：https://wassist.app/mcp/
+
+  \[Witsy]：https://github.com/nbonamy/witsy
+
+  \[Zed]：https://zed.dev
+
+  \[Zencoder]：https://zencoder.ai
+
+  [HyperAgent]: https://github.com/hyperbrowserai/HyperAgent
+</div>
+
+<div id="client-details">
+  ## 客户端详细信息
+</div>
+
+<div id="5ire">
+  ### 5ire
+</div>
+
+[5ire](https://github.com/nanbingxyz/5ire) 是一款开源、跨平台的桌面 AI 助手，可通过 MCP 服务器使用工具（Tools）。
+
+**关键特性：**
+
+- 内置 MCP 服务器，可一键启用或禁用。
+- 支持通过修改配置文件添加更多服务器。
+- 开源且上手友好，适合初学者。
+- 将持续完善对 MCP 的支持。
+
+<div id="agentai">
+  ### AgentAI
+</div>
+
+[AgentAI](https://github.com/AdamStrojek/rust-agentai) 是一个用于简化构建 AI 代理的 Rust 库。该库提供与 MCP 服务器的无缝集成。
+
+[MCP 服务器集成示例](https://github.com/AdamStrojek/rust-agentai/blob/master/examples/tools_mcp.rs)
+
+**关键特性：**
+
+- 多 LLM —— 支持大多数 LLM API（OpenAI、Anthropic、Gemini、Ollama，以及所有兼容 OpenAI API 的实现）。
+- 内置支持 MCP 服务器。
+- 使用 Rust 这类类型安全、内存安全的语言创建代理流程。
+
+<div id="agenticflow">
+  ### AgenticFlow
+</div>
+
+[AgenticFlow](https://agenticflow.ai/) 是一个零代码 AI 平台，帮助你构建可全天候处理销售、营销和创意任务的代理。通过模型上下文协议（MCP）安全连接 2,500+ 个 API 和 10,000+ 个工具（Tools）。
+
+**关键功能：**
+
+- 零代码创建 AI 代理并搭建工作流。
+- 通过 MCP 访问包含 10,000+ 个工具（Tools）和 2,500+ 个 API 的庞大库。
+- 以简单的 3 步流程连接 MCP 服务器（MCP 服务器）。
+- 安全管理连接，可随时撤销访问权限。
+
+**了解更多：**
+
+- [AgenticFlow MCP 集成](https://agenticflow.ai/mcp)
+
+<div id="aiql-tuui">
+  ### AIQL TUUI
+</div>
+
+[AIQL TUUI] 是一款原生、跨平台的桌面 AI 聊天应用，支持 模型上下文协议（MCP）。它兼容多家 AI 提供商（如 Anthropic、Cloudflare、DeepSeek、OpenAI、Qwen），本地 AI 模型（通过 vLLM、Ray 等），以及聚合 API 平台（如 Deepinfra、OpenRouter 等）。
+
+**核心特性：**
+
+- **动态 LLM API 与智能体切换**：可在不同的 LLM API 与智能体之间即时无缝切换。
+- **全面能力支持**：内置支持工具（Tools）、提示（Prompts）、资源（Resources）和采样（Sampling）方法。
+- **可配置智能体**：通过智能体设置选择并自定义工具，获得更高的灵活性。
+- **高级采样控制**：可调整采样参数，并利用多轮采样获得更优结果。
+- **跨平台兼容性**：完全兼容 macOS、Windows 与 Linux。
+- **免费且开源（FOSS）**：宽松许可，支持修改与自定义打包应用。
+
+**了解更多：**
+
+- [TUUI 文档](https://www.tuui.com/)
+- [AIQL GitHub 仓库](https://github.com/AI-QL)
+
+<div id="amazon-q-cli">
+  ### Amazon Q CLI
+</div>
+
+[Amazon Q CLI](https://github.com/aws/amazon-q-developer-cli) 是一款开源的终端智能编码助手，具备代理式能力。
+
+**主要特性：**
+
+- 对 MCP 服务器提供完整支持。
+- 使用你偏好的文本编辑器编辑提示（Prompts）。
+- 通过 `@` 即刻访问已保存的提示（Prompts）。
+- 直接在终端中控制和组织 AWS 资源（Resources）。
+- 工具（Tools）、配置文件、上下文管理、自动压缩等更多功能！
+
+**开始使用**
+
+```bash
+brew install amazon-q
+```
+
+<div id="amazon-q-ide">
+  ### Amazon Q IDE
+</div>
+
+[Amazon Q IDE](https://aws.amazon.com/q/developer) 是一款面向 IDE 的开源“代理式”编码助手。
+
+**主要功能：**
+
+- 支持 VSCode、JetBrains、Visual Studio 和 Eclipse 等 IDE。
+- 可在 IDE 中直接控制并管理 AWS 资源。
+- 通过 IDE 的用户界面为每个 MCP 工具管理权限。
+
+<div id="apify-mcp-tester">
+  ### Apify MCP Tester
+</div>
+
+[Apify MCP Tester](https://github.com/apify/tester-mcp-client) 是一个开源 MCP 客户端，使用服务器发送事件（SSE）连接到任意 MCP 服务器。
+它是一个独立的 Apify Actor，专为通过 SSE 测试 MCP 服务器而设计，支持 Authorization 头。
+它采用纯 JavaScript（传统风格）实现，并托管在 Apify 上，无需任何配置即可运行。
+
+**主要功能：**
+
+- 通过 SSE 连接任意 MCP 服务器。
+- 可与 [Apify MCP Server](https://apify.com/apify/actors-mcp-server) 协同工作，以与一个或多个 Apify [Actors](https://apify.com/store) 进行交互。
+- 可根据上下文和用户查询动态调用工具（Tools）（若服务器支持）。
+
+<div id="amp">
+  ### Amp
+</div>
+
+[Amp](https://ampcode.com) 是由 Sourcegraph 构建的智能体式编码工具。它可在 VS Code（以及 Cursor、Windsurf、VSCodium 等兼容分支）中运行，也可作为命令行工具使用。它还支持多人协作——你可以分享对话并与团队协作。
+
+**主要功能：**
+
+- 对已启用的工具（Tools）和权限进行精细化控制
+- 支持在 VS Code 的 `mcp.json` 中定义的 MCP 服务器
+
+<div id="augment-code">
+  ### Augment Code
+</div>
+
+[Augment Code](https://augmentcode.com) 是一款面向 VS Code 和 JetBrains 的 AI 驱动编码平台，提供自主代理、聊天与补全功能。本地与远程代理均具备对完整代码库的感知，并原生支持 MCP，可借助外部资源与工具增强上下文。
+
+**关键特性：**
+
+- 在本地与远程代理中提供完整的 MCP 支持。
+- 通过 MCP 服务器补充额外上下文。
+- 使用 MCP 工具自动化开发工作流。
+- 适用于 VS Code 和 JetBrains 系列 IDE。
+
+<div id="beeai-framework">
+  ### BeeAI Framework
+</div>
+
+[BeeAI Framework](https://i-am-bee.github.io/beeai-framework) 是一个开源框架，用于在大规模场景下构建、部署与服务强大的智能体工作流。该框架内置 **MCP Tool**，这一原生特性可简化将 MCP 服务器集成进智能体工作流的过程。
+
+**主要特性：**
+
+- 将 MCP 工具（Tools）无缝融入智能体工作流。
+- 从已连接的 MCP 客户端（MCP 客户端）快速实例化框架原生工具。
+- 未来计划支持基于智能体的 MCP 能力。
+
+**了解更多：**
+
+- [在智能体工作流中使用 MCP 工具的示例](https://i-am-bee.github.io/beeai-framework/#/typescript/tools?id=using-the-mcptool-class)
+
+<div id="boltai">
+  ### BoltAI
+</div>
+
+[BoltAI](https://boltai.com) 是一款原生、全能的 AI 聊天客户端，支持模型上下文协议（MCP）。BoltAI 支持多个 AI 服务提供商（OpenAI、Anthropic、Google AI 等），也支持本地 AI 模型（通过 Ollama、LM Studio 或 LMX）。
+
+**主要特性：**
+
+- MCP 工具（Tools）集成：完成配置后，用户可在每个聊天中单独启用对应的 MCP 服务器
+- MCP 快速设置：可从 Claude Desktop 应用或 Cursor 编辑器导入配置
+- 通过 AI Command 功能，在任意应用内调用 MCP 工具（Tools）
+- 在移动端应用中集成远程 MCP 服务器
+
+**了解更多：**
+
+- [BoltAI 文档](https://boltai.com/docs/plugins/mcp-servers)
+- [BoltAI 网站](https://boltai.com)
+
+<div id="call-chirp">
+  ### Call Chirp
+</div>
+
+[Call Chirp] https://www.call-chirp.com 使用 AI 捕捉你的业务对话中的每个关键细节，并将洞察自动同步到你的 CRM 和项目工具，帮助你不错过任何促成交易的关键时刻。
+
+**关键功能：**
+
+- 保存来自 Zoom、Google Meet 等的转录内容
+- 面向语音 AI 代理的 工具（Tools）
+- 支持远程 MCP 服务器（MCP Server）
+
+<div id="chatgpt">
+  ### ChatGPT
+</div>
+
+ChatGPT 是 OpenAI 的 AI 助手，支持通过 MCP 连接远程服务器开展深入研究。
+
+**关键功能：**
+
+- 在设置中的“连接”界面支持 MCP
+- 可从已配置的 MCP 服务器获取搜索工具，以进行深入研究
+- 企业级安全与合规能力
+
+<div id="chatwise">
+  ### ChatWise
+</div>
+
+ChatWise 是一款为桌面端优化的高性能聊天应用，支持自带 API 密钥。它兼容多种 LLM，并与 模型上下文协议（MCP） 集成，以启用工具工作流。
+
+**主要功能：**
+
+- 对 MCP 服务器的工具支持
+- 提供内置工具，如网页搜索、工件（artifacts）和图像生成。
+
+<div id="claude-code">
+  ### Claude Code
+</div>
+
+Claude Code 是 Anthropic 推出的交互式智能编码工具，可通过自然语言指令帮助你更快编写代码。它支持对资源（Resources）、提示（Prompts）、工具（Tools）和根目录（Roots）的 MCP 集成，并且还能作为 MCP 服务器与其他客户端集成。
+
+**主要特性：**
+
+- 完整支持来自 MCP 服务器的资源（Resources）、提示（Prompts）、工具（Tools）和根目录（Roots）
+- 通过 MCP 服务器提供自有的工具（Tools），以便与其他 MCP 客户端集成
+
+<div id="claudeai">
+  ### Claude.ai
+</div>
+
+[Claude.ai](https://claude.ai) 是 Anthropic 的网页版 AI 助手，支持与远程 MCP 服务器配合使用。
+
+**主要特性：**
+
+- 通过“设置”中的集成界面支持远程 MCP 服务器
+- 访问已配置 MCP 服务器提供的 工具（Tools）、提示（Prompts） 和 资源（Resources）
+- 与 Claude 的对话式界面无缝集成
+- 企业级安全与合规能力
+
+<div id="claude-desktop-app">
+  ### Claude 桌面应用
+</div>
+
+Claude 桌面应用对 MCP 提供了全面支持，可与本地工具和数据源进行深度集成。
+
+**关键特性：**
+
+- 完整支持资源（Resources），可附加本地文件和数据
+- 支持提示（Prompts）模板
+- 集成工具（Tools），用于执行命令和脚本
+- 支持连接本地服务器，增强隐私与安全性
+
+<div id="chorus">
+  ### Chorus
+</div>
+
+[Chorus](https://chorus.sh) 是一款原生 Mac 应用，用于与 AI 对话。你可以同时与多个模型聊天、运行工具和 MCP、创建项目、发起快速对话、使用自有密钥，且应用极速流畅并友好支持键盘快捷键。
+
+**主要特性：**
+
+- 一键安装的 MCP 支持
+- 内置工具，例如网页搜索、终端和图像生成
+- 同时与多个模型聊天（云端或本地）
+- 创建具有作用域记忆的项目
+- 与可查看你屏幕的 AI 进行快速对话
+
+<div id="cline">
+  ### Cline
+</div>
+
+[Cline](https://github.com/cline/cline) 是 VS Code 中的自主编码代理，每一步操作都会征得你的许可，可编辑文件、运行命令、使用浏览器等。
+
+**关键特性：**
+
+- 通过自然语言创建并添加工具（例如：“add a tool that searches the web”）
+- 通过 `~/Documents/Cline/MCP` 目录与他人共享 Cline 创建的自定义 MCP 服务器
+- 显示已配置的 MCP 服务器及其工具（Tools）、资源（Resources）以及错误日志
+
+<div id="codegpt">
+  ### CodeGPT
+</div>
+
+[CodeGPT](https://codegpt.co) 是一款流行的 VS Code 和 JetBrains 扩展，为你的编辑器带来 AI 驱动的编码助理。它支持与 MCP 服务器集成以使用工具，使用户能够在开发工作流中直接利用外部 AI 能力。
+
+**关键特性：**
+
+- 使用任意已配置 MCP 服务器提供的工具（Tools）
+- 与 VS Code 和 JetBrains 界面无缝集成
+- 支持多个 LLM 提供商和自定义端点
+
+**了解更多：**
+
+- [CodeGPT 文档](https://docs.codegpt.co/)
+
+<div id="continue">
+  ### Continue
+</div>
+
+[Continue](https://github.com/continuedev/continue) 是一款开源 AI 代码助手，内置支持全部 MCP 功能。
+
+**关键特性：**
+
+- 输入“@”以引用 MCP 资源（Resources）
+- 提示（Prompts）模板以斜杠命令呈现
+- 在聊天中直接使用内置和 MCP 工具（Tools）
+- 支持 VS Code 与 JetBrains 系列 IDE，适配任意 LLM
+
+<div id="copilot-mcp">
+  ### Copilot-MCP
+</div>
+
+[Copilot-MCP](https://github.com/VikashLoomba/copilot-mcp) 通过 MCP 提供 AI 编码辅助。
+
+**主要功能：**
+
+- 支持 MCP 工具（Tools）和资源（Resources）
+- 与开发工作流集成
+- 可扩展的 AI 能力
+
+<div id="cursor">
+  ### Cursor
+</div>
+
+[Cursor](https://docs.cursor.com/advanced/model-context-protocol) 是一款 AI 代码编辑器。
+
+**主要功能：**
+
+- 在 Cursor Composer 中支持 工具（Tools）
+- 同时支持 STDIO 和 服务器发送事件（SSE）
+
+<div id="daydreams">
+  ### Daydreams
+</div>
+
+[Daydreams](https://github.com/daydreamsai/daydreams) 是一个用于在链上执行各类操作的生成式代理框架
+
+**关键特性：**
+
+- 在配置中支持 MCP 服务器
+- 提供 MCP 客户端
+
+<div id="emacs-mcp">
+  ### Emacs Mcp
+</div>
+
+[Emacs Mcp](https://github.com/lizqwerscott/mcp.el) 是一款用于对接 MCP 服务器的 Emacs 客户端，支持无缝连接与交互。它为 [gptel](https://github.com/karthink/gptel) 和 [llm](https://github.com/ahyatt/llm) 等 AI 插件提供 MCP 工具调用支持，并遵循 Emacs 的标准工具调用格式。该集成提升了 Emacs 生态中 AI 工具的能力。
+
+**关键特性：**
+
+- 为 Emacs 提供 MCP 工具支持。
+
+<div id="fast-agent">
+  ### fast-agent
+</div>
+
+[fast-agent](https://github.com/evalstate/fast-agent) 是一个 Python Agent 框架，提供用于创建 Agent 和工作流的简单声明式支持，并为 Anthropic 和 OpenAI 模型提供完整的多模态支持。
+
+**关键特性：**
+
+- 基于 MCP 原生类型的 PDF 与图像支持
+- 面向 Agent 应用开发与诊断的交互式前端，包含直通与回放模拟器
+- 内置对 “Building Effective Agents” 工作流的支持
+- 将 Agent 部署为 MCP 服务器
+
+<div id="flowdown">
+  ### FlowDown
+</div>
+
+[FlowDown](https://github.com/Lakr233/FlowDown) 是一款极致快速、流畅的 AI/LLM 客户端应用，重视隐私与用户体验。它支持通过 MCP 服务器扩展外部工具能力，助你构建强大且可定制的工作流。
+
+**主要特性：**
+
+- **无缝 MCP 集成**：可轻松连接 MCP 服务器，利用多种外部工具。
+- **隐私优先的设计**：你的数据仅存于本地设备。我们不收集任何用户数据，确保彻底的隐私保护。
+- **轻量高效**：紧凑且优化的设计，确保在任何 AI 模型上都拥有流畅、灵敏的体验。
+- **广泛兼容性**：兼容所有 OpenAI 协议的服务提供商，并通过 MLX 支持本地离线模型。
+- **出色的用户体验**：支持精美的 Markdown 展示、极速文本渲染，以及智能的自动聊天命名。
+
+**了解更多：**
+
+- [FlowDown 网站](https://flowdown.ai/)
+- [FlowDown 文档](https://apps.qaq.wiki/docs/flowdown/)
+
+<div id="flujo">
+  ### FLUJO
+</div>
+
+可以把它理解为 n8n + ChatGPT。FLUJO 是一款桌面应用程序，集成了模型上下文协议（MCP），为 AI 交互提供工作流构建界面。基于 Next.js 和 React 构建，既支持在线模型，也支持离线（ollama）模型；集中管理 API Key 与环境变量，并可从 GitHub 安装 MCP 服务器。FLUJO 提供 ChatCompletions 端点，其流程还可由其他 AI 应用（如 Cline、Roo 或 Claude）触发执行。
+
+**关键特性：**
+
+- 环境与 API Key 管理
+- 模型管理
+- MCP 服务器集成
+- 工作流编排
+- 聊天界面
+
+<div id="genkit">
+  ### Genkit
+</div>
+
+[Genkit](https://github.com/firebase/genkit) 是一款跨语言 SDK，用于在应用中构建和集成 GenAI 功能。[genkitx-mcp](https://github.com/firebase/genkit/tree/main/js/plugins/mcp) 插件支持以客户端方式使用 MCP 服务器，或基于 Genkit 的工具（Tools）和提示（Prompts）创建 MCP 服务器。
+
+**主要特性：**
+
+- 提供对工具（Tools）和提示（Prompts）的客户端支持（资源（Resources）为部分支持）
+- 在 Genkit 的 Dev UI playground 中提供完善的发现能力
+- 与 Genkit 现有的工具（Tools）和提示（Prompts）无缝互操作
+- 适配多家顶级提供商的各类 GenAI 模型
+
+<div id="glama">
+  ### Glama
+</div>
+
+[Glama](https://glama.ai/chat) 是一个全能的 AI 工作空间与集成平台，提供统一界面连接主流 LLM 提供商，包括 OpenAI、Anthropic 等。它支持 模型上下文协议（MCP） 生态，帮助开发者和企业轻松发现、构建与管理 MCP 服务器。
+
+**关键特性：**
+
+- 集成的 [MCP Server Directory](https://glama.ai/mcp/servers)
+- 集成的 [MCP Tool Directory](https://glama.ai/mcp/tools)
+- 托管 MCP 服务器，并通过 Chat 或 SSE 端点访问
+  – 可同时与多个 LLM 与 MCP 服务器对话
+- 上传并分析本地文件与数据
+- 在你所有的对话与数据中进行全文搜索
+
+<div id="genaiscript">
+  ### GenAIScript
+</div>
+
+使用 [GenAIScript](https://microsoft.github.io/genaiscript/)（基于 JavaScript）以编程方式组装面向 LLM 的提示。在 JavaScript 中编排 LLM、工具和数据。
+
+**关键特性：**
+
+- 面向提示的 JavaScript 工具箱
+- 便于上手且高效的抽象
+- 与 Visual Studio Code 无缝集成
+
+<div id="goose">
+  ### Goose
+</div>
+
+[Goose](https://github.com/block/goose) 是一款开源 AI 智能体，通过自动化编码任务加速你的软件开发。
+
+**主要功能：**
+
+- 通过工具向 Goose 暴露 MCP 功能。
+- 可通过[扩展目录](https://block.github.io/goose/v1/extensions/)、CLI 或 UI 直接安装 MCP。
+- Goose 支持你通过[构建自有 MCP 服务器](https://block.github.io/goose/docs/tutorials/custom-extensions)来扩展其能力。
+- 内置适用于开发、网页抓取、自动化、记忆，以及与 JetBrains 和 Google Drive 集成的工具。
+
+<div id="github-copilot-coding-agent">
+  ### GitHub Copilot 编码代理
+</div>
+
+将任务交给[GitHub Copilot 编码代理](https://docs.github.com/en/copilot/concepts/about-copilot-coding-agent)，让它在后台处理，而你专注于最具影响力、最有价值的工作
+
+**关键特性：**
+
+- 可从 GitHub Issues、Visual Studio Code、GitHub Copilot Chat，或通过 GitHub MCP Server 在你常用的 MCP 主机上将任务委派给 Copilot
+- 通过[自定义代理的开发环境](https://docs.github.com/en/enterprise-cloud@latest/copilot/how-tos/agents/copilot-coding-agent/customizing-the-development-environment-for-copilot-coding-agent#preinstalling-tools-or-dependencies-in-copilots-environment)或[编写自定义说明](https://docs.github.com/en/enterprise-cloud@latest/copilot/how-tos/agents/copilot-coding-agent/best-practices-for-using-copilot-to-work-on-tasks#adding-custom-instructions-to-your-repository)，使 Copilot 更贴合你的项目
+- [使用 MCP 工具（Tools）增强 Copilot 的上下文与能力](https://docs.github.com/en/enterprise-cloud@latest/copilot/how-tos/agents/copilot-coding-agent/extending-copilot-coding-agent-with-mcp)，同时支持本地与远程 MCP 服务器
+
+<div id="gptme">
+  ### gptme
+</div>
+
+[gptme](https://github.com/gptme/gptme) 是一个开源的终端式个人 AI 助手/智能体，旨在协助完成编程任务和通用知识类工作。
+
+**主要特性：**
+
+- CLI 优先的设计，注重简洁与易用
+- 内置丰富的工具集，支持执行 shell 命令、运行 Python、文件操作与网页浏览
+- 本地优先的架构，兼容多家 LLM 提供商
+- 开源，可扩展、易于修改
+
+<div id="hyperagent">
+  ### HyperAgent
+</div>
+
+[HyperAgent](https://github.com/hyperbrowserai/HyperAgent) 是由 AI 强力加持的 Playwright。借助 HyperAgent，你不再需要易碎的脚本，只需使用强大的自然语言指令。通过使用 MCP 服务器，你可以扩展 HyperAgent 的能力，而无需编写任何代码。
+
+**主要特性：**
+
+- AI 指令：提供如 page.ai()、page.extract() 和 executeTask() 等简单 API，适用于各类 AI 自动化
+- 回退到常规 Playwright：当不需要 AI 时可使用常规 Playwright
+- 隐身模式——通过内置反机器人补丁避免被检测
+- 云就绪——通过 [Hyperbrowser](https://www.hyperbrowser.ai/) 即刻扩展至数百个会话
+- MCP 客户端——连接 Composio 等工具（Tools），实现完整工作流（例如将网页数据写入 Google 表格）
+
+<div id="jetbrains-ai-assistant">
+  ### JetBrains AI Assistant
+</div>
+
+[JetBrains AI Assistant](https://plugins.jetbrains.com/plugin/22282-jetbrains-ai-assistant) 插件为所有 JetBrains IDE 提供面向软件开发的 AI 功能。
+
+**关键功能：**
+
+- 由 Mellum（JetBrains 的自研专有 AI 模型）驱动的不限量代码补全。
+- 具备上下文感知的 AI 聊天，可理解你的代码并实时提供帮助。
+- 可使用来自 OpenAI、Anthropic 和 Google 的顶级模型。
+- 通过 Ollama 或 LM Studio 连接本地 LLM，支持离线模式。
+- 深度融入 IDE 工作流，包括编辑器中的代码建议、VCS 协作辅助、运行时错误说明等。
+
+<div id="kilo-code">
+  ### Kilo Code
+</div>
+
+[Kilo Code](https://github.com/Kilo-Org/kilocode) 是一款在 VS Code 中运行的自主编码型 AI 开发团队助手，能够编辑文件、运行命令、使用浏览器等。
+
+**关键特性：**
+
+- 通过自然语言创建并添加工具（例如 “add a tool that searches the web”）
+- 通过 MCP Marketplace 发现 MCP 服务器
+- 在 MCP Marketplace 中一键安装 MCP 服务器
+- 显示已配置的 MCP 服务器及其工具、资源和任何错误日志
+
+<div id="klavis-ai-slackdiscordweb">
+  ### Klavis AI Slack/Discord/Web
+</div>
+
+[Klavis AI](https://www.klavis.ai/) 是用于轻松使用、构建与扩展 MCP 的开源基础设施。
+
+**关键特性：**
+
+- 面向 Slack/Discord/Web 的 MCP 客户端，可直接使用 MCP
+- 简洁的 Web UI 控制台，便于进行 MCP 配置
+- 与 Slack、Discord 客户端及 MCP 服务器的直接 OAuth 集成，提供安全的用户认证
+- 支持 SSE 传输
+- 开源基础设施（[GitHub 仓库](https://github.com/Klavis-AI/klavis)）
+
+**了解更多：**
+
+- [在 Slack/Discord 中演示 MCP 使用的示例视频](https://youtu.be/9-QQAhrQWw8)
+
+<div id="langflow">
+  ### Langflow
+</div>
+
+Langflow 是一个开源的可视化构建器，帮助开发者快速进行原型设计并构建 AI 应用，同时与模型上下文协议（MCP）集成为 MCP 服务器和 MCP 客户端。
+
+**主要特性：**
+
+- 完整支持使用 MCP 服务器的工具（Tools）来构建代理和流程。
+- 将代理和流程导出为 MCP 服务器
+- 支持本地与远程服务器连接，提升隐私与安全性
+
+**了解更多：**
+
+- [演示视频：如何将 Langflow 同时用作 MCP 客户端与服务器](https://www.youtube.com/watch?v=pEjsaVVPjdI)
+
+<div id="librechat">
+  ### LibreChat
+</div>
+
+[LibreChat](https://github.com/danny-avila/LibreChat) 是一个开源、可定制的 AI 聊天界面，支持多个 AI 提供方，并已集成 模型上下文协议（MCP）。
+
+**主要特性：**
+
+- 通过 MCP 服务器扩展现有工具生态，包括 [Code Interpreter](https://www.librechat.ai/docs/features/code_interpreter) 和图像生成工具
+- 将工具添加到可定制的 [Agents](https://www.librechat.ai/docs/features/agents)，可使用多家顶级提供方的多种 LLM
+- 开源且可自行托管，支持安全的多用户
+- 未来路线图将扩展对 MCP 功能的支持
+
+<div id="lm-studio">
+  ### LM Studio
+</div>
+
+[LM Studio](https://lmstudio.ai) 是一款跨平台桌面应用，可用于在本地发现、下载并运行开源 LLM。现在你可以通过 模型上下文协议（MCP） 将本地模型连接到工具（Tools）。
+
+**关键功能：**
+
+- 在你的电脑上将本地模型与 MCP 服务器配合使用。向 `mcp.json` 添加条目并保存即可开始。
+- 工具调用确认界面：当模型调用工具时，你可以在 LM Studio 应用中确认该调用。
+- 跨平台：支持在 macOS、Windows 和 Linux 上运行，提供一键安装，无需使用命令行
+- 支持带 GPU 加速的 GGUF（llama.cpp）或 MLX 模型
+- 图形界面与终端模式：可使用 LM Studio 应用或 CLI（lms）进行脚本化与自动化
+
+**了解更多：**
+
+- [文档：在 LM Studio 中使用 MCP](https://lmstudio.ai/docs/app/plugins/mcp)
+- [为你的服务器创建一个“Add to LM Studio”按钮](https://lmstudio.ai/docs/app/plugins/mcp/deeplink)
+- [公告博文：LM Studio + MCP](https://lmstudio.ai/blog/mcp)
+
+<div id="lutra">
+  ### Lutra
+</div>
+
+[Lutra](https://lutra.ai) 是一款将对话转化为可执行、自动化工作流的 AI 智能体。
+
+**主要特性：**
+
+- 轻松集成 MCP：只需提供 MCP 服务器的 URL 即可连接，剩下的由 Lutra 在后台自动处理。
+- 通过对话执行操作：Lutra 能理解你的上下文与目标，自动对接现有应用来完成任务。
+- 可复用的操作手册（Playbooks）：任务完成后，可将步骤保存为可复用的自动化工作流，简化重复流程并减少人工操作。
+- 可共享的自动化：可将保存的操作手册轻松分享给团队成员，标准化最佳实践并加速协作工作流。
+
+**了解更多：**
+
+- [Lutra AI 智能体解析](https://www.youtube.com/watch?v=W5ZpN0cMY70)
+
+<div id="mcp-agent">
+  ### mcp-agent
+</div>
+
+[mcp-agent] 是一个简洁、可组合的框架，用于基于 模型上下文协议（MCP） 构建智能体。
+
+**主要特性：**
+
+- 自动管理 MCP 服务器的连接。
+- 将来自多个服务器的工具（Tools）暴露给 LLM。
+- 实现了 [Building Effective Agents](https://www.anthropic.com/research/building-effective-agents) 中定义的全部模式。
+- 支持工作流的暂停/恢复信号，例如等待人工反馈。
+
+<div id="mcp-client-chatbot">
+  ### mcp-client-chatbot
+</div>
+
+[mcp-client-chatbot](https://github.com/cgoinglove/mcp-client-chatbot) 是一款本地优先的聊天机器人，基于 Vercel 的 Next.js、AI SDK 和 Shadcn UI 构建。
+
+**主要特性：**
+
+- 支持标准的 MCP 工具（Tools）调用，内置自定义 MCP 服务器（MCP 服务器）以及独立 UI，可在聊天流程之外测试 MCP 工具。
+- 默认会将所有 MCP 工具提供给 LLM；同时提供可选的 `@toolname` 提及功能，使工具调用更为明确——在连接多个、且包含众多工具的 MCP 服务器时尤为实用。
+- 提供可视化工作流构建器，可将 LLM 节点与 MCP 工具串联，创建自定义工具。发布后的工作流会在聊天中以 `@workflow_name` 工具的形式被调用，从而实现复杂的多步骤自动化。
+
+<div id="mcp-use">
+  ### mcp-use
+</div>
+
+[mcp-use] 是一个开源的 Python 库，可非常轻松地将任意 LLM 连接到任意本地或远程的 MCP 服务器。
+
+**关键特性：**
+
+- 简洁易用的接口，可将任意 LLM 连接到任意 MCP。
+- 支持创建自定义智能体和工作流。
+- 支持同时连接多个 MCP 服务器。
+- 兼容所有由 LangChain 支持的模型，也可在本地运行。
+- 提供高效的工具（Tools）编排与搜索功能。
+
+<div id="modelcontextchatcom">
+  ### modelcontextchat.com
+</div>
+
+[modelcontextchat.com](https://modelcontextchat.com) 是一款基于 Web 的 MCP 客户端，面向远程 MCP 服务器使用，提供完善的身份验证支持，并集成 OpenRouter。
+
+**主要特性：**
+
+- 基于 Web 的界面，可连接远程 MCP 服务器
+- 支持基于请求头的 Authorization，保障安全访问服务器
+- 集成 OAuth 身份验证
+- 支持 OpenRouter API Key，可访问多家 LLM 提供商
+- 无需安装——可通过任意网页浏览器访问
+
+<div id="mcphub">
+  ### MCPHub
+</div>
+
+[MCPHub] 是一款强大的 Neovim 插件，可将 模型上下文协议（MCP） 服务器集成到你的工作流程中。
+
+**主要功能：**
+
+- 通过直观的 UI 安装、配置和管理 MCP 服务器。
+- 内置 Neovim MCP 服务器，支持文件读写、搜索与替换、命令执行、终端集成、LSP 集成、缓冲区与诊断等功能。
+- 可直接在 Neovim 中创建基于 Lua 的 MCP 服务器。
+- 可与流行的 Neovim 聊天插件 Avante.nvim 与 CodeCompanion.nvim 集成。
+
+<div id="mcpomni-connect">
+  ### MCPOmni-Connect
+</div>
+
+[MCPOmni-Connect](https://github.com/Abiorh001/mcp_omni_connect) 是一款多功能命令行界面（CLI）客户端，可通过 stdio 和 服务器发送事件（SSE）传输方式连接各类 模型上下文协议（MCP） 服务器。
+
+**主要特性：**
+
+- 支持 资源（Resources）、提示（Prompts）、工具（Tools） 和 采样（Sampling）
+- 提供具备 ReAct 与编排器能力的 Agentic 模式
+- 与 OpenAI 模型及其他 LLM 无缝集成
+- 跨多服务器的动态工具与资源管理
+- 同时支持 stdio 与 SSE 传输协议
+- 提供完善的工具编排与资源分析能力
+
+<div id="memex">
+  ### Memex
+</div>
+
+[Memex](https://memex.tech/) 是首个将 MCP 客户端与 MCP 服务器构建器集于一体的桌面应用。不同于只用于对接现有服务器的传统 MCP 客户端，Memex 可根据自然语言提示（Prompts）生成自定义 MCP 服务器，立即将其纳入自身工具集，并在同一段对话中用它们解决问题。
+
+**主要特性：**
+
+- **从提示到 MCP 服务器（Prompt-to-MCP Server）**：依据自然语言描述生成可即用的完整 MCP 服务器
+- **自测与调试（Self-Testing & Debugging）**：自主测试、调试并改进所创建的 MCP 服务器
+- **通用 MCP 客户端（Universal MCP Client）**：通过直观的自然语言集成对接任意 MCP 服务器
+- **精选 MCP 目录（Curated MCP Directory）**：访问已测试、支持一键安装的 MCP 服务器（Neon、Netlify、GitHub、Context7 等）
+- **多服务器编排（Multi-Server Orchestration）**：并行调度多个 MCP 服务器以支持复杂工作流
+
+**了解更多：**
+
+- [Memex Launch 2: MCP Teams and Agent API](https://memex.tech/blog/memex-launch-2-mcp-teams-and-agent-api-private-preview-125f)
+
+<div id="microsoft-copilot-studio">
+  ### Microsoft Copilot Studio
+</div>
+
+[Microsoft Copilot Studio] 是一款强大的 SaaS 平台，面向构建定制的 AI 驱动应用与智能代理，助力开发者创建、部署并管理先进的 AI 解决方案。
+
+**关键特性：**
+
+- 支持 工具（Tools）
+- 通过 MCP 服务器 扩展 Copilot Studio 代理
+- 利用 Microsoft 统一、合规与安全的 API 管理解决方案
+
+<div id="mindpal">
+  ### MindPal
+</div>
+
+[MindPal](https://mindpal.io) 是一个零代码平台，可用于构建和运行面向业务流程的 AI 代理与多代理工作流。
+
+**关键特性：**
+
+- 以零代码方式构建自定义 AI 代理
+- 连接任意基于 SSE 的 MCP 服务器以扩展代理工具（Tools）
+- 为复杂业务流程创建多代理工作流
+- 对技术和非技术从业者都友好
+- 持续迭代，逐步加强对 MCP 的支持
+
+**了解更多：**
+
+- [MindPal MCP 文档](https://docs.mindpal.io/agent/mcp)
+
+<div id="moopoint">
+  ### MooPoint
+</div>
+
+[MooPoint](https://moopoint.io)
+
+MooPoint 是一款面向开发者和高级用户的 Web 版 AI 聊天平台，让你通过一个统一界面与多个大型语言模型（LLM）交互。可连接你自己的 API 密钥（OpenAI、Anthropic 等），并安全管理自定义 MCP 服务器集成。
+
+**主要特性：**
+
+- 可从任何 PC 或智能手机访问——无需安装
+- 可自由选择偏好的 LLM 提供商
+- 支持 `SSE`、`Streamable HTTP`、`npx` 和 `uvx` 的 MCP 服务器
+- 支持 OAuth 和 采样（Sampling）
+- 每天都有新功能上线
+
+<div id="msty-studio">
+  ### Msty Studio
+</div>
+
+[Msty Studio](https://msty.ai) 是一款以隐私为先的 AI 生产力平台，可将本地与在线大型语言模型（LLMs）无缝集成进可自定义的工作流。Msty Studio 面向技术与非技术用户，提供一套工具，助力强化 AI 交互、自动化任务，并对数据与模型行为保持完全掌控。
+
+**关键特性：**
+
+- **Toolbox 与 Toolsets**：使用符合 MCP 的配置，将 AI 模型连接到本地工具与脚本。将工具分组为 Toolsets，在对话中启用动态的多步工作流。
+- **Turnstiles**：创建自动化的多步 AI 交互，支持复杂的数据处理与决策流程。
+- **实时数据集成**：通过集成实时网页搜索能力，用最新信息增强 AI 的响应。
+- **分屏聊天与分支**：与多个模型并行对话，支持对比分析与多元视角。
+
+**了解更多：**
+
+- [Msty Studio 文档](https://docs.msty.studio/features/toolbox/tools)
+
+<div id="nvidia-agent-intelligence-aiq-toolkit">
+  ### NVIDIA Agent Intelligence (AIQ) 工具包
+</div>
+
+[NVIDIA Agent Intelligence (AIQ) 工具包](https://github.com/NVIDIA/AIQToolkit) 是一个灵活、轻量、统一的库，便于你将现有企业级智能体轻松连接到任何框架中的数据源和工具（Tools）。
+
+**关键特性：**
+
+- 作为 MCP **客户端** 消费远程工具（Tools）
+- 作为 MCP **服务器** 暴露工具（Tools）
+- 框架无关，兼容 LangChain、CrewAI、Semantic Kernel 以及自定义智能体
+- 内置可观测性与评估工具
+
+**了解更多：**
+
+- [AIQ 工具包 GitHub 仓库](https://github.com/NVIDIA/AIQToolkit)
+- [AIQ 工具包 MCP 文档](https://docs.nvidia.com/aiqtoolkit/latest/workflows/mcp/index.html)
+
+<div id="opensumi">
+  ### OpenSumi
+</div>
+
+[OpenSumi](https://github.com/opensumi/core) 是一个帮助你快速构建 AI 原生 IDE 产品的框架。
+
+**关键特性：**
+
+- 在 OpenSumi 中支持 工具（Tools）
+- 支持内置 IDE 的 MCP 服务器（MCP Server）和自定义 MCP 服务器（MCP Server）
+
+<div id="oterm">
+  ### oterm
+</div>
+
+[oterm] 是一个用于 Ollama 的终端客户端，支持创建聊天/智能体。
+
+**关键特性：**
+
+- 支持与工具集成的 Ollama，提供多会话且可完全自定义的聊天会话。
+- 支持 MCP 工具（Tools）。
+
+<div id="roo-code">
+  ### Roo Code
+</div>
+
+[Roo Code](https://roocode.com) 通过 MCP 提供 AI 编码辅助。
+
+**主要特性：**
+
+- 支持 MCP 工具（Tools）和资源（Resources）
+- 可与开发工作流集成
+- 可扩展的 AI 能力
+
+<div id="postman">
+  ### Postman
+</div>
+
+[Postman](https://postman.com/downloads) 是最受欢迎的 API 客户端，现在支持对 MCP 服务器进行测试和调试。
+
+**主要特性：**
+
+- 完整支持所有主要 MCP 功能（工具（Tools）、提示（Prompts）、资源（Resources）和订阅）
+- 速度快、无缝的 UI，便于调试 MCP 功能
+- 集成 MCP 配置（Claude、VSCode 等），让首次测试 MCP 更加快捷
+- 与历史记录、变量和集合集成，便于复用与协作
+
+<div id="recursechat">
+  ### RecurseChat
+</div>
+
+[RecurseChat](https://recurse.chat) 是一款功能强大、快速、强调本地优先的聊天客户端，支持 模型上下文协议（MCP）。RecurseChat 支持多个 AI 提供商，包括 LLaMA.cpp、Ollama、OpenAI 和 Anthropic。
+
+**核心功能：**
+
+- 本地 AI：通过 Ollama 模型支持 MCP。
+- MCP 工具（Tools）：独立管理 MCP 服务器，轻松可视化 MCP 服务器的连接状态。
+- MCP 导入：从 Claude 桌面应用或 JSON 导入配置。
+
+**了解更多：**
+
+- [RecurseChat 文档](https://recurse.chat/docs/features/mcp/)
+
+<div id="shortwave">
+  ### Shortwave
+</div>
+
+[Shortwave](https://www.shortwave.com) 是一款由 AI 驱动的电子邮件客户端，支持 MCP 工具（Tools），可提升邮件处理效率并实现工作流自动化。
+
+**关键特性：**
+
+- 集成 MCP 工具，强化电子邮件工作流
+- 直观且丰富的界面，用于添加、管理并与各类 MCP 服务器交互
+- 同时支持远程（可流式 HTTP（Streamable HTTP）和服务器发送事件（SSE））与本地（STDIO）的 MCP 服务器
+- 提供 AI 协助，帮助管理电子邮件、日历、任务及其他第三方服务
+
+<div id="slack-mcp-client">
+  ### Slack MCP 客户端
+</div>
+
+[Slack MCP Client](https://github.com/tuannvm/slack-mcp-client) 作为 Slack 与模型上下文协议（MCP）服务器之间的桥梁。以 Slack 为界面，它使大语言模型（LLM）能够通过标准化的 MCP 工具（Tools）连接并与各类 MCP 服务器交互。
+
+**主要特性：**
+
+- **支持主流 LLM 提供商：** 可与 OpenAI、Anthropic、Ollama 等领先的大语言模型提供商无缝集成，使用户在 Slack 中利用先进的对话式 AI 与编排能力。
+- **动态且安全的集成：** 支持 MCP 工具（Tools）的动态注册，可在频道和私信中使用，并通过环境变量或 Kubernetes Secret 安全管理凭据。
+- **易于部署与扩展：** 提供官方 Docker 镜像、适用于 Kubernetes 的 Helm Chart，以及用于本地开发的 Docker Compose，便于部署、配置，并可轻松扩展以接入更多 MCP 服务器或工具（Tools）。
+
+<div id="sourcegraph-cody">
+  ### Sourcegraph Cody
+</div>
+
+[Cody](https://openctx.org/docs/providers/modelcontextprotocol) 是 Sourcegraph 的 AI 编码助手，通过 OpenCTX 实现了 模型上下文协议（MCP）。
+
+**主要功能：**
+
+- 支持 MCP 资源（Resources）
+- 集成 Sourcegraph 的代码智能
+- 使用 OpenCTX 作为抽象层
+- 计划在未来支持更多 MCP 功能
+
+<div id="spinai">
+  ### SpinAI
+</div>
+
+[SpinAI](https://spinai.dev) 是一个开源的 TypeScript 框架，用于构建可观测的 AI 代理。该框架提供对 MCP 的原生兼容，支持代理与 MCP 服务器和工具的无缝集成。
+
+**关键特性：**
+
+- 面向 AI 代理的内置 MCP 兼容
+- 开源的 TypeScript 框架
+- 可观测的代理架构
+- 原生支持与 MCP 工具的集成
+
+<div id="superinterface">
+  ### Superinterface
+</div>
+
+[Superinterface](https://superinterface.ai) 是一套用于构建应用内 AI 助手的 AI 基础设施与开发者平台，支持 MCP、交互式组件、客户端函数调用等。
+
+**主要功能：**
+
+- 通过 React 组件或脚本标签嵌入助手，并使用来自 MCP 服务器的工具（Tools）
+- 支持 SSE 传输
+- 可使用任意 AI 提供商的任意 AI 模型（OpenAI、Anthropic、Ollama 等）
+
+<div id="superjoin">
+  ### Superjoin
+</div>
+
+[Superjoin](https://superjoin.ai) 将 MCP 的强大功能直接带入 Google Sheets 扩展中。借助 Superjoin，用户无需离开电子表格即可访问并调用 MCP 工具（Tools）和代理，让强大的 AI 工作流与自动化在数据所在之处就地运行。
+
+**主要特性：**
+
+- 原生 Google Sheets 附加组件，轻松使用 MCP 功能
+- 支持 OAuth 2.1 与基于请求头的身份验证，连接安全且灵活
+- 兼容服务器发送事件（SSE）与可流式 HTTP（Streamable HTTP）传输方式，实现高效的实时流式通信
+- 完全基于 Web 的跨平台客户端，无需额外安装软件
+
+<div id="systemprompt">
+  ### systemprompt
+</div>
+
+[systemprompt](https://systemprompt.io) 是一款语音控制的移动应用，用于管理你的 MCP 服务器。让你随身安全使用 MCP 代理。支持 iOS 和 Android。
+
+**主要特性：**
+
+- **原生移动体验**：在 Android 和 iOS 设备上随时随地访问并管理你的 MCP 服务器
+- **先进的 AI 驱动语音识别**：采用前沿 AI 与自然语言处理（NLP）加持的高精度语音识别引擎，专为理解复杂的开发者术语与命令结构而优化
+- **统一的多 MCP 服务器管理**：通过一款集中式移动应用，轻松管理并与多个 模型上下文协议（MCP）服务器交互
+
+<div id="tambo">
+  ### Tambo
+</div>
+
+[Tambo](https://tambo.co) 是一个用于在 React 中构建自定义聊天体验的平台，内置自定义用户界面组件。
+
+**关键特性：**
+
+- 提供托管平台与 React SDK，便于将聊天或其他基于 LLM 的体验集成到你的应用中。
+- 在聊天体验中支持选用任意 React 组件，具备状态管理与工具（Tools）调用能力。
+- 支持 MCP 服务器，可通过 Tambo 的服务器或直接在浏览器中连接。
+- 支持 OAuth 2.1 和基于自定义请求头的身份验证。
+- 支持 MCP 工具（Tools），更多 MCP 功能即将推出。
+
+<div id="tencent-cloudbase-ai-devkit">
+  ### Tencent CloudBase AI DevKit
+</div>
+
+[Tencent CloudBase AI DevKit](https://docs.cloudbase.net/ai/agent/mcp) 是一款可在数分钟内构建 AI 智能体的工具，具备零代码工具、安全的数据集成，并通过模型上下文协议（MCP）实现可扩展的插件能力。
+
+**主要特性：**
+
+- 支持 工具（Tools）
+- 通过 MCP 服务器（MCP 服务器）扩展智能体
+- MCP 服务器托管：支持无服务器托管与身份验证
+
+<div id="theiaaitheiaide">
+  ### TheiaAI/TheiaIDE
+</div>
+
+[Theia AI](https://eclipsesource.com/blogs/2024/10/07/introducing-theia-ai/) 是一个用于构建 AI 增强型工具和 IDE 的框架。[AI 驱动的 Theia IDE](https://eclipsesource.com/blogs/2024/10/08/introducting-ai-theia-ide/) 是基于 Theia AI 构建的开放且灵活的开发环境。
+
+**关键特性：**
+
+- **工具集成**：Theia AI 使 AI 代理（包括 Theia IDE 中的代理）能够利用 MCP 服务器，实现无缝工具交互。
+- **可自定义提示（Prompts）**：Theia IDE 允许用户定义与调整提示（Prompts），并可动态集成 MCP 服务器，以定制工作流。
+- **自定义代理**：Theia IDE 支持创建基于 MCP 能力的自定义代理，使用户能够即时设计专用工作流。
+
+Theia AI 和 Theia IDE 对 MCP 的集成为用户带来更高的灵活性，使其成为探索与适配 MCP 的强大平台。
+
+**了解更多：**
+
+- [Theia IDE 和 Theia AI 的 MCP 公告](https://eclipsesource.com/blogs/2024/12/19/theia-ide-and-theia-ai-support-mcp/)
+- [下载 AI 驱动的 Theia IDE](https://theia-ide.org/)
+
+<div id="tome">
+  ### Tome
+</div>
+
+[Tome](https://github.com/runebookai/tome) 是一款开源、跨平台的桌面应用，专为与本地 LLM 和 MCP 服务器协同工作而设计。它对新手友好，能为刚接触 MCP 的用户屏蔽繁琐的配置细节。
+
+**主要特性：**
+
+- MCP 服务器由 Tome 统一管理，因此无需安装 uv 或 npm，也无需配置 JSON
+- 用户可通过 UI 快速添加或移除 MCP 服务器
+- 兼容在 Ollama 上支持工具（Tools）的任何本地模型
+
+<div id="typingmind-app">
+  ### TypingMind 应用
+</div>
+
+[TypingMind](https://www.typingmind.com) 是一款支持 MCP 的高级 LLM 前端。TypingMind 兼容 OpenAI、Gemini、Claude 等主流 LLM 提供商，用户可使用自己的 API 密钥。
+
+**主要特性：**
+
+- **MCP 工具（Tools）集成**：配置好 MCP 后，MCP 工具会以插件形式显示，可在主应用界面中轻松启用或禁用。
+- **为智能体分配 MCP 工具（Tools）**：TypingMind 允许用户创建 AI 智能体，并为其分配一组 MCP 服务器。
+- **远程 MCP 服务器**：通过 MCP 连接器（MCP Connector）配置，用户可自定义 MCP 服务器的运行位置，从而在多设备（笔记本、移动设备等）间使用 MCP 工具，或从远程私有服务器控制 MCP 服务器。
+
+**了解更多：**
+
+- [TypingMind MCP 文档](https://www.typingmind.com/mcp)
+- [下载 TypingMind（PWA）](https://www.typingmind.com/)
+
+<div id="vs-code-github-copilot">
+  ### VS Code GitHub Copilot
+</div>
+
+[VS Code](https://code.visualstudio.com/) 通过 [agent mode](https://code.visualstudio.com/docs/copilot/chat/chat-agent-mode) 将 模型上下文协议（MCP） 与 GitHub Copilot 集成，使你能够在代理式编码工作流中直接使用 MCP 提供的 工具（Tools）。可在 Claude Desktop、工作区或用户设置中配置服务器，提供引导式 MCP 安装，并在输入变量中安全处理密钥，避免泄露硬编码密钥。
+
+**关键特性：**
+
+- 支持 stdio 和 服务器发送事件（SSE） 传输方式
+- 按会话为每个代理会话选择 工具（Tools），以获得最佳性能
+- 通过重启命令与输出日志轻松调试服务器
+- 工具调用支持可编辑输入，并提供“始终允许”开关
+- 与现有 VS Code 扩展体系集成，可从扩展中注册 MCP 服务器
+
+<div id="warp">
+  ### Warp
+</div>
+
+[Warp](https://www.warp.dev/) 是一款内置 AI 与团队知识的智能终端。借助直接集成到具备代理能力的命令行中的自然语言功能，Warp 让开发者能够在拥有现代化体验的终端中更高效地编写代码、自动化流程并协作。
+
+**关键特性：**
+
+- **Agent 模式与 MCP 支持**：使用自然语言提示（Prompts）从 MCP 服务器调用工具（Tools）并访问数据
+- **灵活的服务器管理**：通过 Warp 内置 UI 添加并管理基于 CLI 或 SSE 的 MCP 服务器
+- **实时工具/资源发现**：查看每个正在运行的 MCP 服务器提供的工具与资源（Resources）
+- **可配置启动**：可将 MCP 服务器设为随 Warp 自动启动，或按需手动启动
+
+<div id="whatsmcp">
+  ### WhatsMCP
+</div>
+
+[WhatsMCP](https://wassist.app/mcp/) 是一款用于 WhatsApp 的 MCP 客户端。WhatsMCP 让你可以在熟悉的 WhatsApp 聊天中与自己的 AI 技术栈交互。
+
+**关键特性：**
+
+- 支持 MCP 工具（Tools）
+- 基于 SSE 的传输方式，完整支持 OAuth 2.0
+- 针对 WhatsApp 消息的聊天流管理
+- 一键连接到你的 MCP 服务器（MCP Server）
+- 在聊天中管理 MCP 服务器（MCP Server）
+- 在 WhatsApp 中原生支持 OAuth 流程
+
+<div id="windsurf-editor">
+  ### Windsurf Editor
+</div>
+
+[Windsurf Editor](https://codeium.com/windsurf) 是一款具备智能体能力的 IDE，将 AI 辅助与开发者工作流程相结合。其创新的 AI Flow 系统既支持协作式与独立式的 AI 交互，又能保持开发者的主导与控制。
+
+**主要功能：**
+
+- 革命性的 AI Flow 范式，促进人机协作
+- 智能代码生成与理解
+- 丰富的开发工具，支持多模型
+
+<div id="witsy">
+  ### Witsy
+</div>
+
+[Witsy](https://github.com/nbonamy/witsy) 是一款 AI 桌面助手，支持 Anthropic 模型，并将 MCP 服务器作为 LLM 的工具使用。
+
+**主要特性：**
+
+- 支持连接多个 MCP 服务器
+- 集成工具，可执行命令与脚本
+- 支持本地服务器连接，提升隐私与安全
+- 可从 Smithery.ai 一键安装
+- 开源，支持 macOS、Windows 与 Linux
+
+<div id="zed">
+  ### Zed
+</div>
+
+[Zed](https://zed.dev/docs/assistant/model-context-protocol) 是一款高性能代码编辑器，内置 MCP 支持，侧重于提示模板和工具（Tools）集成。
+
+**关键特性：**
+
+- 提示模板以斜杠命令的形式在编辑器中呈现
+- 工具（Tools）集成，增强编码工作流
+- 与编辑器功能和工作区上下文深度集成
+- 不支持 MCP 资源（Resources）
+
+<div id="zencoder">
+  ### Zencoder
+</div>
+
+[Zencoder](https://zecoder.ai) 是一款编码智能体，可作为 VS Code 和 JetBrains 系列 IDE 的扩展使用，在开发者日常工作环境中无缝集成。它提供 RepoGrokking（对代码库的深度上下文理解）、智能体式流水线，以及创建和分享自定义智能体的能力。
+
+**主要特性：**
+
+- RepoGrokking - 对代码库的深度上下文理解
+- Agentic pipeline - 在输出前先运行、测试并执行代码
+- Zen Agents 平台 - 支持构建自定义智能体并与团队共享
+- 集成的 MCP 工具（Tools）库，支持一键安装
+- 面向单元测试与端到端（E2E）测试的专用智能体
+
+**了解更多：**
+
+- [Zencoder 文档](https://docs.zencoder.ai)
+
+<div id="adding-mcp-support-to-your-application">
+  ## 为你的应用添加 MCP 支持
+</div>
+
+如果你已在应用中添加了 MCP 支持，欢迎提交 pull request 将其加入此列表。集成模型上下文协议（MCP）能为你的用户提供强大的上下文型 AI 能力，并让你的应用成为不断壮大的 MCP 生态的一部分。
+
+添加 MCP 支持的优势：
+
+- 让用户能够携带他们自己的上下文与工具（Tools）
+- 加入不断增长、可互操作的 AI 应用生态
+- 为用户提供灵活的集成选项
+- 支持本地优先的 AI 工作流
+
+要在你的应用中开始实现 MCP，请查看我们的 [Python](https://github.com/modelcontextprotocol/python-sdk) 或 [TypeScript SDK 文档](https://github.com/modelcontextprotocol/typescript-sdk)
+
+<div id="updates-and-corrections">
+  ## 更新与更正
+</div>
+
+此列表由社区维护。若您发现任何不准确之处，或希望更新您应用中关于 MCP 支持的信息，请提交 pull request，或[在我们的文档仓库中提交 issue](https://github.com/modelcontextprotocol/modelcontextprotocol/issues)。

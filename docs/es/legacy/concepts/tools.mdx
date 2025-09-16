@@ -1,0 +1,530 @@
+---
+title: "Herramientas"
+description: "Permite que los LLM realicen acciones a través de tu servidor"
+---
+
+Las herramientas son un primitivo potente del Protocolo de Contexto de Modelo (MCP) que permite a los servidores exponer funcionalidades ejecutables a los clientes. A través de las herramientas, los LLM pueden interactuar con sistemas externos, realizar cálculos y ejecutar acciones en el mundo real.
+
+<Note>
+  Las herramientas están diseñadas para ser **controladas por el modelo**, lo que significa que se exponen desde los servidores a los clientes con la intención de que el modelo de IA pueda invocarlas automáticamente (con una persona en el circuito para otorgar la aprobación).
+</Note>
+
+<div id="overview">
+  ## Descripción general
+</div>
+
+Las Herramientas en MCP permiten que los servidores expongan funciones ejecutables que los clientes pueden invocar y que los LLM pueden usar para realizar acciones. Los aspectos clave de las herramientas incluyen:
+
+* **Descubrimiento**: Los clientes pueden obtener la lista de herramientas disponibles enviando una solicitud `tools/list`
+* **Invocación**: Las herramientas se invocan mediante la solicitud `tools/call`, con la cual los servidores realizan la operación solicitada y devuelven resultados
+* **Flexibilidad**: Las herramientas pueden abarcar desde cálculos simples hasta interacciones complejas con API
+
+Al igual que los [Recursos](/es/legacy/concepts/resources), las herramientas se identifican por nombres únicos y pueden incluir descripciones para orientar su uso. Sin embargo, a diferencia de los recursos, las herramientas representan operaciones dinámicas que pueden modificar el estado o interactuar con sistemas externos.
+
+<div id="tool-definition-structure">
+  ## Estructura de definición de la herramienta
+</div>
+
+Cada herramienta se define con la siguiente estructura:
+
+```typescript
+{
+  name: string;          // Identificador único de la herramienta
+  description?: string;  // Descripción en lenguaje natural
+  inputSchema: {         // JSON Schema para los parámetros de la herramienta
+    type: "object",
+    properties: { ... }  // Parámetros específicos de la herramienta
+  },
+  annotations?: {        // Indicaciones opcionales sobre el comportamiento de la herramienta
+    title?: string;      // Título en lenguaje natural de la herramienta
+    readOnlyHint?: boolean;    // Si es true, la herramienta no modifica su entorno
+    destructiveHint?: boolean; // Si es true, la herramienta puede realizar cambios destructivos
+    idempotentHint?: boolean;  // Si es true, las llamadas repetidas con los mismos argumentos no tienen efecto adicional
+    openWorldHint?: boolean;   // Si es true, la herramienta interactúa con entidades externas
+  }
+}
+```
+
+<div id="implementing-tools">
+  ## Implementación de Herramientas
+</div>
+
+Aquí tienes un ejemplo de cómo implementar una herramienta básica en un Servidor MCP:
+
+<CodeGroup>
+  ```typescript TypeScript
+  const server = new Server(
+    {
+      name: "example-server",
+      version: "1.0.0",
+    },
+    {
+      capabilities: {
+        tools: {},
+      },
+    },
+  );
+
+  // Definir las herramientas disponibles
+  server.setRequestHandler(ListToolsRequestSchema, async () => {
+    return {
+      tools: [
+        {
+          name: "calculate_sum",
+          description: "Suma dos números",
+          inputSchema: {
+            type: "object",
+            properties: {
+              a: { type: "number" },
+              b: { type: "number" },
+            },
+            required: ["a", "b"],
+          },
+        },
+      ],
+    };
+  });
+
+  // Gestionar la ejecución de la herramienta
+  server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    if (request.params.name === "calculate_sum") {
+      const { a, b } = request.params.arguments;
+      return {
+        content: [
+          {
+            type: "text",
+            text: String(a + b),
+          },
+        ],
+      };
+    }
+    throw new Error("Herramienta no encontrada");
+  });
+  ```
+
+  ```python Python
+  app = Server("example-server")
+
+  @app.list_tools()
+  async def list_tools() -> list[types.Tool]:
+      return [
+          types.Tool(
+              name="calculate_sum",
+              description="Suma dos números",
+              inputSchema={
+                  "type": "object",
+                  "properties": {
+                      "a": {"type": "number"},
+                      "b": {"type": "number"}
+                  },
+                  "required": ["a", "b"]
+              }
+          )
+      ]
+
+  @app.call_tool()
+  async def call_tool(
+      name: str,
+      arguments: dict
+  ) -> list[types.TextContent | types.ImageContent | types.EmbeddedResource]:
+      if name == "calculate_sum":
+          a = arguments["a"]
+          b = arguments["b"]
+          result = a + b
+          return [types.TextContent(type="text", text=str(result))]
+      raise ValueError(f"Herramienta no encontrada: {name}")
+  ```
+</CodeGroup>
+
+<div id="example-tool-patterns">
+  ## Patrones de Herramientas de ejemplo
+</div>
+
+Aquí tienes algunos ejemplos de tipos de Herramientas que un servidor podría proporcionar:
+
+<div id="system-operations">
+  ### Operaciones del sistema
+</div>
+
+Herramientas que interactúan con el sistema local:
+
+```typescript
+{
+  name: "execute_command",
+  description: "Ejecuta un comando de shell",
+  inputSchema: {
+    type: "object",
+    properties: {
+      command: { type: "string" },
+      args: { type: "array", items: { type: "string" } }
+    }
+  }
+}
+```
+
+<div id="api-integrations">
+  ### Integraciones de API
+</div>
+
+Herramientas que encapsulan APIs externas:
+
+```typescript
+{
+  name: "github_create_issue",
+  description: "Create a GitHub issue",
+  inputSchema: {
+    type: "object",
+    properties: {
+      title: { type: "string" },
+      body: { type: "string" },
+      labels: { type: "array", items: { type: "string" } }
+    }
+  }
+}
+```
+
+<div id="data-processing">
+  ### Procesamiento de datos
+</div>
+
+Herramientas que transforman o analizan datos:
+
+```typescript
+{
+  name: "analyze_csv",
+  description: "Analizar un archivo CSV",
+  inputSchema: {
+    type: "object",
+    properties: {
+      filepath: { type: "string" },
+      operations: {
+        type: "array",
+        items: {
+          enum: ["sum", "average", "count"]
+        }
+      }
+    }
+  }
+}
+```
+
+<div id="best-practices">
+  ## Mejores prácticas
+</div>
+
+Al implementar Herramientas:
+
+1. Proporcione nombres y descripciones claras y precisas
+2. Use definiciones detalladas de JSON Schema para los parámetros
+3. Incluya ejemplos en las descripciones de las Herramientas para mostrar cómo debería usarlas el modelo
+4. Implemente un manejo de errores y validaciones adecuados
+5. Use informes de progreso para operaciones de larga duración
+6. Mantenga las operaciones de las Herramientas enfocadas y atómicas
+7. Documente las estructuras de los valores de retorno esperados
+8. Implemente tiempos de espera adecuados
+9. Considere la limitación de tasa para operaciones con uso intensivo de Recursos
+10. Registre el uso de las Herramientas para depuración y monitoreo
+
+<div id="tool-name-conflicts">
+  ### Conflictos de nombres de herramientas
+</div>
+
+Las aplicaciones Cliente MCP y los proxies de Servidor MCP pueden encontrarse con conflictos de nombres de herramientas al construir sus propias listas de herramientas. Por ejemplo, dos Servidores MCP conectados, `web1` y `web2`, pueden exponer ambos una herramienta llamada `search_web`.
+
+Las aplicaciones pueden desambiguar las herramientas con una de las siguientes estrategias (entre otras; no es una lista exhaustiva):
+
+* Concatenar un nombre de servidor único definido por el usuario con el nombre de la herramienta, p. ej., `web1___search_web` y `web2___search_web`. Esta estrategia puede ser preferible cuando el usuario ya proporciona nombres de servidor únicos en un archivo de configuración.
+* Generar un prefijo aleatorio para el nombre de la herramienta, p. ej., `jrwxs___search_web` y `6cq52___search_web`. Esta estrategia puede ser preferible en proxies de servidor donde no haya nombres únicos definidos por el usuario.
+* Usar el URI del servidor como prefijo para el nombre de la herramienta, p. ej., `web1.example.com:search_web` y `web2.example.com:search_web`. Esta estrategia puede ser adecuada cuando se trabaja con Servidores MCP remotos.
+
+Tenga en cuenta que el nombre proporcionado por el servidor durante el flujo de inicialización no está garantizado que sea único y, por lo general, no es adecuado para fines de desambiguación.
+
+<div id="security-considerations">
+  ## Consideraciones de seguridad
+</div>
+
+Al exponer Herramientas:
+
+<div id="input-validation">
+  ### Validación de entradas
+</div>
+
+* Valida todos los parámetros conforme al esquema
+* Depura las rutas de archivos y los comandos del sistema
+* Valida las URL y los identificadores externos
+* Verifica los tamaños y rangos de los parámetros
+* Evita la inyección de comandos
+
+<div id="access-control">
+  ### Control de acceso
+</div>
+
+* Implementar autenticación cuando sea necesario
+* Aplicar controles de autorización adecuados
+* Auditar el uso de Herramientas
+* Limitar la frecuencia de las solicitudes
+* Monitorizar posibles abusos
+
+<div id="error-handling">
+  ### Manejo de errores
+</div>
+
+* No expongas errores internos a los clientes
+* Registra los errores relevantes para la seguridad
+* Maneja los tiempos de espera de forma adecuada
+* Libera los recursos después de errores
+* Valida los valores de retorno
+
+<div id="tool-discovery-and-updates">
+  ## Descubrimiento y actualizaciones de Herramientas
+</div>
+
+MCP admite el descubrimiento dinámico de Herramientas:
+
+1. Los Clientes pueden listar las Herramientas disponibles en cualquier momento
+2. Los Servidores pueden notificar a los Clientes cuando las Herramientas cambian mediante `notifications/tools/list_changed`
+3. Las Herramientas pueden añadirse o eliminarse durante la ejecución
+4. Las definiciones de Herramientas pueden actualizarse (aunque debe hacerse con cuidado)
+
+<div id="error-handling">
+  ## Manejo de errores
+</div>
+
+Los errores de las Herramientas deben informarse dentro del objeto de resultado, no como errores a nivel del protocolo MCP. Esto permite que el LLM vea el error y, potencialmente, lo maneje. Cuando una herramienta encuentre un error:
+
+1. Establece `isError` en `true` en el resultado
+2. Incluye los detalles del error en el array `content`
+
+Aquí tienes un ejemplo de manejo de errores adecuado para Herramientas:
+
+<CodeGroup>
+  ```typescript TypeScript
+  try {
+    // Tool operation
+    const result = performOperation();
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Operation successful: ${result}`,
+        },
+      ],
+    };
+  } catch (error) {
+    return {
+      isError: true,
+      content: [
+        {
+          type: "text",
+          text: `Error: ${error.message}`,
+        },
+      ],
+    };
+  }
+  ```
+
+  ```python Python
+  try:
+      # Tool operation
+      result = perform_operation()
+      return types.CallToolResult(
+          content=[
+              types.TextContent(
+                  type="text",
+                  text=f"Operation successful: {result}"
+              )
+          ]
+      )
+  except Exception as error:
+      return types.CallToolResult(
+          isError=True,
+          content=[
+              types.TextContent(
+                  type="text",
+                  text=f"Error: {str(error)}"
+              )
+          ]
+      )
+  ```
+</CodeGroup>
+
+Este enfoque permite que el LLM vea que se produjo un error y, potencialmente, tome medidas correctivas o solicite intervención humana.
+
+<div id="tool-annotations">
+  ## Anotaciones de herramientas
+</div>
+
+Las anotaciones de herramientas aportan metadatos adicionales sobre el comportamiento de una herramienta, lo que ayuda a los clientes a entender cómo presentar y gestionar las herramientas. Estas anotaciones son indicaciones que describen la naturaleza y el impacto de una herramienta, pero no deben usarse como base para tomar decisiones de seguridad.
+
+<div id="purpose-of-tool-annotations">
+  ### Propósito de las anotaciones de Herramientas
+</div>
+
+Las anotaciones de Herramientas cumplen varios propósitos clave:
+
+1. Proporcionar información específica de UX sin afectar el contexto del modelo
+2. Ayudar a los clientes a clasificar y presentar las Herramientas de forma adecuada
+3. Transmitir información sobre los posibles efectos secundarios de una Herramienta
+4. Contribuir al desarrollo de interfaces intuitivas para la aprobación de Herramientas
+
+<div id="available-tool-annotations">
+  ### Anotaciones de Herramientas disponibles
+</div>
+
+La especificación de MCP define las siguientes anotaciones para las Herramientas:
+
+| Anotación         | Tipo    | Predeterminado | Descripción                                                                                                                                      |
+| ----------------- | ------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `title`           | string  | -              | Un título comprensible para personas para la Herramienta, útil para mostrarlo en la interfaz                                                    |
+| `readOnlyHint`    | boolean | false          | Si es true, indica que la Herramienta no modifica su entorno                                                                                    |
+| `destructiveHint` | boolean | true           | Si es true, la Herramienta puede realizar actualizaciones destructivas (solo aplica cuando `readOnlyHint` es false)                            |
+| `idempotentHint`  | boolean | false          | Si es true, invocar repetidamente la Herramienta con los mismos argumentos no tiene efecto adicional (solo aplica cuando `readOnlyHint` es false) |
+| `openWorldHint`   | boolean | true           | Si es true, la Herramienta puede interactuar con un “mundo abierto” de entidades externas                                                       |
+
+<div id="example-usage">
+  ### Ejemplo de uso
+</div>
+
+Así es como definir Herramientas con anotaciones para diferentes escenarios:
+
+```typescript
+// Una herramienta de búsqueda de solo lectura
+{
+  name: "web_search",
+  description: "Buscar información en la web",
+  inputSchema: {
+    type: "object",
+    properties: {
+      query: { type: "string" }
+    },
+    required: ["query"]
+  },
+  annotations: {
+    title: "Búsqueda web",
+    readOnlyHint: true,
+    openWorldHint: true
+  }
+}
+
+// Una herramienta destructiva para eliminar archivos
+{
+  name: "delete_file",
+  description: "Eliminar un archivo del sistema de archivos",
+  inputSchema: {
+    type: "object",
+    properties: {
+      path: { type: "string" }
+    },
+    required: ["path"]
+  },
+  annotations: {
+    title: "Eliminar archivo",
+    readOnlyHint: false,
+    destructiveHint: true,
+    idempotentHint: true,
+    openWorldHint: false
+  }
+}
+
+// Una herramienta no destructiva para crear registros en la base de datos
+{
+  name: "create_record",
+  description: "Crear un nuevo registro en la base de datos",
+  inputSchema: {
+    type: "object",
+    properties: {
+      table: { type: "string" },
+      data: { type: "object" }
+    },
+    required: ["table", "data"]
+  },
+  annotations: {
+    title: "Crear registro en la base de datos",
+    readOnlyHint: false,
+    destructiveHint: false,
+    idempotentHint: false,
+    openWorldHint: false
+  }
+}
+```
+
+<div id="integrating-annotations-in-server-implementation">
+  ### Integración de anotaciones en la implementación del servidor
+</div>
+
+<CodeGroup>
+  ```typescript TypeScript
+  server.setRequestHandler(ListToolsRequestSchema, async () => {
+    return {
+      tools: [
+        {
+          name: "calculate_sum",
+          description: "Suma dos números",
+          inputSchema: {
+            type: "object",
+            properties: {
+              a: { type: "number" },
+              b: { type: "number" },
+            },
+            required: ["a", "b"],
+          },
+          annotations: {
+            title: "Calcular suma",
+            readOnlyHint: true,
+            openWorldHint: false,
+          },
+        },
+      ],
+    };
+  });
+  ```
+
+  ```python Python
+  from mcp.server.fastmcp import FastMCP
+
+  mcp = FastMCP("example-server")
+
+  @mcp.tool(
+      annotations={
+          "title": "Calcular suma",
+          "readOnlyHint": True,
+          "openWorldHint": False
+      }
+  )
+  async def calculate_sum(a: float, b: float) -> str:
+      """Suma dos números.
+
+      Args:
+          a: Primer número a sumar
+          b: Segundo número a sumar
+      """
+      result = a + b
+      return str(result)
+  ```
+</CodeGroup>
+
+<div id="best-practices-for-tool-annotations">
+  ### Mejores prácticas para las anotaciones de Herramientas
+</div>
+
+1. **Sea preciso sobre los efectos secundarios**: Indique claramente si una herramienta modifica su entorno y si esas modificaciones son destructivas.
+
+2. **Use títulos descriptivos**: Proporcione títulos claros y comprensibles que describan el propósito de la herramienta.
+
+3. **Indique la idempotencia correctamente**: Marque las herramientas como idempotentes solo si las llamadas repetidas con los mismos argumentos realmente no tienen ningún efecto adicional.
+
+4. **Defina correctamente las pistas de mundo abierto/cerrado**: Indique si una herramienta interactúa con un sistema cerrado (como una base de datos) o con un sistema abierto (como la web).
+
+5. **Recuerde que las anotaciones son indicativas**: Todas las propiedades en ToolAnnotations son orientativas y no garantizan una descripción fiel del comportamiento de la herramienta. Los clientes nunca deben tomar decisiones críticas de seguridad basándose únicamente en las anotaciones.
+
+<div id="testing-tools">
+  ## Pruebas de herramientas
+</div>
+
+Una estrategia de pruebas integral para las Herramientas de MCP debería cubrir:
+
+* **Pruebas funcionales**: Verificar que las herramientas se ejecuten correctamente con entradas válidas y gestionen adecuadamente las entradas no válidas
+* **Pruebas de integración**: Probar la interacción de la herramienta con sistemas externos usando dependencias reales y simuladas
+* **Pruebas de seguridad**: Validar autenticación, autorización, saneamiento de entradas y limitación de frecuencia
+* **Pruebas de rendimiento**: Comprobar el comportamiento bajo carga, el manejo de tiempos de espera y la liberación de recursos
+* **Manejo de errores**: Asegurar que las herramientas informen correctamente los errores a través del Protocolo de Contexto de Modelo (MCP) y liberen los recursos

@@ -1,0 +1,305 @@
+---
+title: Indicaciones
+---
+
+<div id="enable-section-numbers" />
+
+<Info>**Revisión del protocolo**: 2025-06-18</Info>
+
+El Protocolo de Contexto de Modelo (MCP) proporciona una forma estandarizada para que los servidores expongan plantillas de indicaciones a los clientes. Las indicaciones permiten a los servidores proporcionar mensajes estructurados e instrucciones para interactuar con modelos de lenguaje. Los clientes pueden descubrir las indicaciones disponibles, obtener su contenido y proporcionar argumentos para personalizarlas.
+
+<div id="user-interaction-model">
+  ## Modelo de interacción con el usuario
+</div>
+
+Las Indicaciones están diseñadas para ser **controladas por el usuario**, lo que significa que se exponen desde los servidores a los clientes con la intención de que el usuario pueda seleccionarlas explícitamente para su uso.
+
+Por lo general, las indicaciones se activarían mediante comandos iniciados por el usuario en la interfaz, lo que permite que los usuarios descubran e invoquen de forma natural las indicaciones disponibles.
+
+Por ejemplo, como comandos de barra:
+
+![Example of prompt exposed as slash command](/specification/2025-06-18/server/slash-command.png)
+
+No obstante, los implementadores son libres de exponer indicaciones mediante cualquier patrón de interfaz que se ajuste a sus necesidades; el protocolo en sí no impone ningún modelo específico de interacción con el usuario.
+
+<div id="capabilities">
+  ## Capacidades
+</div>
+
+Los servidores que admiten Indicaciones **DEBEN** declarar la capacidad `prompts` durante la
+[inicialización](/es/specification/2025-06-18/basic/lifecycle#initialization):
+
+```json
+{
+  "capabilities": {
+    "prompts": {
+      "listChanged": true
+    }
+  }
+}
+```
+
+`listChanged` indica si el servidor emitirá notificaciones cuando cambie la lista de
+Indicaciones disponibles.
+
+<div id="protocol-messages">
+  ## Mensajes del protocolo
+</div>
+
+<div id="listing-prompts">
+  ### Listado de Indicaciones
+</div>
+
+Para obtener las indicaciones disponibles, los clientes envían una solicitud `prompts/list`. Esta operación
+admite [paginación](/es/specification/2025-06-18/server/utilities/pagination).
+
+**Solicitud:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "prompts/list",
+  "params": {
+    "cursor": "optional-cursor-value"
+  }
+}
+```
+
+**Respuesta:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "prompts": [
+      {
+        "name": "code_review",
+        "title": "Solicitar revisión de código",
+        "description": "Pide al LLM que analice la calidad del código y sugiera mejoras",
+        "arguments": [
+          {
+            "name": "code",
+            "description": "El código a revisar",
+            "required": true
+          }
+        ]
+      }
+    ],
+    "nextCursor": "next-page-cursor"
+  }
+}
+```
+
+<div id="getting-a-prompt">
+  ### Obtener una indicación
+</div>
+
+Para obtener una indicación específica, los clientes envían una solicitud `prompts/get`. Los argumentos pueden
+completarse automáticamente mediante [la API de autocompletado](/es/specification/2025-06-18/server/utilities/completion).
+
+**Solicitud:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "prompts/get",
+  "params": {
+    "name": "code_review",
+    "arguments": {
+      "code": "def hello():\n    print('world')"
+    }
+  }
+}
+```
+
+**Respuesta:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "description": "Indicación para revisión de código",
+    "messages": [
+      {
+        "role": "user",
+        "content": {
+          "type": "text",
+          "text": "Por favor, revisa este código de Python:\ndef hello():\n    print('world')"
+        }
+      }
+    ]
+  }
+}
+```
+
+<div id="list-changed-notification">
+  ### Notificación de cambio de lista
+</div>
+
+Cuando cambie la lista de indicaciones disponibles, los servidores que hayan declarado la capacidad `listChanged` **DEBERÍAN** enviar una notificación:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/prompts/list_changed"
+}
+```
+
+<div id="message-flow">
+  ## Flujo de mensajes
+</div>
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Server
+
+    Note over Client,Server: Descubrimiento
+    Client->>Server: prompts/list
+    Server-->>Client: Lista de indicaciones
+
+    Note over Client,Server: Uso
+    Client->>Server: prompts/get
+    Server-->>Client: Contenido de la indicación
+
+    opt listChanged
+      Note over Client,Server: Cambios
+      Server--)Client: prompts/list_changed
+      Client->>Server: prompts/list
+      Server-->>Client: Indicaciones actualizadas
+    end
+```
+
+<div id="data-types">
+  ## Tipos de datos
+</div>
+
+<div id="prompt">
+  ### Indicaciones
+</div>
+
+Una definición de indicación incluye:
+
+* `name`: Identificador único de la indicación
+* `title`: Nombre legible para humanos de la indicación (opcional), para fines de visualización.
+* `description`: Descripción legible para humanos (opcional)
+* `arguments`: Lista (opcional) de argumentos para personalización
+
+<div id="promptmessage">
+  ### PromptMessage
+</div>
+
+Los mensajes en una indicación pueden contener:
+
+* `role`: &quot;user&quot; o &quot;assistant&quot; para indicar quién habla
+* `content`: Uno de los siguientes tipos de contenido:
+
+<Note>
+  Todos los tipos de contenido en los mensajes de indicaciones admiten
+  [anotaciones](/es/specification/2025-06-18/server/resources#annotations) opcionales para
+  metadatos sobre la audiencia, la prioridad y los tiempos de modificación.
+</Note>
+
+<div id="text-content">
+  #### Contenido de texto
+</div>
+
+El contenido de texto representa mensajes de texto sin formato:
+
+```json
+{
+  "type": "text",
+  "text": "The text content of the message"
+}
+```
+
+Este es el tipo de contenido más común utilizado para interacciones en lenguaje natural.
+
+<div id="image-content">
+  #### Contenido de imagen
+</div>
+
+El contenido de imagen permite incluir información visual en los mensajes:
+
+```json
+{
+  "type": "image",
+  "data": "base64-encoded-image-data",
+  "mimeType": "image/png"
+}
+```
+
+Los datos de la imagen **DEBEN** estar codificados en base64 e incluir un tipo MIME válido. Esto permite
+interacciones multimodales en las que el contexto visual es importante.
+
+<div id="audio-content">
+  #### Contenido de audio
+</div>
+
+El contenido de audio permite incluir información de audio en los mensajes:
+
+```json
+{
+  "type": "audio",
+  "data": "base64-encoded-audio-data",
+  "mimeType": "audio/wav"
+}
+```
+
+Los datos de audio DEBEN estar codificados en base64 e incluir un tipo MIME válido. Esto habilita
+interacciones multimodales en las que el contexto de audio es importante.
+
+<div id="embedded-resources">
+  #### Recursos incrustados
+</div>
+
+Los recursos incrustados permiten referenciar Recursos del lado del servidor directamente en los mensajes:
+
+```json
+{
+  "type": "resource",
+  "resource": {
+    "uri": "resource://example",
+    "name": "example",
+    "title": "My Example Resource",
+    "mimeType": "text/plain",
+    "text": "Resource content"
+  }
+}
+```
+
+Los Recursos pueden contener texto o datos binarios (blob) y **DEBEN** incluir:
+
+* Un URI de recurso válido
+* El tipo MIME correspondiente
+* Contenido de texto o datos blob codificados en base64
+
+Los recursos incrustados permiten que las Indicaciones incorporen sin dificultades contenido gestionado por el servidor, como documentación, ejemplos de código u otros materiales de referencia, directamente en el flujo de la conversación.
+
+<div id="error-handling">
+  ## Manejo de errores
+</div>
+
+Los servidores **DEBERÍAN** devolver errores estándar de JSON-RPC para casos de fallo comunes:
+
+* Nombre de indicación no válido: `-32602` (Parámetros no válidos)
+* Falta de argumentos obligatorios: `-32602` (Parámetros no válidos)
+* Errores internos: `-32603` (Error interno)
+
+<div id="implementation-considerations">
+  ## Consideraciones de implementación
+</div>
+
+1. Los servidores **DEBERÍAN** validar los argumentos de las indicaciones antes de procesarlas
+2. Los clientes **DEBERÍAN** gestionar la paginación para listas grandes de indicaciones
+3. Ambas partes **DEBERÍAN** respetar la negociación de capacidades
+
+<div id="security">
+  ## Seguridad
+</div>
+
+Las implementaciones **DEBEN** validar cuidadosamente todas las entradas y salidas de las Indicaciones para prevenir ataques de inyección o accesos no autorizados a Recursos.

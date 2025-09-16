@@ -1,0 +1,166 @@
+---
+title: MCP Inspector
+description: Model Context Protocolサーバーをテスト／デバッグするためのMCP Inspector詳細ガイド
+---
+
+[MCP Inspector](https://github.com/modelcontextprotocol/inspector) は、MCPサーバーのテストとデバッグに使える対話型の開発者向けツールです。[Debugging Guide](/ja/legacy/tools/debugging) では、全体的なデバッグツールキットの一部として Inspector を扱っていますが、本ドキュメントでは Inspector の機能と特長を詳しく解説します。
+
+<div id="getting-started">
+  ## はじめに
+</div>
+
+<div id="installation-and-basic-usage">
+  ### インストールと基本的な使い方
+</div>
+
+Inspectorはインストール不要で、`npx`から直接実行できます。
+
+```bash
+npx @modelcontextprotocol/inspector <command>
+```
+
+```bash
+npx @modelcontextprotocol/inspector <command> <arg1> <arg2>
+```
+
+<div id="inspecting-servers-from-npm-or-pypi">
+  #### NPM または PyPi のサーバーをインスペクトする
+</div>
+
+[NPM](https://npmjs.com) または [PyPi](https://pypi.org) のサーバーパッケージを起動して確認する一般的な方法です。
+
+<Tabs>
+  <Tab title="NPM パッケージ">
+    ```bash
+    npx -y @modelcontextprotocol/inspector npx <package-name> <args>
+    # 例
+    npx -y @modelcontextprotocol/inspector npx @modelcontextprotocol/server-filesystem /Users/username/Desktop
+    ```
+  </Tab>
+
+  <Tab title="PyPi パッケージ">
+    ```bash
+    npx @modelcontextprotocol/inspector uvx <package-name> <args>
+    # 例
+    npx @modelcontextprotocol/inspector uvx mcp-server-git --repository ~/code/mcp/servers.git
+    ```
+  </Tab>
+</Tabs>
+
+<div id="inspecting-locally-developed-servers">
+  #### ローカルで開発したサーバーの検査
+</div>
+
+ローカルで開発した、またはリポジトリとしてダウンロードしたサーバーを検査する一般的な方法は次のとおりです。
+
+<Tabs>
+  <Tab title="TypeScript">
+    ```bash
+    npx @modelcontextprotocol/inspector node path/to/server/index.js args...
+    ```
+  </Tab>
+
+  <Tab title="Python">
+    ```bash
+    npx @modelcontextprotocol/inspector \
+      uv \
+      --directory path/to/server \
+      run \
+      package-name \
+      args...
+    ```
+  </Tab>
+</Tabs>
+
+最も正確な手順については、添付のREADMEを必ずよくお読みください。
+
+<div id="feature-overview">
+  ## 機能概要
+</div>
+
+<Frame caption="MCP Inspector のインターフェース">
+  <img src="/images/mcp-inspector.png" />
+</Frame>
+
+Inspector は、MCPサーバーとやり取りするためのさまざまな機能を提供します。
+
+<div id="server-connection-pane">
+  ### サーバー接続ペイン
+</div>
+
+* サーバーに接続するための[トランスポート](/ja/legacy/concepts/transports)を選択できる
+* ローカルサーバーでは、コマンドライン引数と環境変数をカスタマイズできる
+
+<div id="resources-tab">
+  ### リソースタブ
+</div>
+
+* 利用可能なリソースをすべて一覧表示
+* リソースのメタデータ（MIMEタイプ、説明）を表示
+* リソース内容を確認・閲覧可能
+* 購読（サブスクリプション）のテストに対応
+
+<div id="prompts-tab">
+  ### プロンプトタブ
+</div>
+
+* 利用可能なプロンプトテンプレートを表示
+* プロンプトの引数と説明を表示
+* 任意の引数でプロンプトのテストを実行可能
+* 生成メッセージをプレビュー
+
+<div id="tools-tab">
+  ### ツールタブ
+</div>
+
+* 利用可能なツールを一覧表示
+* ツールのスキーマと説明を表示
+* 任意の入力でツールをテスト可能
+* ツールの実行結果を表示
+
+<div id="notifications-pane">
+  ### 通知ペイン
+</div>
+
+* サーバーで記録されたすべてのログを表示します
+* サーバーから受信した通知を表示します
+
+<div id="best-practices">
+  ## ベストプラクティス
+</div>
+
+<div id="development-workflow">
+  ### 開発ワークフロー
+</div>
+
+1. 開発を開始
+   * サーバーと併せて Inspector を起動
+   * 基本的な接続を確認
+   * 機能のネゴシエーションを確認
+
+2. 反復テスト
+   * サーバーに変更を加える
+   * サーバーを再ビルドする
+   * Inspector に再接続する
+   * 影響範囲の機能をテストする
+   * メッセージをモニタリングする
+
+3. エッジケースのテスト
+   * 無効な入力
+   * プロンプト引数の不足
+   * 並行処理
+   * エラー処理とエラーレスポンスの確認
+
+<div id="next-steps">
+  ## 次のステップ
+</div>
+
+<CardGroup cols={2}>
+  <Card title="Inspector リポジトリ" icon="github" href="https://github.com/modelcontextprotocol/inspector">
+    MCP Inspector のソースコードを確認する
+  </Card>
+
+  <Card title="デバッグガイド" icon="bug" href="/ja/legacy/tools/debugging">
+    さらに幅広いデバッグ戦略について学ぶ
+  </Card>
+</CardGroup>

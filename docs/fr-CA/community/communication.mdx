@@ -1,0 +1,122 @@
+---
+title: Communication des contributeurs et contributrices
+description: Stratégie et cadre de communication pour la communauté du Protocole de contexte de modèle (MCP)
+---
+
+Ce document explique comment communiquer et collaborer au sein du projet Protocole de contexte de modèle (MCP).
+
+<div id="communication-channels">
+  ## Canaux de communication
+</div>
+
+En bref :
+
+* **[Discord][discord-join]** : Pour des discussions en temps réel ou ponctuelles.
+* **[GitHub Discussions](https://github.com/modelcontextprotocol/modelcontextprotocol/discussions)** : Pour des discussions structurées et approfondies.
+* **[GitHub Issues](https://github.com/modelcontextprotocol/modelcontextprotocol/issues)** : Pour des tâches concrètes, des rapports de bogues et des demandes de fonctionnalités.
+* **Pour les enjeux liés à la sécurité** : Suivez le processus indiqué dans [SECURITY.md](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/main/SECURITY.md).
+
+Toutes les communications sont régies par notre [Code de conduite](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/main/CODE_OF_CONDUCT.md). Nous nous attendons à ce que tous les participants maintiennent des interactions respectueuses, professionnelles et inclusives sur tous les canaux.
+
+<div id="discord">
+  ### Discord
+</div>
+
+Pour les discussions et la collaboration en temps réel entre contributeurs. Le serveur est conçu pour les **contributeurs MCP** et n’est pas destiné au soutien général de MCP.
+
+Le serveur Discord comprendra des canaux publics et privés.
+
+[Joignez-vous au serveur Discord ici][discord-join].
+
+<div id="public-channels-default">
+  #### Canaux publics (par défaut)
+</div>
+
+* **Objectif** : Engagement communautaire ouvert, développement collaboratif et coordination transparente du projet.
+* Principaux cas d’utilisation :
+  * **Développement public des SDK et des outils** : Tout le développement, de l’idéation à la planification des versions, se fait dans des canaux publics (p. ex., `#typescript-sdk-dev`, `#inspector-dev`).
+  * **Discussions des groupes de travail et d’intérêt** (`#client-implementors`, `#agents-wg`, etc.)
+    * **Groupe de travail** : Un objectif ou projet précis à atteindre (p. ex., un SDK, un inspecteur, un registre, une identité de serveur, un équilibrage de charge, etc.).
+    * **Groupe d’intérêt** : Un regroupement informel de personnes pouvant soulever divers sujets. Certains pourraient donner lieu à des actions ponctuelles, d’autres pourraient évoluer en groupes de travail.
+  * **Intégration communautaire** et lignes directrices pour les contributions.
+  * **Rétroaction de la communauté** et remue-méninges collaboratif.
+  * **Heures de disponibilité publiques** et **disponibilité des responsables**.
+* À éviter :
+  * Soutien aux utilisateurs MCP : les participants doivent lire la documentation officielle et ouvrir de nouvelles discussions GitHub pour toute question ou demande de soutien.
+  * Marketing de services ou de produits : les interactions sur ce Discord doivent être neutres à l’égard des fournisseurs et ne pas servir au développement d’une marque ni à des activités de vente. Les mentions de marques ou de produits sont déconseillées, sauf lorsqu’elles sont utilisées comme exemples ou en réponse à des conversations initialement centrées sur la spécification.
+
+<div id="private-channels-exceptions">
+  #### Canaux privés (Exceptions)
+</div>
+
+* **But** : Coordination confidentielle et sujets sensibles qui ne peuvent pas être abordés publiquement. L’accès sera limité aux responsables désignés.
+* **Critères stricts d’utilisation des canaux privés** :
+  * **Incidents de sécurité** (CVE, vulnérabilités de protocole).
+  * **Questions relatives aux personnes** (discussions impliquant des responsables, politiques du code de conduite).
+  * Certains canaux seront configurés en **lecture seule**. Cela peut être utile, par exemple, pour la prise de décision des responsables.
+  * Coordination nécessitant une réponse **immédiate** ou autrement **ciblée** auprès d’un auditoire restreint.
+* **Transparence** :
+  * **Toutes les décisions techniques et de gouvernance** qui touchent la communauté **doivent être documentées** dans GitHub Discussions et/ou Issues, et porteront l’étiquette `notes`.
+  * **Certaines questions liées à des contributeurs individuels** peuvent demeurer privées lorsque approprié (p. ex., circonstances personnelles, mesures disciplinaires ou autres questions individuelles sensibles).
+  * Les canaux privés doivent servir de **« salles d’incident » temporaires**, et non au développement de routine.
+
+Toute discussion significative sur Discord qui mène à une décision ou à une proposition potentielle doit être transférée vers une GitHub Discussion ou un GitHub Issue afin de créer un enregistrement persistant et consultable. Les propositions seront ensuite promues en PR complètes avec les éléments de travail associés (GitHub Issues), au besoin.
+
+<div id="github-discussions">
+  ### Discussions GitHub
+</div>
+
+Pour des discussions et des débats structurés et détaillés sur l’orientation du projet, les fonctionnalités, les améliorations et les sujets liés à la communauté.
+
+Quand utiliser :
+
+* Planification de la feuille de route du projet et discussions sur les jalons
+* Annonces et communications de publication
+* Sondages communautaires et processus d’obtention d’un consensus
+* Demandes de fonctionnalités avec contexte et justification
+  * Si un dépôt particulier n’a pas activé GitHub Discussions, n’hésitez pas à ouvrir plutôt un billet GitHub.
+
+<div id="github-issues">
+  ### Problèmes GitHub
+</div>
+
+Pour les rapports de bogues, le suivi des fonctionnalités et les tâches de développement concrètes.
+
+Quand l’utiliser :
+
+* Soumettre des propositions SEP (en suivant les [directives SEP](fr-CA/./sep-guidelines))
+* Rapports de bogues avec étapes de reproduction
+* Améliorations de la documentation à portée précise
+* Problèmes CI/CD et questions d’infrastructure
+* Tâches de publication et suivi des étapes (jalons)
+
+<div id="security-issues">
+  ### Problèmes de sécurité
+</div>
+
+**Ne publiez pas de problèmes de sécurité publiquement.** À la place :
+
+1. Utilisez le processus privé de signalement en matière de sécurité. Pour les problèmes de sécurité au niveau du protocole, suivez le processus décrit dans [SECURITY.md du dépôt GitHub modelcontextprotocol](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/main/SECURITY.md).
+2. Communiquez directement avec la personne responsable principale et/ou les [responsables principaux](fr-CA/./governance#current-core-maintainers).
+3. Suivez les lignes directrices de divulgation responsable.
+
+<div id="decision-records">
+  ## Registres de décisions
+</div>
+
+Toutes les décisions liées au MCP sont documentées et consignées dans des canaux publics.
+
+* **Décisions techniques** : [GitHub Issues](https://github.com/modelcontextprotocol/modelcontextprotocol/issues) et SEPs.
+* **Modifications de la spécification** : [Sur le site du Protocole de contexte de modèle](https://modelcontextprotocol.io/specification/draft/changelog).
+* **Modifications des processus** : [Documentation communautaire](https://modelcontextprotocol.io/community/governance).
+* **Décisions et mises à jour de gouvernance** : [GitHub Issues](https://github.com/modelcontextprotocol/modelcontextprotocol/issues) et SEPs.
+
+Lors de la consignation des décisions, nous conserverons le plus de contexte possible :
+
+* Décideurs
+* Contexte et motivation
+* Options envisagées
+* Justification de l’approche choisie
+* Étapes de mise en œuvre
+
+[discord-join]: https://discord.gg/6CSzBmMkjX

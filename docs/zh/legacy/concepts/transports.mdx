@@ -1,0 +1,739 @@
+---
+title: "传输方式"
+description: "了解 MCP 的通信机制"
+---
+
+模型上下文协议（MCP）中的传输方式为客户端与服务器之间的通信奠定基础。传输方式负责处理消息收发的底层机制。
+
+<div id="message-format">
+  ## 消息格式
+</div>
+
+MCP 使用 [JSON-RPC](https://www.jsonrpc.org/) 2.0 作为其协议载荷格式。传输层负责将 MCP 协议消息转换为用于传输的 JSON-RPC 格式，并将接收到的 JSON-RPC 消息再转换回 MCP 协议消息。
+
+JSON-RPC 消息分为三种类型：
+
+<div id="requests">
+  ### 请求
+</div>
+
+```typescript
+{
+  jsonrpc: "2.0",
+  id: number | string,
+  method: string,
+  params?: object
+}
+```
+
+<div id="responses">
+  ### 响应
+</div>
+
+```typescript
+{
+  jsonrpc: "2.0",
+  id: number | string,
+  result?: object,
+  error?: {
+    code: number,
+    message: string,
+    data?: unknown
+  }
+}
+```
+
+<div id="notifications">
+  ### 通知
+</div>
+
+```typescript
+{
+  jsonrpc: "2.0",
+  method: string,
+  params?: object
+}
+```
+
+<div id="built-in-transport-types">
+  ## 内置传输类型
+</div>
+
+MCP 目前定义了两种标准传输方式：
+
+<div id="standard-inputoutput-stdio">
+  ### 标准输入/输出（stdio）
+</div>
+
+stdio 传输方式通过标准输入和标准输出流进行通信，特别适用于本地集成和命令行工具。
+
+在以下情况下使用 stdio：
+
+- 构建命令行工具
+- 实现本地集成
+- 需要简单的进程通信
+- 使用 shell 脚本时
+
+<div id="server">
+  #### 服务器
+</div>
+
+<CodeGroup>
+
+```typescript TypeScript
+const server = new Server(
+  {
+    name: "example-server",
+    version: "1.0.0",
+  },
+  {
+    capabilities: {},
+  },
+);
+
+const transport = new StdioServerTransport();
+await server.connect(transport);
+```
+
+```python Python
+app = Server("example-server")
+
+async with stdio_server() as streams:
+    await app.run(
+        streams[0],
+        streams[1],
+        app.create_initialization_options()
+    )
+```
+
+</CodeGroup>
+
+<div id="client">
+  #### 客户端
+</div>
+
+<CodeGroup>
+
+```typescript TypeScript
+const client = new Client(
+  {
+    name: "example-client",
+    version: "1.0.0",
+  },
+  {
+    capabilities: {},
+  },
+);
+
+const transport = new StdioClientTransport({
+  command: "./server",
+  args: ["--option", "value"],
+});
+await client.connect(transport);
+```
+
+```python Python
+params = StdioServerParameters(
+    command="./server",
+    args=["--option", "value"]
+)
+
+async with stdio_client(params) as streams:
+    async with ClientSession(streams[0], streams[1]) as session:
+        await session.initialize()
+```
+
+</CodeGroup>
+
+<div id="streamable-http">
+  ### 可流式 HTTP
+</div>
+
+可流式 HTTP 传输方式使用 HTTP POST 请求进行客户端到服务器的通信，并可选使用服务器发送事件（SSE）流进行服务器到客户端的通信。
+
+在以下情况下使用可流式 HTTP：
+
+- 构建基于 Web 的集成
+- 需要通过 HTTP 进行客户端与服务器通信
+- 需要有状态会话
+- 需要支持多个并发客户端
+- 需要实现可恢复的连接
+
+<div id="how-it-works">
+  #### 工作原理
+</div>
+
+1. **客户端到服务器通信**：客户端发往服务器的每条 JSON-RPC 消息都会作为一个新的 HTTP POST 请求发送到 MCP 端点
+2. **服务器响应**：服务器可以通过以下两种方式响应：
+   - 单个 JSON 响应（`Content-Type: application/json`）
+   - 用于多条消息的 SSE 流（`Content-Type: text/event-stream`）
+3. **服务器到客户端通信**：服务器可以通过以下方式向客户端发送请求或通知：
+   - 由客户端请求发起的 SSE 流
+   - 通过对 MCP 端点发起 HTTP GET 请求建立的 SSE 流
+
+<div id="server">
+  #### 服务器
+</div>
+
+<CodeGroup>
+
+```typescript TypeScript
+import express from "express";
+
+const app = express();
+
+const server = new Server(
+  {
+    name: "example-server",
+    version: "1.0.0",
+  },
+  {
+    capabilities: {},
+  },
+);
+
+// MCP 端点同时处理 POST 和 GET
+app.post("/mcp", async (req, res) => {
+  // 处理 JSON-RPC 请求
+  const response = await server.handleRequest(req.body);
+
+  // 返回单次响应或 SSE 流
+  if (needsStreaming) {
+    res.setHeader("Content-Type", "text/event-stream");
+    // 发送 SSE 事件...
+  } else {
+    res.json(response);
+  }
+});
+
+app.get("/mcp", (req, res) => {
+  // 可选：支持服务器发起的 SSE 流
+  res.setHeader("Content-Type", "text/event-stream");
+  // 发送服务器通知/请求...
+});
+
+app.listen(3000);
+```
+
+```python Python
+from mcp.server.http import HttpServerTransport
+from starlette.applications import Starlette
+from starlette.routing import Route
+
+app = Server("example-server")
+
+async def handle_mcp(scope, receive, send):
+    if scope["method"] == "POST":
+        # 处理 JSON-RPC 请求
+        response = await app.handle_request(request_body)
+
+        if needs_streaming:
+            # 返回 SSE 流
+            await send_sse_response(send, response)
+        else:
+            # 返回 JSON 响应
+            await send_json_response(send, response)
+
+    elif scope["method"] == "GET":
+        # 可选：支持服务器发起的 SSE 流
+        await send_sse_stream(send)
+
+starlette_app = Starlette(
+    routes=[
+        Route("/mcp", endpoint=handle_mcp, methods=["POST", "GET"]),
+    ]
+)
+```
+
+</CodeGroup>
+
+<div id="client">
+  #### 客户端
+</div>
+
+<CodeGroup>
+
+```typescript TypeScript
+const client = new Client(
+  {
+    name: "example-client",
+    version: "1.0.0",
+  },
+  {
+    capabilities: {},
+  },
+);
+
+const transport = new HttpClientTransport(new URL("http://localhost:3000/mcp"));
+await client.connect(transport);
+```
+
+```python Python
+async with http_client("http://localhost:8000/mcp") as transport:
+    async with ClientSession(transport[0], transport[1]) as session:
+        await session.initialize()
+```
+
+</CodeGroup>
+
+<div id="session-management">
+  #### 会话管理
+</div>
+
+可流式 HTTP 支持有状态会话，可在多次请求间保持上下文：
+
+1. **会话初始化**：服务器可在初始化时通过在 `Mcp-Session-Id` 头中包含会话 ID 来分配会话
+2. **会话持久化**：客户端必须在所有后续请求中通过 `Mcp-Session-Id` 头携带该会话 ID
+3. **会话终止**：可通过发送带有会话 ID 的 HTTP DELETE 请求显式终止会话
+
+会话流程示例：
+
+```typescript
+// 服务器在初始化时分配会话 ID
+app.post("/mcp", (req, res) => {
+  if (req.body.method === "initialize") {
+    const sessionId = generateSecureId();
+    res.setHeader("Mcp-Session-Id", sessionId);
+    // 存储会话状态...
+  }
+  // 处理请求...
+});
+
+// 客户端在后续请求中携带会话 ID
+fetch("/mcp", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Mcp-Session-Id": sessionId,
+  },
+  body: JSON.stringify(request),
+});
+```
+
+<div id="resumability-and-redelivery">
+  #### 可恢复性与重传
+</div>
+
+为支持在连接中断后恢复，可流式 HTTP 提供：
+
+1. **事件 ID**：服务器可为 SSE 事件附加唯一 ID 以便跟踪
+2. **从最后一条事件恢复**：客户端可通过发送 `Last-Event-ID` 头来继续
+3. **消息重放**：服务器可从断开点重放漏过的消息
+
+这确保即使在网络不稳定的情况下也能可靠地传递消息。
+
+<div id="security-considerations">
+  #### 安全注意事项
+</div>
+
+在实现可流式 HTTP 传输时，请遵循以下安全最佳实践：
+
+1. **验证 Origin 头部**：始终在所有入站连接上验证 `Origin` 头部，以防止 DNS 重绑定攻击
+2. **仅绑定本地主机**：在本地运行时，只绑定到本地主机（127.0.0.1），而非所有网络接口（0.0.0.0）
+3. **实施身份验证**：为所有连接启用并正确配置身份验证
+4. **使用 HTTPS**：在生产环境中始终使用 TLS/HTTPS
+5. **校验会话 ID**：确保会话 ID 具备密码学级安全性，并进行正确校验
+
+缺少这些防护时，攻击者可能通过 DNS 重绑定，从远程网站与本地 MCP 服务器交互。
+
+<div id="server-sent-events-sse-deprecated">
+  ### 服务器发送事件（SSE） - 已弃用
+</div>
+
+<Note>
+  自协议版本 2024-11-05 起，SSE 作为独立传输方式已被弃用。
+  它已由可流式 HTTP 取代，后者将 SSE 作为可选的
+  流式机制进行整合。有关向后兼容性的信息，请参见下方的
+  [向后兼容性](#backwards-compatibility) 部分。
+</Note>
+
+旧版 SSE 传输通过使用 HTTP POST 处理客户端到服务器的请求，从而实现服务器到客户端的流式传输。
+
+以往用于以下场景：
+
+- 仅需服务器到客户端的流式传输
+- 受限网络环境
+- 实现简单的状态/内容更新
+
+<div id="legacy-security-considerations">
+  #### 旧版安全注意事项
+</div>
+
+已弃用的 SSE 传输与可流式 HTTP 在安全考量上相似，尤其涉及 DNS 重绑定攻击。在可流式 HTTP 传输中使用 SSE 流时，应采取相同的防护措施。
+
+<div id="server">
+  #### 服务器
+</div>
+
+<CodeGroup>
+
+```typescript TypeScript
+import express from "express";
+
+const app = express();
+
+const server = new Server(
+  {
+    name: "example-server",
+    version: "1.0.0",
+  },
+  {
+    capabilities: {},
+  },
+);
+
+let transport: SSEServerTransport | null = null;
+
+app.get("/sse", (req, res) => {
+  transport = new SSEServerTransport("/messages", res);
+  server.connect(transport);
+});
+
+app.post("/messages", (req, res) => {
+  if (transport) {
+    transport.handlePostMessage(req, res);
+  }
+});
+
+app.listen(3000);
+```
+
+```python Python
+from mcp.server.sse import SseServerTransport
+from starlette.applications import Starlette
+from starlette.routing import Route
+
+app = Server("example-server")
+sse = SseServerTransport("/messages")
+
+async def handle_sse(scope, receive, send):
+    async with sse.connect_sse(scope, receive, send) as streams:
+        await app.run(streams[0], streams[1], app.create_initialization_options())
+
+async def handle_messages(scope, receive, send):
+    await sse.handle_post_message(scope, receive, send)
+
+starlette_app = Starlette(
+    routes=[
+        Route("/sse", endpoint=handle_sse),
+        Route("/messages", endpoint=handle_messages, methods=["POST"]),
+    ]
+)
+```
+
+</CodeGroup>
+
+<div id="client">
+  #### 客户端
+</div>
+
+<CodeGroup>
+
+```typescript TypeScript
+const client = new Client(
+  {
+    name: "example-client",
+    version: "1.0.0",
+  },
+  {
+    capabilities: {},
+  },
+);
+
+const transport = new SSEClientTransport(new URL("http://localhost:3000/sse"));
+await client.connect(transport);
+```
+
+```python Python
+async with sse_client("http://localhost:8000/sse") as streams:
+    async with ClientSession(streams[0], streams[1]) as session:
+        await session.initialize()
+```
+
+</CodeGroup>
+
+<div id="custom-transports">
+  ## 自定义传输方式
+</div>
+
+MCP 便于为特定需求实现自定义传输方式。任何传输方式的实现只需遵循 Transport 接口：
+
+你可以在以下场景实现自定义传输方式：
+
+- 自定义网络协议
+- 专用通信通道
+- 与现有系统集成
+- 性能优化
+
+<CodeGroup>
+
+```typescript TypeScript
+interface Transport {
+  // 开始处理消息
+  start(): Promise<void>;
+
+  // 发送 JSON-RPC 消息
+  send(message: JSONRPCMessage): Promise<void>;
+
+  // 关闭连接
+  close(): Promise<void>;
+
+  // 回调
+  onclose?: () => void;
+  onerror?: (error: Error) => void;
+  onmessage?: (message: JSONRPCMessage) => void;
+}
+```
+
+```python Python
+# 注意，尽管 MCP 服务器通常使用 asyncio 实现，但为了更广泛的兼容性，
+# 我们建议使用 `anyio` 来实现诸如传输方式等底层接口。
+
+@contextmanager
+async def create_transport(
+    read_stream: MemoryObjectReceiveStream[JSONRPCMessage | Exception],
+    write_stream: MemoryObjectSendStream[JSONRPCMessage]
+):
+    """
+    MCP 的传输接口。
+
+    Args:
+        read_stream: 用于读取入站消息的流
+        write_stream: 用于写出出站消息的流
+    """
+    async with anyio.create_task_group() as tg:
+        try:
+            # 开始处理消息
+            tg.start_soon(lambda: process_messages(read_stream))
+
+            # 发送消息
+            async with write_stream:
+                yield write_stream
+
+        except Exception as exc:
+            # 处理错误
+            raise exc
+        finally:
+            # 清理
+            tg.cancel_scope.cancel()
+            await write_stream.aclose()
+            await read_stream.aclose()
+```
+
+</CodeGroup>
+
+<div id="error-handling">
+  ## 错误处理
+</div>
+
+传输方式的实现应当能够处理多种错误情形：
+
+1. 连接错误
+2. 消息解析错误
+3. 协议错误
+4. 网络超时
+5. 资源清理
+
+错误处理示例：
+
+<CodeGroup>
+
+```typescript TypeScript
+class ExampleTransport implements Transport {
+  async start() {
+    try {
+      // 连接逻辑
+    } catch (error) {
+      this.onerror?.(new Error(`Failed to connect: ${error}`));
+      throw error;
+    }
+  }
+
+  async send(message: JSONRPCMessage) {
+    try {
+      // 发送逻辑
+    } catch (error) {
+      this.onerror?.(new Error(`Failed to send message: ${error}`));
+      throw error;
+    }
+  }
+}
+```
+
+```python Python
+# 注意：尽管 MCP 服务器常用 asyncio 实现，但我们建议
+# 使用 `anyio` 来实现诸如传输这类的低层接口，以获得更好的兼容性。
+
+@contextmanager
+async def example_transport(scope: Scope, receive: Receive, send: Send):
+    try:
+        # 创建用于双向通信的流
+        read_stream_writer, read_stream = anyio.create_memory_object_stream(0)
+        write_stream, write_stream_reader = anyio.create_memory_object_stream(0)
+
+        async def message_handler():
+            try:
+                async with read_stream_writer:
+                    # 消息处理逻辑
+                    pass
+            except Exception as exc:
+                logger.error(f"Failed to handle message: {exc}")
+                raise exc
+
+        async with anyio.create_task_group() as tg:
+            tg.start_soon(message_handler)
+            try:
+                # 提供用于通信的流
+                yield read_stream, write_stream
+            except Exception as exc:
+                logger.error(f"Transport error: {exc}")
+                raise exc
+            finally:
+                tg.cancel_scope.cancel()
+                await write_stream.aclose()
+                await read_stream.aclose()
+    except Exception as exc:
+        logger.error(f"Failed to initialize transport: {exc}")
+        raise exc
+```
+
+</CodeGroup>
+
+<div id="best-practices">
+  ## 最佳实践
+</div>
+
+在实现或使用 MCP 传输方式时：
+
+1. 正确处理连接生命周期
+2. 实现健全的错误处理
+3. 在连接关闭时清理资源
+4. 使用合理的超时设置
+5. 发送前先验证消息
+6. 记录传输事件以便调试
+7. 在合适情况下实现重连机制
+8. 正确处理消息队列的背压
+9. 监控连接健康状态
+10. 实施完善的安全措施
+
+<div id="security-considerations">
+  ## 安全注意事项
+</div>
+
+在实现传输方式时：
+
+<div id="authentication-and-authorization">
+  ### 身份验证与授权
+</div>
+
+- 实施健全的身份验证机制
+- 验证客户端凭据
+- 安全地处理令牌
+- 实施授权校查
+
+<div id="data-security">
+  ### 数据安全
+</div>
+
+- 使用 TLS 进行网络传输
+- 加密敏感数据
+- 校验消息完整性
+- 设定消息大小上限
+- 规整并净化输入数据
+
+<div id="network-security">
+  ### 网络安全
+</div>
+
+- 实施速率限制
+- 使用合适的超时时间
+- 妥善应对拒绝服务（DoS）场景
+- 监控异常行为模式
+- 配置合理的防火墙规则
+- 对于基于 HTTP 的传输方式（包括可流式 HTTP），验证 Origin 头以防止 DNS 重绑定攻击
+- 对于本地服务器，仅绑定到 localhost（127.0.0.1），而非所有接口（0.0.0.0）
+
+<div id="debugging-transport">
+  ## 调试传输方式
+</div>
+
+调试传输问题的建议：
+
+1. 启用调试日志
+2. 监控消息流向
+3. 检查连接状态
+4. 校验消息格式
+5. 测试错误情景
+6. 使用网络分析工具
+7. 实施健康检查
+8. 监控资源占用
+9. 测试边界/极端情况
+10. 使用规范的错误跟踪
+
+<div id="backwards-compatibility">
+  ## 向后兼容
+</div>
+
+为在不同协议版本之间保持兼容性：
+
+<div id="for-servers-supporting-older-clients">
+  ### 面向需要兼容旧版客户端的服务器
+</div>
+
+希望兼容已弃用的 HTTP+SSE 传输方式的客户端时，服务器应：
+
+1. 在新的 MCP 端点之外，同时提供旧版 SSE 和 POST 端点
+2. 在两个端点上都处理初始化请求
+3. 为每种传输方式分别维护独立的处理逻辑
+
+<div id="for-clients-supporting-older-servers">
+  ### 面向需兼容旧版服务器的客户端
+</div>
+
+希望兼容已弃用传输方式服务器的客户端应：
+
+1. 接受可能使用任一传输方式的服务器 URL
+2. 尝试以正确的 `Accept` 头发送 `InitializeRequest` 的 POST 请求：
+   - 若成功，则使用可流式 HTTP 传输
+   - 若返回 4xx 状态码，则回退到传统 SSE 传输
+3. 对于旧版服务器，发起一个期望接收包含 `endpoint` 事件的 SSE 流的 GET 请求
+
+兼容性检测示例：
+
+```typescript
+async function detectTransport(serverUrl: string): Promise<TransportType> {
+  try {
+    // 先尝试可流式 HTTP
+    const response = await fetch(serverUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json, text/event-stream",
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "initialize",
+        params: {
+          /* ... */
+        },
+      }),
+    });
+
+    if (response.ok) {
+      return "streamable-http";
+    }
+  } catch (error) {
+    // 回退到传统 SSE
+    const sseResponse = await fetch(serverUrl, {
+      method: "GET",
+      headers: { Accept: "text/event-stream" },
+    });
+
+    if (sseResponse.ok) {
+      return "legacy-sse";
+    }
+  }
+
+  throw new Error("Unsupported transport");
+}
+```

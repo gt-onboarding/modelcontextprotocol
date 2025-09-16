@@ -21,263 +21,1326 @@
     ]
   },
   "navigation": {
-    "tabs": [
+    "languages": [
       {
-        "tab": "Documentation",
-        "pages": [
+        "tabs": [
           {
-            "group": "Get started",
+            "tab": "Documentation",
             "pages": [
-              "docs/getting-started/intro"
-            ]
-          },
-          {
-            "group": "About MCP",
-            "pages": [
-              "docs/learn/architecture",
-              "docs/learn/server-concepts",
-              "docs/learn/client-concepts",
-              "specification/versioning"
-            ]
-          },
-          {
-            "group": "Develop with MCP",
-            "pages": [
-              "docs/develop/connect-local-servers",
-              "docs/develop/connect-remote-servers",
-              "docs/develop/build-server",
-              "docs/develop/build-client",
-              "docs/sdk"
-            ]
-          },
-          {
-            "group": "Developer tools",
-            "pages": [
-              "legacy/tools/inspector"
-            ]
-          }
-        ]
-      },
-      {
-        "tab": "Specification",
-        "versions": [
-          {
-            "version": "Version 2025-06-18 (latest)",
-            "pages": [
-              "specification/2025-06-18/index",
-              "specification/2025-06-18/changelog",
-              "specification/2025-06-18/architecture/index",
               {
-                "group": "Base Protocol",
+                "group": "Get started",
                 "pages": [
-                  "specification/2025-06-18/basic/index",
-                  "specification/2025-06-18/basic/lifecycle",
-                  "specification/2025-06-18/basic/transports",
-                  "specification/2025-06-18/basic/authorization",
-                  "specification/2025-06-18/basic/security_best_practices",
-                  {
-                    "group": "Utilities",
-                    "pages": [
-                      "specification/2025-06-18/basic/utilities/cancellation",
-                      "specification/2025-06-18/basic/utilities/ping",
-                      "specification/2025-06-18/basic/utilities/progress"
-                    ]
-                  }
+                  "docs/getting-started/intro"
                 ]
               },
               {
-                "group": "Client Features",
+                "group": "About MCP",
                 "pages": [
-                  "specification/2025-06-18/client/roots",
-                  "specification/2025-06-18/client/sampling",
-                  "specification/2025-06-18/client/elicitation"
+                  "docs/learn/architecture",
+                  "docs/learn/server-concepts",
+                  "docs/learn/client-concepts",
+                  "specification/versioning"
                 ]
               },
               {
-                "group": "Server Features",
+                "group": "Develop with MCP",
                 "pages": [
-                  "specification/2025-06-18/server/index",
-                  "specification/2025-06-18/server/prompts",
-                  "specification/2025-06-18/server/resources",
-                  "specification/2025-06-18/server/tools",
-                  {
-                    "group": "Utilities",
-                    "pages": [
-                      "specification/2025-06-18/server/utilities/completion",
-                      "specification/2025-06-18/server/utilities/logging",
-                      "specification/2025-06-18/server/utilities/pagination"
-                    ]
-                  }
-                ]
-              },
-              "specification/2025-06-18/schema"
-            ]
-          },
-          {
-            "version": "Version 2025-03-26",
-            "pages": [
-              "specification/2025-03-26/index",
-              "specification/2025-03-26/changelog",
-              "specification/2025-03-26/architecture/index",
-              {
-                "group": "Base Protocol",
-                "pages": [
-                  "specification/2025-03-26/basic/index",
-                  "specification/2025-03-26/basic/lifecycle",
-                  "specification/2025-03-26/basic/transports",
-                  "specification/2025-03-26/basic/authorization",
-                  {
-                    "group": "Utilities",
-                    "pages": [
-                      "specification/2025-03-26/basic/utilities/cancellation",
-                      "specification/2025-03-26/basic/utilities/ping",
-                      "specification/2025-03-26/basic/utilities/progress"
-                    ]
-                  }
+                  "docs/develop/connect-local-servers",
+                  "docs/develop/connect-remote-servers",
+                  "docs/develop/build-server",
+                  "docs/develop/build-client",
+                  "docs/sdk"
                 ]
               },
               {
-                "group": "Client Features",
+                "group": "Developer tools",
                 "pages": [
-                  "specification/2025-03-26/client/roots",
-                  "specification/2025-03-26/client/sampling"
-                ]
-              },
-              {
-                "group": "Server Features",
-                "pages": [
-                  "specification/2025-03-26/server/index",
-                  "specification/2025-03-26/server/prompts",
-                  "specification/2025-03-26/server/resources",
-                  "specification/2025-03-26/server/tools",
-                  {
-                    "group": "Utilities",
-                    "pages": [
-                      "specification/2025-03-26/server/utilities/completion",
-                      "specification/2025-03-26/server/utilities/logging",
-                      "specification/2025-03-26/server/utilities/pagination"
-                    ]
-                  }
+                  "legacy/tools/inspector"
                 ]
               }
             ]
           },
           {
-            "version": "Version 2024-11-05",
-            "pages": [
-              "specification/2024-11-05/index",
-              "specification/2024-11-05/architecture/index",
+            "tab": "Specification",
+            "versions": [
               {
-                "group": "Base Protocol",
+                "version": "Version 2025-06-18 (latest)",
                 "pages": [
-                  "specification/2024-11-05/basic/index",
-                  "specification/2024-11-05/basic/lifecycle",
-                  "specification/2024-11-05/basic/messages",
-                  "specification/2024-11-05/basic/transports",
+                  "specification/2025-06-18/index",
+                  "specification/2025-06-18/changelog",
+                  "specification/2025-06-18/architecture/index",
                   {
-                    "group": "Utilities",
+                    "group": "Base Protocol",
                     "pages": [
-                      "specification/2024-11-05/basic/utilities/cancellation",
-                      "specification/2024-11-05/basic/utilities/ping",
-                      "specification/2024-11-05/basic/utilities/progress"
+                      "specification/2025-06-18/basic/index",
+                      "specification/2025-06-18/basic/lifecycle",
+                      "specification/2025-06-18/basic/transports",
+                      "specification/2025-06-18/basic/authorization",
+                      "specification/2025-06-18/basic/security_best_practices",
+                      {
+                        "group": "Utilities",
+                        "pages": [
+                          "specification/2025-06-18/basic/utilities/cancellation",
+                          "specification/2025-06-18/basic/utilities/ping",
+                          "specification/2025-06-18/basic/utilities/progress"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "group": "Client Features",
+                    "pages": [
+                      "specification/2025-06-18/client/roots",
+                      "specification/2025-06-18/client/sampling",
+                      "specification/2025-06-18/client/elicitation"
+                    ]
+                  },
+                  {
+                    "group": "Server Features",
+                    "pages": [
+                      "specification/2025-06-18/server/index",
+                      "specification/2025-06-18/server/prompts",
+                      "specification/2025-06-18/server/resources",
+                      "specification/2025-06-18/server/tools",
+                      {
+                        "group": "Utilities",
+                        "pages": [
+                          "specification/2025-06-18/server/utilities/completion",
+                          "specification/2025-06-18/server/utilities/logging",
+                          "specification/2025-06-18/server/utilities/pagination"
+                        ]
+                      }
+                    ]
+                  },
+                  "specification/2025-06-18/schema"
+                ]
+              },
+              {
+                "version": "Version 2025-03-26",
+                "pages": [
+                  "specification/2025-03-26/index",
+                  "specification/2025-03-26/changelog",
+                  "specification/2025-03-26/architecture/index",
+                  {
+                    "group": "Base Protocol",
+                    "pages": [
+                      "specification/2025-03-26/basic/index",
+                      "specification/2025-03-26/basic/lifecycle",
+                      "specification/2025-03-26/basic/transports",
+                      "specification/2025-03-26/basic/authorization",
+                      {
+                        "group": "Utilities",
+                        "pages": [
+                          "specification/2025-03-26/basic/utilities/cancellation",
+                          "specification/2025-03-26/basic/utilities/ping",
+                          "specification/2025-03-26/basic/utilities/progress"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "group": "Client Features",
+                    "pages": [
+                      "specification/2025-03-26/client/roots",
+                      "specification/2025-03-26/client/sampling"
+                    ]
+                  },
+                  {
+                    "group": "Server Features",
+                    "pages": [
+                      "specification/2025-03-26/server/index",
+                      "specification/2025-03-26/server/prompts",
+                      "specification/2025-03-26/server/resources",
+                      "specification/2025-03-26/server/tools",
+                      {
+                        "group": "Utilities",
+                        "pages": [
+                          "specification/2025-03-26/server/utilities/completion",
+                          "specification/2025-03-26/server/utilities/logging",
+                          "specification/2025-03-26/server/utilities/pagination"
+                        ]
+                      }
                     ]
                   }
                 ]
               },
               {
-                "group": "Client Features",
+                "version": "Version 2024-11-05",
                 "pages": [
-                  "specification/2024-11-05/client/roots",
-                  "specification/2024-11-05/client/sampling"
+                  "specification/2024-11-05/index",
+                  "specification/2024-11-05/architecture/index",
+                  {
+                    "group": "Base Protocol",
+                    "pages": [
+                      "specification/2024-11-05/basic/index",
+                      "specification/2024-11-05/basic/lifecycle",
+                      "specification/2024-11-05/basic/messages",
+                      "specification/2024-11-05/basic/transports",
+                      {
+                        "group": "Utilities",
+                        "pages": [
+                          "specification/2024-11-05/basic/utilities/cancellation",
+                          "specification/2024-11-05/basic/utilities/ping",
+                          "specification/2024-11-05/basic/utilities/progress"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "group": "Client Features",
+                    "pages": [
+                      "specification/2024-11-05/client/roots",
+                      "specification/2024-11-05/client/sampling"
+                    ]
+                  },
+                  {
+                    "group": "Server Features",
+                    "pages": [
+                      "specification/2024-11-05/server/index",
+                      "specification/2024-11-05/server/prompts",
+                      "specification/2024-11-05/server/resources",
+                      "specification/2024-11-05/server/tools",
+                      {
+                        "group": "Utilities",
+                        "pages": [
+                          "specification/2024-11-05/server/utilities/completion",
+                          "specification/2024-11-05/server/utilities/logging",
+                          "specification/2024-11-05/server/utilities/pagination"
+                        ]
+                      }
+                    ]
+                  }
                 ]
               },
               {
-                "group": "Server Features",
+                "version": "Draft",
                 "pages": [
-                  "specification/2024-11-05/server/index",
-                  "specification/2024-11-05/server/prompts",
-                  "specification/2024-11-05/server/resources",
-                  "specification/2024-11-05/server/tools",
+                  "specification/draft/index",
+                  "specification/draft/changelog",
+                  "specification/draft/architecture/index",
                   {
-                    "group": "Utilities",
+                    "group": "Base Protocol",
                     "pages": [
-                      "specification/2024-11-05/server/utilities/completion",
-                      "specification/2024-11-05/server/utilities/logging",
-                      "specification/2024-11-05/server/utilities/pagination"
+                      "specification/draft/basic/index",
+                      "specification/draft/basic/lifecycle",
+                      "specification/draft/basic/transports",
+                      "specification/draft/basic/authorization",
+                      "specification/draft/basic/security_best_practices",
+                      {
+                        "group": "Utilities",
+                        "pages": [
+                          "specification/draft/basic/utilities/cancellation",
+                          "specification/draft/basic/utilities/ping",
+                          "specification/draft/basic/utilities/progress"
+                        ]
+                      }
                     ]
-                  }
+                  },
+                  {
+                    "group": "Client Features",
+                    "pages": [
+                      "specification/draft/client/roots",
+                      "specification/draft/client/sampling",
+                      "specification/draft/client/elicitation"
+                    ]
+                  },
+                  {
+                    "group": "Server Features",
+                    "pages": [
+                      "specification/draft/server/index",
+                      "specification/draft/server/prompts",
+                      "specification/draft/server/resources",
+                      "specification/draft/server/tools",
+                      {
+                        "group": "Utilities",
+                        "pages": [
+                          "specification/draft/server/utilities/completion",
+                          "specification/draft/server/utilities/logging",
+                          "specification/draft/server/utilities/pagination"
+                        ]
+                      }
+                    ]
+                  },
+                  "specification/draft/schema"
                 ]
               }
             ]
           },
           {
-            "version": "Draft",
+            "tab": "Community",
             "pages": [
-              "specification/draft/index",
-              "specification/draft/changelog",
-              "specification/draft/architecture/index",
-              {
-                "group": "Base Protocol",
-                "pages": [
-                  "specification/draft/basic/index",
-                  "specification/draft/basic/lifecycle",
-                  "specification/draft/basic/transports",
-                  "specification/draft/basic/authorization",
-                  "specification/draft/basic/security_best_practices",
-                  {
-                    "group": "Utilities",
-                    "pages": [
-                      "specification/draft/basic/utilities/cancellation",
-                      "specification/draft/basic/utilities/ping",
-                      "specification/draft/basic/utilities/progress"
-                    ]
-                  }
-                ]
-              },
-              {
-                "group": "Client Features",
-                "pages": [
-                  "specification/draft/client/roots",
-                  "specification/draft/client/sampling",
-                  "specification/draft/client/elicitation"
-                ]
-              },
-              {
-                "group": "Server Features",
-                "pages": [
-                  "specification/draft/server/index",
-                  "specification/draft/server/prompts",
-                  "specification/draft/server/resources",
-                  "specification/draft/server/tools",
-                  {
-                    "group": "Utilities",
-                    "pages": [
-                      "specification/draft/server/utilities/completion",
-                      "specification/draft/server/utilities/logging",
-                      "specification/draft/server/utilities/pagination"
-                    ]
-                  }
-                ]
-              },
-              "specification/draft/schema"
+              "community/communication",
+              "community/governance",
+              "community/sep-guidelines",
+              "development/roadmap",
+              "clients",
+              "examples"
+            ]
+          },
+          {
+            "tab": "About MCP",
+            "pages": [
+              "about/index"
             ]
           }
-        ]
+        ],
+        "language": "en"
       },
       {
-        "tab": "Community",
-        "pages": [
-          "community/communication",
-          "community/governance",
-          "community/sep-guidelines",
-          "development/roadmap",
-          "clients",
-          "examples"
-        ]
+        "tabs": [
+          {
+            "tab": "Documentación",
+            "pages": [
+              {
+                "group": "Comenzar",
+                "pages": [
+                  "es/docs/getting-started/intro"
+                ]
+              },
+              {
+                "group": "Acerca de MCP",
+                "pages": [
+                  "es/docs/learn/architecture",
+                  "es/docs/learn/server-concepts",
+                  "es/docs/learn/client-concepts",
+                  "es/specification/versioning"
+                ]
+              },
+              {
+                "group": "Desarrolla con MCP",
+                "pages": [
+                  "es/docs/develop/connect-local-servers",
+                  "es/docs/develop/connect-remote-servers",
+                  "es/docs/develop/build-server",
+                  "es/docs/develop/build-client",
+                  "es/docs/sdk"
+                ]
+              },
+              {
+                "group": "Herramientas para desarrolladores",
+                "pages": [
+                  "es/legacy/tools/inspector"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "Especificación",
+            "versions": [
+              {
+                "version": "Version 2025-06-18 (latest)",
+                "pages": [
+                  "es/specification/2025-06-18/index",
+                  "es/specification/2025-06-18/changelog",
+                  "es/specification/2025-06-18/architecture/index",
+                  {
+                    "group": "Protocolo base",
+                    "pages": [
+                      "es/specification/2025-06-18/basic/index",
+                      "es/specification/2025-06-18/basic/lifecycle",
+                      "es/specification/2025-06-18/basic/transports",
+                      "es/specification/2025-06-18/basic/authorization",
+                      "es/specification/2025-06-18/basic/security_best_practices",
+                      {
+                        "group": "Utilidades",
+                        "pages": [
+                          "es/specification/2025-06-18/basic/utilities/cancellation",
+                          "es/specification/2025-06-18/basic/utilities/ping",
+                          "es/specification/2025-06-18/basic/utilities/progress"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "group": "Funciones del Cliente",
+                    "pages": [
+                      "es/specification/2025-06-18/client/roots",
+                      "es/specification/2025-06-18/client/sampling",
+                      "es/specification/2025-06-18/client/elicitation"
+                    ]
+                  },
+                  {
+                    "group": "Funciones del servidor",
+                    "pages": [
+                      "es/specification/2025-06-18/server/index",
+                      "es/specification/2025-06-18/server/prompts",
+                      "es/specification/2025-06-18/server/resources",
+                      "es/specification/2025-06-18/server/tools",
+                      {
+                        "group": "Utilidades",
+                        "pages": [
+                          "es/specification/2025-06-18/server/utilities/completion",
+                          "es/specification/2025-06-18/server/utilities/logging",
+                          "es/specification/2025-06-18/server/utilities/pagination"
+                        ]
+                      }
+                    ]
+                  },
+                  "es/specification/2025-06-18/schema"
+                ]
+              },
+              {
+                "version": "Version 2025-03-26",
+                "pages": [
+                  "es/specification/2025-03-26/index",
+                  "es/specification/2025-03-26/changelog",
+                  "es/specification/2025-03-26/architecture/index",
+                  {
+                    "group": "Protocolo Base",
+                    "pages": [
+                      "es/specification/2025-03-26/basic/index",
+                      "es/specification/2025-03-26/basic/lifecycle",
+                      "es/specification/2025-03-26/basic/transports",
+                      "es/specification/2025-03-26/basic/authorization",
+                      {
+                        "group": "Utilidades",
+                        "pages": [
+                          "es/specification/2025-03-26/basic/utilities/cancellation",
+                          "es/specification/2025-03-26/basic/utilities/ping",
+                          "es/specification/2025-03-26/basic/utilities/progress"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "group": "Funciones del Cliente",
+                    "pages": [
+                      "es/specification/2025-03-26/client/roots",
+                      "es/specification/2025-03-26/client/sampling"
+                    ]
+                  },
+                  {
+                    "group": "Funciones del servidor",
+                    "pages": [
+                      "es/specification/2025-03-26/server/index",
+                      "es/specification/2025-03-26/server/prompts",
+                      "es/specification/2025-03-26/server/resources",
+                      "es/specification/2025-03-26/server/tools",
+                      {
+                        "group": "Utilidades",
+                        "pages": [
+                          "es/specification/2025-03-26/server/utilities/completion",
+                          "es/specification/2025-03-26/server/utilities/logging",
+                          "es/specification/2025-03-26/server/utilities/pagination"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "version": "Version 2024-11-05",
+                "pages": [
+                  "es/specification/2024-11-05/index",
+                  "es/specification/2024-11-05/architecture/index",
+                  {
+                    "group": "Protocolo base",
+                    "pages": [
+                      "es/specification/2024-11-05/basic/index",
+                      "es/specification/2024-11-05/basic/lifecycle",
+                      "es/specification/2024-11-05/basic/messages",
+                      "es/specification/2024-11-05/basic/transports",
+                      {
+                        "group": "Utilidades",
+                        "pages": [
+                          "es/specification/2024-11-05/basic/utilities/cancellation",
+                          "es/specification/2024-11-05/basic/utilities/ping",
+                          "es/specification/2024-11-05/basic/utilities/progress"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "group": "Funciones del Cliente",
+                    "pages": [
+                      "es/specification/2024-11-05/client/roots",
+                      "es/specification/2024-11-05/client/sampling"
+                    ]
+                  },
+                  {
+                    "group": "Funciones del Servidor",
+                    "pages": [
+                      "es/specification/2024-11-05/server/index",
+                      "es/specification/2024-11-05/server/prompts",
+                      "es/specification/2024-11-05/server/resources",
+                      "es/specification/2024-11-05/server/tools",
+                      {
+                        "group": "Utilidades",
+                        "pages": [
+                          "es/specification/2024-11-05/server/utilities/completion",
+                          "es/specification/2024-11-05/server/utilities/logging",
+                          "es/specification/2024-11-05/server/utilities/pagination"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "version": "Draft",
+                "pages": [
+                  "es/specification/draft/index",
+                  "es/specification/draft/changelog",
+                  "es/specification/draft/architecture/index",
+                  {
+                    "group": "Protocolo base",
+                    "pages": [
+                      "es/specification/draft/basic/index",
+                      "es/specification/draft/basic/lifecycle",
+                      "es/specification/draft/basic/transports",
+                      "es/specification/draft/basic/authorization",
+                      "es/specification/draft/basic/security_best_practices",
+                      {
+                        "group": "Utilidades",
+                        "pages": [
+                          "es/specification/draft/basic/utilities/cancellation",
+                          "es/specification/draft/basic/utilities/ping",
+                          "es/specification/draft/basic/utilities/progress"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "group": "Funciones del Cliente",
+                    "pages": [
+                      "es/specification/draft/client/roots",
+                      "es/specification/draft/client/sampling",
+                      "es/specification/draft/client/elicitation"
+                    ]
+                  },
+                  {
+                    "group": "Funciones del servidor",
+                    "pages": [
+                      "es/specification/draft/server/index",
+                      "es/specification/draft/server/prompts",
+                      "es/specification/draft/server/resources",
+                      "es/specification/draft/server/tools",
+                      {
+                        "group": "Utilidades",
+                        "pages": [
+                          "es/specification/draft/server/utilities/completion",
+                          "es/specification/draft/server/utilities/logging",
+                          "es/specification/draft/server/utilities/pagination"
+                        ]
+                      }
+                    ]
+                  },
+                  "es/specification/draft/schema"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "Comunidad",
+            "pages": [
+              "es/community/communication",
+              "es/community/governance",
+              "es/community/sep-guidelines",
+              "es/development/roadmap",
+              "es/clients",
+              "es/examples"
+            ]
+          },
+          {
+            "tab": "Acerca de MCP",
+            "pages": [
+              "es/about/index"
+            ]
+          }
+        ],
+        "language": "es"
       },
       {
-        "tab": "About MCP",
-        "pages": ["about/index"]
+        "tabs": [
+          {
+            "tab": "ドキュメント",
+            "pages": [
+              {
+                "group": "はじめる",
+                "pages": [
+                  "ja/docs/getting-started/intro"
+                ]
+              },
+              {
+                "group": "MCP について",
+                "pages": [
+                  "ja/docs/learn/architecture",
+                  "ja/docs/learn/server-concepts",
+                  "ja/docs/learn/client-concepts",
+                  "ja/specification/versioning"
+                ]
+              },
+              {
+                "group": "MCP で開発する",
+                "pages": [
+                  "ja/docs/develop/connect-local-servers",
+                  "ja/docs/develop/connect-remote-servers",
+                  "ja/docs/develop/build-server",
+                  "ja/docs/develop/build-client",
+                  "ja/docs/sdk"
+                ]
+              },
+              {
+                "group": "開発者向けツール",
+                "pages": [
+                  "ja/legacy/tools/inspector"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "仕様",
+            "versions": [
+              {
+                "version": "Version 2025-06-18 (latest)",
+                "pages": [
+                  "ja/specification/2025-06-18/index",
+                  "ja/specification/2025-06-18/changelog",
+                  "ja/specification/2025-06-18/architecture/index",
+                  {
+                    "group": "基本プロトコル",
+                    "pages": [
+                      "ja/specification/2025-06-18/basic/index",
+                      "ja/specification/2025-06-18/basic/lifecycle",
+                      "ja/specification/2025-06-18/basic/transports",
+                      "ja/specification/2025-06-18/basic/authorization",
+                      "ja/specification/2025-06-18/basic/security_best_practices",
+                      {
+                        "group": "ユーティリティ",
+                        "pages": [
+                          "ja/specification/2025-06-18/basic/utilities/cancellation",
+                          "ja/specification/2025-06-18/basic/utilities/ping",
+                          "ja/specification/2025-06-18/basic/utilities/progress"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "group": "クライアントの機能",
+                    "pages": [
+                      "ja/specification/2025-06-18/client/roots",
+                      "ja/specification/2025-06-18/client/sampling",
+                      "ja/specification/2025-06-18/client/elicitation"
+                    ]
+                  },
+                  {
+                    "group": "サーバーの機能",
+                    "pages": [
+                      "ja/specification/2025-06-18/server/index",
+                      "ja/specification/2025-06-18/server/prompts",
+                      "ja/specification/2025-06-18/server/resources",
+                      "ja/specification/2025-06-18/server/tools",
+                      {
+                        "group": "ユーティリティ",
+                        "pages": [
+                          "ja/specification/2025-06-18/server/utilities/completion",
+                          "ja/specification/2025-06-18/server/utilities/logging",
+                          "ja/specification/2025-06-18/server/utilities/pagination"
+                        ]
+                      }
+                    ]
+                  },
+                  "ja/specification/2025-06-18/schema"
+                ]
+              },
+              {
+                "version": "Version 2025-03-26",
+                "pages": [
+                  "ja/specification/2025-03-26/index",
+                  "ja/specification/2025-03-26/changelog",
+                  "ja/specification/2025-03-26/architecture/index",
+                  {
+                    "group": "ベースプロトコル",
+                    "pages": [
+                      "ja/specification/2025-03-26/basic/index",
+                      "ja/specification/2025-03-26/basic/lifecycle",
+                      "ja/specification/2025-03-26/basic/transports",
+                      "ja/specification/2025-03-26/basic/authorization",
+                      {
+                        "group": "ユーティリティ",
+                        "pages": [
+                          "ja/specification/2025-03-26/basic/utilities/cancellation",
+                          "ja/specification/2025-03-26/basic/utilities/ping",
+                          "ja/specification/2025-03-26/basic/utilities/progress"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "group": "クライアントの機能",
+                    "pages": [
+                      "ja/specification/2025-03-26/client/roots",
+                      "ja/specification/2025-03-26/client/sampling"
+                    ]
+                  },
+                  {
+                    "group": "サーバーの機能",
+                    "pages": [
+                      "ja/specification/2025-03-26/server/index",
+                      "ja/specification/2025-03-26/server/prompts",
+                      "ja/specification/2025-03-26/server/resources",
+                      "ja/specification/2025-03-26/server/tools",
+                      {
+                        "group": "ユーティリティ",
+                        "pages": [
+                          "ja/specification/2025-03-26/server/utilities/completion",
+                          "ja/specification/2025-03-26/server/utilities/logging",
+                          "ja/specification/2025-03-26/server/utilities/pagination"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "version": "Version 2024-11-05",
+                "pages": [
+                  "ja/specification/2024-11-05/index",
+                  "ja/specification/2024-11-05/architecture/index",
+                  {
+                    "group": "ベースプロトコル",
+                    "pages": [
+                      "ja/specification/2024-11-05/basic/index",
+                      "ja/specification/2024-11-05/basic/lifecycle",
+                      "ja/specification/2024-11-05/basic/messages",
+                      "ja/specification/2024-11-05/basic/transports",
+                      {
+                        "group": "ユーティリティ",
+                        "pages": [
+                          "ja/specification/2024-11-05/basic/utilities/cancellation",
+                          "ja/specification/2024-11-05/basic/utilities/ping",
+                          "ja/specification/2024-11-05/basic/utilities/progress"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "group": "クライアントの機能",
+                    "pages": [
+                      "ja/specification/2024-11-05/client/roots",
+                      "ja/specification/2024-11-05/client/sampling"
+                    ]
+                  },
+                  {
+                    "group": "サーバーの機能",
+                    "pages": [
+                      "ja/specification/2024-11-05/server/index",
+                      "ja/specification/2024-11-05/server/prompts",
+                      "ja/specification/2024-11-05/server/resources",
+                      "ja/specification/2024-11-05/server/tools",
+                      {
+                        "group": "ユーティリティ",
+                        "pages": [
+                          "ja/specification/2024-11-05/server/utilities/completion",
+                          "ja/specification/2024-11-05/server/utilities/logging",
+                          "ja/specification/2024-11-05/server/utilities/pagination"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "version": "Draft",
+                "pages": [
+                  "ja/specification/draft/index",
+                  "ja/specification/draft/changelog",
+                  "ja/specification/draft/architecture/index",
+                  {
+                    "group": "基本プロトコル",
+                    "pages": [
+                      "ja/specification/draft/basic/index",
+                      "ja/specification/draft/basic/lifecycle",
+                      "ja/specification/draft/basic/transports",
+                      "ja/specification/draft/basic/authorization",
+                      "ja/specification/draft/basic/security_best_practices",
+                      {
+                        "group": "ユーティリティ",
+                        "pages": [
+                          "ja/specification/draft/basic/utilities/cancellation",
+                          "ja/specification/draft/basic/utilities/ping",
+                          "ja/specification/draft/basic/utilities/progress"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "group": "クライアントの機能",
+                    "pages": [
+                      "ja/specification/draft/client/roots",
+                      "ja/specification/draft/client/sampling",
+                      "ja/specification/draft/client/elicitation"
+                    ]
+                  },
+                  {
+                    "group": "サーバー機能",
+                    "pages": [
+                      "ja/specification/draft/server/index",
+                      "ja/specification/draft/server/prompts",
+                      "ja/specification/draft/server/resources",
+                      "ja/specification/draft/server/tools",
+                      {
+                        "group": "ユーティリティ",
+                        "pages": [
+                          "ja/specification/draft/server/utilities/completion",
+                          "ja/specification/draft/server/utilities/logging",
+                          "ja/specification/draft/server/utilities/pagination"
+                        ]
+                      }
+                    ]
+                  },
+                  "ja/specification/draft/schema"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "コミュニティ",
+            "pages": [
+              "ja/community/communication",
+              "ja/community/governance",
+              "ja/community/sep-guidelines",
+              "ja/development/roadmap",
+              "ja/clients",
+              "ja/examples"
+            ]
+          },
+          {
+            "tab": "MCP について",
+            "pages": [
+              "ja/about/index"
+            ]
+          }
+        ],
+        "language": "ja"
+      },
+      {
+        "tabs": [
+          {
+            "tab": "文档",
+            "pages": [
+              {
+                "group": "开始使用",
+                "pages": [
+                  "zh/docs/getting-started/intro"
+                ]
+              },
+              {
+                "group": "关于 MCP",
+                "pages": [
+                  "zh/docs/learn/architecture",
+                  "zh/docs/learn/server-concepts",
+                  "zh/docs/learn/client-concepts",
+                  "zh/specification/versioning"
+                ]
+              },
+              {
+                "group": "使用 MCP 进行开发",
+                "pages": [
+                  "zh/docs/develop/connect-local-servers",
+                  "zh/docs/develop/connect-remote-servers",
+                  "zh/docs/develop/build-server",
+                  "zh/docs/develop/build-client",
+                  "zh/docs/sdk"
+                ]
+              },
+              {
+                "group": "开发者工具",
+                "pages": [
+                  "zh/legacy/tools/inspector"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "规范",
+            "versions": [
+              {
+                "version": "Version 2025-06-18 (latest)",
+                "pages": [
+                  "zh/specification/2025-06-18/index",
+                  "zh/specification/2025-06-18/changelog",
+                  "zh/specification/2025-06-18/architecture/index",
+                  {
+                    "group": "基础协议",
+                    "pages": [
+                      "zh/specification/2025-06-18/basic/index",
+                      "zh/specification/2025-06-18/basic/lifecycle",
+                      "zh/specification/2025-06-18/basic/transports",
+                      "zh/specification/2025-06-18/basic/authorization",
+                      "zh/specification/2025-06-18/basic/security_best_practices",
+                      {
+                        "group": "实用工具",
+                        "pages": [
+                          "zh/specification/2025-06-18/basic/utilities/cancellation",
+                          "zh/specification/2025-06-18/basic/utilities/ping",
+                          "zh/specification/2025-06-18/basic/utilities/progress"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "group": "客户端功能",
+                    "pages": [
+                      "zh/specification/2025-06-18/client/roots",
+                      "zh/specification/2025-06-18/client/sampling",
+                      "zh/specification/2025-06-18/client/elicitation"
+                    ]
+                  },
+                  {
+                    "group": "服务器功能",
+                    "pages": [
+                      "zh/specification/2025-06-18/server/index",
+                      "zh/specification/2025-06-18/server/prompts",
+                      "zh/specification/2025-06-18/server/resources",
+                      "zh/specification/2025-06-18/server/tools",
+                      {
+                        "group": "实用工具",
+                        "pages": [
+                          "zh/specification/2025-06-18/server/utilities/completion",
+                          "zh/specification/2025-06-18/server/utilities/logging",
+                          "zh/specification/2025-06-18/server/utilities/pagination"
+                        ]
+                      }
+                    ]
+                  },
+                  "zh/specification/2025-06-18/schema"
+                ]
+              },
+              {
+                "version": "Version 2025-03-26",
+                "pages": [
+                  "zh/specification/2025-03-26/index",
+                  "zh/specification/2025-03-26/changelog",
+                  "zh/specification/2025-03-26/architecture/index",
+                  {
+                    "group": "基础协议",
+                    "pages": [
+                      "zh/specification/2025-03-26/basic/index",
+                      "zh/specification/2025-03-26/basic/lifecycle",
+                      "zh/specification/2025-03-26/basic/transports",
+                      "zh/specification/2025-03-26/basic/authorization",
+                      {
+                        "group": "实用工具",
+                        "pages": [
+                          "zh/specification/2025-03-26/basic/utilities/cancellation",
+                          "zh/specification/2025-03-26/basic/utilities/ping",
+                          "zh/specification/2025-03-26/basic/utilities/progress"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "group": "客户端功能",
+                    "pages": [
+                      "zh/specification/2025-03-26/client/roots",
+                      "zh/specification/2025-03-26/client/sampling"
+                    ]
+                  },
+                  {
+                    "group": "服务器功能",
+                    "pages": [
+                      "zh/specification/2025-03-26/server/index",
+                      "zh/specification/2025-03-26/server/prompts",
+                      "zh/specification/2025-03-26/server/resources",
+                      "zh/specification/2025-03-26/server/tools",
+                      {
+                        "group": "实用工具",
+                        "pages": [
+                          "zh/specification/2025-03-26/server/utilities/completion",
+                          "zh/specification/2025-03-26/server/utilities/logging",
+                          "zh/specification/2025-03-26/server/utilities/pagination"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "version": "Version 2024-11-05",
+                "pages": [
+                  "zh/specification/2024-11-05/index",
+                  "zh/specification/2024-11-05/architecture/index",
+                  {
+                    "group": "基础协议",
+                    "pages": [
+                      "zh/specification/2024-11-05/basic/index",
+                      "zh/specification/2024-11-05/basic/lifecycle",
+                      "zh/specification/2024-11-05/basic/messages",
+                      "zh/specification/2024-11-05/basic/transports",
+                      {
+                        "group": "实用工具",
+                        "pages": [
+                          "zh/specification/2024-11-05/basic/utilities/cancellation",
+                          "zh/specification/2024-11-05/basic/utilities/ping",
+                          "zh/specification/2024-11-05/basic/utilities/progress"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "group": "客户端功能",
+                    "pages": [
+                      "zh/specification/2024-11-05/client/roots",
+                      "zh/specification/2024-11-05/client/sampling"
+                    ]
+                  },
+                  {
+                    "group": "服务器功能",
+                    "pages": [
+                      "zh/specification/2024-11-05/server/index",
+                      "zh/specification/2024-11-05/server/prompts",
+                      "zh/specification/2024-11-05/server/resources",
+                      "zh/specification/2024-11-05/server/tools",
+                      {
+                        "group": "实用工具",
+                        "pages": [
+                          "zh/specification/2024-11-05/server/utilities/completion",
+                          "zh/specification/2024-11-05/server/utilities/logging",
+                          "zh/specification/2024-11-05/server/utilities/pagination"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "version": "Draft",
+                "pages": [
+                  "zh/specification/draft/index",
+                  "zh/specification/draft/changelog",
+                  "zh/specification/draft/architecture/index",
+                  {
+                    "group": "基础协议",
+                    "pages": [
+                      "zh/specification/draft/basic/index",
+                      "zh/specification/draft/basic/lifecycle",
+                      "zh/specification/draft/basic/transports",
+                      "zh/specification/draft/basic/authorization",
+                      "zh/specification/draft/basic/security_best_practices",
+                      {
+                        "group": "实用工具",
+                        "pages": [
+                          "zh/specification/draft/basic/utilities/cancellation",
+                          "zh/specification/draft/basic/utilities/ping",
+                          "zh/specification/draft/basic/utilities/progress"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "group": "客户端功能",
+                    "pages": [
+                      "zh/specification/draft/client/roots",
+                      "zh/specification/draft/client/sampling",
+                      "zh/specification/draft/client/elicitation"
+                    ]
+                  },
+                  {
+                    "group": "服务器功能",
+                    "pages": [
+                      "zh/specification/draft/server/index",
+                      "zh/specification/draft/server/prompts",
+                      "zh/specification/draft/server/resources",
+                      "zh/specification/draft/server/tools",
+                      {
+                        "group": "实用工具",
+                        "pages": [
+                          "zh/specification/draft/server/utilities/completion",
+                          "zh/specification/draft/server/utilities/logging",
+                          "zh/specification/draft/server/utilities/pagination"
+                        ]
+                      }
+                    ]
+                  },
+                  "zh/specification/draft/schema"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "社区",
+            "pages": [
+              "zh/community/communication",
+              "zh/community/governance",
+              "zh/community/sep-guidelines",
+              "zh/development/roadmap",
+              "zh/clients",
+              "zh/examples"
+            ]
+          },
+          {
+            "tab": "关于 MCP",
+            "pages": [
+              "zh/about/index"
+            ]
+          }
+        ],
+        "language": "zh"
+      },
+      {
+        "tabs": [
+          {
+            "tab": "Documentation",
+            "pages": [
+              {
+                "group": "Commencer",
+                "pages": [
+                  "fr-CA/docs/getting-started/intro"
+                ]
+              },
+              {
+                "group": "À propos de MCP",
+                "pages": [
+                  "fr-CA/docs/learn/architecture",
+                  "fr-CA/docs/learn/server-concepts",
+                  "fr-CA/docs/learn/client-concepts",
+                  "fr-CA/specification/versioning"
+                ]
+              },
+              {
+                "group": "Développer avec MCP",
+                "pages": [
+                  "fr-CA/docs/develop/connect-local-servers",
+                  "fr-CA/docs/develop/connect-remote-servers",
+                  "fr-CA/docs/develop/build-server",
+                  "fr-CA/docs/develop/build-client",
+                  "fr-CA/docs/sdk"
+                ]
+              },
+              {
+                "group": "Outils pour développeurs",
+                "pages": [
+                  "fr-CA/legacy/tools/inspector"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "Spécification",
+            "versions": [
+              {
+                "version": "Version 2025-06-18 (latest)",
+                "pages": [
+                  "fr-CA/specification/2025-06-18/index",
+                  "fr-CA/specification/2025-06-18/changelog",
+                  "fr-CA/specification/2025-06-18/architecture/index",
+                  {
+                    "group": "Protocole de base",
+                    "pages": [
+                      "fr-CA/specification/2025-06-18/basic/index",
+                      "fr-CA/specification/2025-06-18/basic/lifecycle",
+                      "fr-CA/specification/2025-06-18/basic/transports",
+                      "fr-CA/specification/2025-06-18/basic/authorization",
+                      "fr-CA/specification/2025-06-18/basic/security_best_practices",
+                      {
+                        "group": "Utilitaires",
+                        "pages": [
+                          "fr-CA/specification/2025-06-18/basic/utilities/cancellation",
+                          "fr-CA/specification/2025-06-18/basic/utilities/ping",
+                          "fr-CA/specification/2025-06-18/basic/utilities/progress"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "group": "Fonctionnalités du client",
+                    "pages": [
+                      "fr-CA/specification/2025-06-18/client/roots",
+                      "fr-CA/specification/2025-06-18/client/sampling",
+                      "fr-CA/specification/2025-06-18/client/elicitation"
+                    ]
+                  },
+                  {
+                    "group": "Fonctionnalités du serveur",
+                    "pages": [
+                      "fr-CA/specification/2025-06-18/server/index",
+                      "fr-CA/specification/2025-06-18/server/prompts",
+                      "fr-CA/specification/2025-06-18/server/resources",
+                      "fr-CA/specification/2025-06-18/server/tools",
+                      {
+                        "group": "Utilitaires",
+                        "pages": [
+                          "fr-CA/specification/2025-06-18/server/utilities/completion",
+                          "fr-CA/specification/2025-06-18/server/utilities/logging",
+                          "fr-CA/specification/2025-06-18/server/utilities/pagination"
+                        ]
+                      }
+                    ]
+                  },
+                  "fr-CA/specification/2025-06-18/schema"
+                ]
+              },
+              {
+                "version": "Version 2025-03-26",
+                "pages": [
+                  "fr-CA/specification/2025-03-26/index",
+                  "fr-CA/specification/2025-03-26/changelog",
+                  "fr-CA/specification/2025-03-26/architecture/index",
+                  {
+                    "group": "Protocole de base",
+                    "pages": [
+                      "fr-CA/specification/2025-03-26/basic/index",
+                      "fr-CA/specification/2025-03-26/basic/lifecycle",
+                      "fr-CA/specification/2025-03-26/basic/transports",
+                      "fr-CA/specification/2025-03-26/basic/authorization",
+                      {
+                        "group": "Utilitaires",
+                        "pages": [
+                          "fr-CA/specification/2025-03-26/basic/utilities/cancellation",
+                          "fr-CA/specification/2025-03-26/basic/utilities/ping",
+                          "fr-CA/specification/2025-03-26/basic/utilities/progress"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "group": "Fonctionnalités du client",
+                    "pages": [
+                      "fr-CA/specification/2025-03-26/client/roots",
+                      "fr-CA/specification/2025-03-26/client/sampling"
+                    ]
+                  },
+                  {
+                    "group": "Fonctionnalités du serveur",
+                    "pages": [
+                      "fr-CA/specification/2025-03-26/server/index",
+                      "fr-CA/specification/2025-03-26/server/prompts",
+                      "fr-CA/specification/2025-03-26/server/resources",
+                      "fr-CA/specification/2025-03-26/server/tools",
+                      {
+                        "group": "Utilitaires",
+                        "pages": [
+                          "fr-CA/specification/2025-03-26/server/utilities/completion",
+                          "fr-CA/specification/2025-03-26/server/utilities/logging",
+                          "fr-CA/specification/2025-03-26/server/utilities/pagination"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "version": "Version 2024-11-05",
+                "pages": [
+                  "fr-CA/specification/2024-11-05/index",
+                  "fr-CA/specification/2024-11-05/architecture/index",
+                  {
+                    "group": "Protocole de base",
+                    "pages": [
+                      "fr-CA/specification/2024-11-05/basic/index",
+                      "fr-CA/specification/2024-11-05/basic/lifecycle",
+                      "fr-CA/specification/2024-11-05/basic/messages",
+                      "fr-CA/specification/2024-11-05/basic/transports",
+                      {
+                        "group": "Outils utilitaires",
+                        "pages": [
+                          "fr-CA/specification/2024-11-05/basic/utilities/cancellation",
+                          "fr-CA/specification/2024-11-05/basic/utilities/ping",
+                          "fr-CA/specification/2024-11-05/basic/utilities/progress"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "group": "Fonctionnalités du client",
+                    "pages": [
+                      "fr-CA/specification/2024-11-05/client/roots",
+                      "fr-CA/specification/2024-11-05/client/sampling"
+                    ]
+                  },
+                  {
+                    "group": "Fonctionnalités du serveur",
+                    "pages": [
+                      "fr-CA/specification/2024-11-05/server/index",
+                      "fr-CA/specification/2024-11-05/server/prompts",
+                      "fr-CA/specification/2024-11-05/server/resources",
+                      "fr-CA/specification/2024-11-05/server/tools",
+                      {
+                        "group": "Utilitaires",
+                        "pages": [
+                          "fr-CA/specification/2024-11-05/server/utilities/completion",
+                          "fr-CA/specification/2024-11-05/server/utilities/logging",
+                          "fr-CA/specification/2024-11-05/server/utilities/pagination"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "version": "Draft",
+                "pages": [
+                  "fr-CA/specification/draft/index",
+                  "fr-CA/specification/draft/changelog",
+                  "fr-CA/specification/draft/architecture/index",
+                  {
+                    "group": "Protocole de base",
+                    "pages": [
+                      "fr-CA/specification/draft/basic/index",
+                      "fr-CA/specification/draft/basic/lifecycle",
+                      "fr-CA/specification/draft/basic/transports",
+                      "fr-CA/specification/draft/basic/authorization",
+                      "fr-CA/specification/draft/basic/security_best_practices",
+                      {
+                        "group": "Utilitaires",
+                        "pages": [
+                          "fr-CA/specification/draft/basic/utilities/cancellation",
+                          "fr-CA/specification/draft/basic/utilities/ping",
+                          "fr-CA/specification/draft/basic/utilities/progress"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "group": "Fonctionnalités du client",
+                    "pages": [
+                      "fr-CA/specification/draft/client/roots",
+                      "fr-CA/specification/draft/client/sampling",
+                      "fr-CA/specification/draft/client/elicitation"
+                    ]
+                  },
+                  {
+                    "group": "Fonctionnalités du Serveur",
+                    "pages": [
+                      "fr-CA/specification/draft/server/index",
+                      "fr-CA/specification/draft/server/prompts",
+                      "fr-CA/specification/draft/server/resources",
+                      "fr-CA/specification/draft/server/tools",
+                      {
+                        "group": "Utilitaires",
+                        "pages": [
+                          "fr-CA/specification/draft/server/utilities/completion",
+                          "fr-CA/specification/draft/server/utilities/logging",
+                          "fr-CA/specification/draft/server/utilities/pagination"
+                        ]
+                      }
+                    ]
+                  },
+                  "fr-CA/specification/draft/schema"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "Communauté",
+            "pages": [
+              "fr-CA/community/communication",
+              "fr-CA/community/governance",
+              "fr-CA/community/sep-guidelines",
+              "fr-CA/development/roadmap",
+              "fr-CA/clients",
+              "fr-CA/examples"
+            ]
+          },
+          {
+            "tab": "À propos de MCP",
+            "pages": [
+              "fr-CA/about/index"
+            ]
+          }
+        ],
+        "language": "fr-CA"
       }
     ]
   },
@@ -380,6 +1443,9 @@
     }
   ],
   "contextual": {
-    "options": ["copy", "view"]
+    "options": [
+      "copy",
+      "view"
+    ]
   }
 }

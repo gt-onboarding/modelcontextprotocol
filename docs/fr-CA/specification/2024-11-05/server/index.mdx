@@ -1,0 +1,29 @@
+---
+title: Aperçu
+---
+
+<Info>**Révision du protocole** : 2024-11-05</Info>
+
+Les serveurs fournissent les éléments de base essentiels pour ajouter du contexte aux modèles de langage via le Model Context Protocol (MCP). Ces primitives permettent des interactions riches entre clients, serveurs et modèles de langage :
+
+* **Invites** : Modèles ou instructions prédéfinis qui guident les interactions avec le modèle de langage
+* **Ressources** : Données ou contenu structurés offrant un contexte supplémentaire au modèle
+* **Outils** : Fonctions exécutables qui permettent aux modèles d’effectuer des actions ou de récupérer de l’information
+
+Chaque primitive peut être résumée selon la hiérarchie de contrôle suivante :
+
+| Primitive | Contrôle                 | Description                                          | Exemple                          |
+| --------- | ------------------------ | ---------------------------------------------------- | -------------------------------- |
+| Invites   | Contrôlé par l’utilisateur | Modèles interactifs lancés au choix de l’utilisateur | Commandes slash, options de menu |
+| Ressources | Contrôlé par l’application | Données contextuelles rattachées et gérées par le client | Contenu de fichiers, historique Git |
+| Outils     | Contrôlé par le modèle    | Fonctions exposées au LLM pour exécuter des actions   | Requêtes POST à une API, écriture de fichiers |
+
+Explorez plus en détail ces primitives clés ci-dessous :
+
+<CardGroup cols={3}>
+  <Card title="Invites" icon="message" href="/fr-CA/specification/2024-11-05/server/prompts" />
+
+  <Card title="Ressources" icon="file-lines" href="/fr-CA/specification/2024-11-05/server/resources" />
+
+  <Card title="Outils" icon="wrench" href="/fr-CA/specification/2024-11-05/server/tools" />
+</CardGroup>

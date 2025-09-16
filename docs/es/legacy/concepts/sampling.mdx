@@ -1,0 +1,288 @@
+---
+title: "Muestreo"
+description: "Permite que tus servidores soliciten respuestas de LLM"
+---
+
+El Muestreo es una potente función de MCP que permite a los servidores solicitar respuestas de LLM a través del cliente, habilitando comportamientos de agentes sofisticados y manteniendo la seguridad y la privacidad.
+
+<Info>
+
+Esta función de MCP aún no es compatible en el cliente de escritorio de Claude.
+
+</Info>
+
+<div id="how-sampling-works">
+  ## Cómo funciona el muestreo
+</div>
+
+El flujo de muestreo sigue estos pasos:
+
+1. El servidor envía una solicitud `sampling/createMessage` al cliente
+2. El cliente revisa la solicitud y puede modificarla
+3. El cliente realiza muestreo con un LLM
+4. El cliente revisa la respuesta
+5. El cliente devuelve el resultado al servidor
+
+Este diseño con intervención humana garantiza que los usuarios mantengan el control sobre lo que el LLM ve y genera.
+
+<div id="message-format">
+  ## Formato del mensaje
+</div>
+
+Las solicitudes de muestreo utilizan un formato de mensaje estandarizado:
+
+```typescript
+{
+  messages: [
+    {
+      role: "user" | "assistant",
+      content: {
+        type: "text" | "image",
+
+        // Para texto:
+        text?: string,
+
+        // Para imágenes:
+        data?: string,             // codificado en base64
+        mimeType?: string
+      }
+    }
+  ],
+  modelPreferences?: {
+    hints?: [{
+      name?: string                // Nombre o familia de modelo sugerido
+    }],
+    costPriority?: number,         // 0-1, importancia de minimizar el costo
+    speedPriority?: number,        // 0-1, importancia de baja latencia
+    intelligencePriority?: number  // 0-1, importancia de las capacidades
+  },
+  systemPrompt?: string,
+  includeContext?: "none" | "thisServer" | "allServers",
+  temperature?: number,
+  maxTokens: number,
+  stopSequences?: string[],
+  metadata?: Record<string, unknown>
+}
+```
+
+<div id="request-parameters">
+  ## Parámetros de la petición
+</div>
+
+<div id="messages">
+  ### Mensajes
+</div>
+
+La matriz `messages` contiene el historial de la conversación que se envía al LLM. Cada mensaje tiene:
+
+- `role`: Puede ser "user" o "assistant"
+- `content`: El contenido del mensaje, que puede ser:
+  - Contenido de texto con un campo `text`
+  - Contenido de imagen con los campos `data` (base64) y `mimeType`
+
+<div id="model-preferences">
+  ### Preferencias de modelo
+</div>
+
+El objeto `modelPreferences` permite a los servidores especificar sus preferencias de selección de modelo:
+
+- `hints`: Lista de sugerencias de nombres de modelos que los clientes pueden usar para seleccionar un modelo apropiado:
+  - `name`: Cadena que puede coincidir con nombres de modelos completos o parciales (p. ej., "claude-3", "sonnet")
+  - Los clientes pueden mapear las sugerencias a modelos equivalentes de diferentes proveedores
+  - Se evalúan varias sugerencias en orden de preferencia
+
+- Valores de prioridad (normalizados entre 0 y 1):
+  - `costPriority`: Importancia de minimizar los costos
+  - `speedPriority`: Importancia de reducir la latencia de la respuesta
+  - `intelligencePriority`: Importancia de las capacidades avanzadas del modelo
+
+Los clientes realizan la selección final del modelo en función de estas preferencias y de los modelos disponibles.
+
+<div id="system-prompt">
+  ### Indicaciones del sistema
+</div>
+
+Un campo opcional `systemPrompt` permite a los servidores solicitar una indicación del sistema específica. El cliente puede modificarla o ignorarla.
+
+<div id="context-inclusion">
+  ### Inclusión de contexto
+</div>
+
+El parámetro `includeContext` especifica qué contexto de MCP incluir:
+
+- `"none"`: Sin contexto adicional
+- `"thisServer"`: Incluir el contexto del servidor que realiza la solicitud
+- `"allServers"`: Incluir el contexto de todos los servidores MCP conectados
+
+El cliente controla qué contexto se incluye realmente.
+
+<div id="sampling-parameters">
+  ### Parámetros de muestreo
+</div>
+
+Ajusta el muestreo del LLM con:
+
+- `temperature`: Controla la aleatoriedad (0.0 a 1.0)
+- `maxTokens`: Máximo de tokens a generar
+- `stopSequences`: Matriz de secuencias que detienen la generación
+- `metadata`: Parámetros adicionales específicos del proveedor
+
+<div id="response-format">
+  ## Formato de respuesta
+</div>
+
+El cliente devuelve un resultado de completado:
+
+```typescript
+{
+  model: string,  // Nombre del modelo usado
+  stopReason?: "endTurn" | "stopSequence" | "maxTokens" | string,
+  role: "user" | "assistant",
+  content: {
+    type: "text" | "image",
+    text?: string,
+    data?: string,
+    mimeType?: string
+  }
+}
+```
+
+<div id="example-request">
+  ## Ejemplo de solicitud
+</div>
+
+Aquí tienes un ejemplo de cómo solicitar muestreo desde un cliente:
+
+```json
+{
+  "method": "sampling/createMessage",
+  "params": {
+    "messages": [
+      {
+        "role": "user",
+        "content": {
+          "type": "text",
+          "text": "What files are in the current directory?"
+        }
+      }
+    ],
+    "systemPrompt": "You are a helpful file system assistant.",
+    "includeContext": "thisServer",
+    "maxTokens": 100
+  }
+}
+```
+
+<div id="best-practices">
+  ## Mejores prácticas
+</div>
+
+Al implementar el muestreo:
+
+1. Proporcione siempre indicaciones claras y bien estructuradas
+2. Gestione adecuadamente contenido de texto e imagen
+3. Establezca límites de tokens razonables
+4. Incluya contexto relevante mediante `includeContext`
+5. Valide las respuestas antes de utilizarlas
+6. Maneje los errores con gracia
+7. Considere aplicar limitación de velocidad a las solicitudes de muestreo
+8. Documente el comportamiento esperado del muestreo
+9. Pruebe con distintos parámetros del modelo
+10. Supervise los costos del muestreo
+
+<div id="human-in-the-loop-controls">
+  ## Controles con intervención humana
+</div>
+
+El muestreo está diseñado con la supervisión humana en mente:
+
+<div id="for-prompts">
+  ### Para las indicaciones
+</div>
+
+- Los clientes deben mostrar a los usuarios la indicación propuesta
+- Los usuarios deben poder modificar o rechazar la indicación
+- Las indicaciones del sistema pueden filtrarse o modificarse
+- La inclusión de contexto la controla el cliente
+
+<div id="for-completions">
+  ### Sobre las completaciones
+</div>
+
+- Los clientes deben mostrar a los usuarios la completación
+- Los usuarios deben poder modificar o rechazar las completaciones
+- Los clientes pueden filtrar o modificar las completaciones
+- Los usuarios controlan qué modelo se utiliza
+
+<div id="security-considerations">
+  ## Consideraciones de seguridad
+</div>
+
+Al implementar el muestreo:
+
+- Validar todo el contenido de los mensajes
+- Depurar información sensible
+- Implementar límites de velocidad apropiados
+- Supervisar el uso del muestreo
+- Cifrar los datos en tránsito
+- Gestionar la privacidad de los datos de los usuarios
+- Auditar las solicitudes de muestreo
+- Controlar la exposición de costos
+- Implementar tiempos de espera
+- Manejar los errores del modelo de forma elegante
+
+<div id="common-patterns">
+  ## Patrones comunes
+</div>
+
+<div id="agentic-workflows">
+  ### Flujos de trabajo agénticos
+</div>
+
+El Muestreo habilita patrones agénticos como:
+
+- Leer y analizar recursos
+- Tomar decisiones basadas en el contexto
+- Generar datos estructurados
+- Gestionar tareas de varios pasos
+- Brindar asistencia interactiva
+
+<div id="context-management">
+  ### Gestión del contexto
+</div>
+
+Buenas prácticas para el contexto:
+
+- Solicita el contexto mínimo necesario
+- Estructura el contexto con claridad
+- Gestiona los límites de tamaño del contexto
+- Actualiza el contexto cuando sea necesario
+- Depura el contexto obsoleto
+
+<div id="error-handling">
+  ### Manejo de errores
+</div>
+
+Un manejo de errores sólido debería:
+
+- Detectar fallos de muestreo
+- Gestionar errores por tiempo de espera
+- Gestionar límites de tasa
+- Validar las respuestas
+- Proporcionar comportamientos de respaldo
+- Registrar los errores de forma adecuada
+
+<div id="limitations">
+  ## Limitaciones
+</div>
+
+Tenga en cuenta estas limitaciones:
+
+- El muestreo depende de las capacidades del cliente
+- Los usuarios controlan el comportamiento del muestreo
+- El tamaño del contexto tiene límites
+- Pueden aplicarse límites de tasa
+- Se deben considerar los costos
+- La disponibilidad del modelo varía
+- Los tiempos de respuesta varían
+- No todos los tipos de contenido están soportados

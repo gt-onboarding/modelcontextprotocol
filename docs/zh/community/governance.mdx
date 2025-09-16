@@ -1,0 +1,214 @@
+---
+title: 治理与治理维护
+description: 了解模型上下文协议（MCP）的治理结构以及如何参与社区
+---
+
+模型上下文协议（MCP）遵循正式的治理模型，以确保决策透明并促进社区参与。本文档概述了项目的组织方式以及决策的产生方式。
+
+<div id="technical-governance">
+  ## 技术治理
+</div>
+
+MCP 项目采用类似 Python、PyTorch 等开源项目的层级结构：
+
+* 由提交 issue、发起 pull request 并为项目作出贡献的**贡献者**社区构成。
+* 一小组**维护者**负责推进 MCP 项目内的各个组件，如 SDK、文档等。
+* **核心维护者**对贡献者和维护者进行监督，并推动项目整体方向。
+* 核心维护者中有两位**首席核心维护者**，作为最终决策者。
+* 维护者、核心维护者与首席核心维护者共同组成 **MCP 指导委员会**。
+
+所有维护者都应当对 MCP 的设计理念保持强烈认同。技术治理的成员资格属于个人而非公司。也就是说，不会为特定公司保留席位，成员资格与个人绑定，而非其雇主。这确保维护者以协议本身及开源社区的最大利益为行动准则。
+
+<div id="channels">
+  ### 渠道
+</div>
+
+技术治理通过一个面向所有**维护者、核心维护者**和**首席维护者**的共享[Discord 服务器](/zh/community/communication#discord)进行。各维护者群体可选择额外的沟通渠道，但所有决策及其支撑性的讨论必须记录在 Discord 服务器上，并以透明方式对外公开。
+
+<div id="maintainers">
+  ### 维护者
+</div>
+
+维护者负责 MCP 项目中的各个独立项目或技术工作组。这些通常是独立的代码仓库，例如特定语言的 SDK，但也可能扩展到仓库的子目录，如 MCP 文档。维护者可以自行制定决策规则和流程。维护者应独立为各自的项目做出决策，但在需要时可以将事项转交或升级至核心维护者处理。
+
+维护者的职责包括：
+
+* 与社区贡献者进行审慎而高效的交流与协作，
+* 维护并改进其所负责的 MCP 项目领域，
+* 维护相关文档、路线图及 MCP 项目的其他相邻部分，
+* 将社区的想法反馈给核心团队。
+
+鼓励维护者在需要时提名新增维护者。维护者仅可由核心维护者或首席核心维护者在任何时间、无需说明理由地予以任命或撤销。
+
+维护者对其各自的代码仓库拥有写入权限和/或管理员权限。
+
+<div id="core-maintainers">
+  ### 核心维护者
+</div>
+
+核心维护者应当对模型上下文协议（MCP）及其规范有深入理解。他们的职责包括：
+
+* 设计、评审并引导 MCP 规范的发展，以及 MCP 项目的其他各个部分（如文档），
+* 阐述项目连贯一致的长期愿景，
+* 以公平、透明的方式调解并解决争议问题，在可能时寻求共识，同时在必要时做出果断决策，
+* 任命或撤销维护者，
+* 以 MCP 的最佳利益为原则，承担 MCP 项目的托管与治理职责。
+
+核心维护者作为一个整体，可通过多数投票否决维护者作出的任何决定。核心维护者有权按其认为合适的方式解决争端，并应公开阐明其决策。核心小组负责制定自身的决策程序。
+
+核心维护者通常对所有 MCP 代码仓库拥有写入与管理权限，但应与外部贡献者使用相同的贡献机制（通常为 pull request）。基于安全因素，可作例外处理。
+
+<div id="lead-maintainers-bdfl">
+  ### 首席维护者（BDFL）
+</div>
+
+MCP 有两位首席维护者：Justin Spahr-Summers 和 David Soria Parra。首席维护者可以否决核心维护者或维护者作出的任何决定。这种模式在开源社区中也常被称为“终身仁慈独裁者（BDFL）”。首席维护者应公开阐明其决策，并为其决定提供清晰的理由。首席维护者属于核心维护者组的一部分。
+
+首席维护者负责确认或移除核心维护者。
+
+在可行的情况下，首席维护者是 MCP 项目所有基础设施的管理员。这包括但不限于所有沟通渠道、GitHub 组织与代码仓库。
+
+<div id="decision-process">
+  ### 决策流程
+</div>
+
+核心维护者小组每两周召开一次会议，讨论并对提案进行投票，并讨论其他必要议题。必要时，可在共享的 Discord 服务器上就较小的提案进行讨论和投票。
+
+首席维护者、核心维护者及维护者小组应尽量每三到六个月线下面对面会面一次。
+
+<div id="processes">
+  ## 流程
+</div>
+
+核心维护者与负责人负责模型上下文协议（MCP）的各个方面，包括文档、议题、内容建议，以及 [MCP 项目](https://github.com/modelcontextprotocol) 下的其他所有部分。维护者负责其所负责的 MCP 项目领域内的文档、议题和内容建议，同时也鼓励参与 MCP 项目的日常维护。维护者、核心维护者和负责人应与外部贡献者采用相同的贡献流程，而不是直接对代码仓库进行更改。这样可以更清晰地体现意图，并创造讨论的机会。
+
+<div id="projects-and-working-groups">
+  ### 项目与工作组
+</div>
+
+MCP 项目由两种主要结构构成：项目与工作组。
+
+项目是维护于独立代码仓库中的具体组件，包括规范（Specification）、TypeScript SDK、Go SDK、Inspector，以及其他实现产物。
+
+工作组是协作讨论的论坛，感兴趣的成员在此讨论 MCP 的特定主题，而无需维护代码仓库。这些工作组包括专注于传输协议、客户端实现，以及其他跨领域问题的群组。
+
+<div id="governance-principles">
+  #### 治理原则
+</div>
+
+所有项目和工作组在遵循以下核心原则的前提下实行自我治理：
+
+1. 明确的贡献与决策流程
+2. 开放沟通与透明决策
+
+两者都必须：
+
+* 记录其贡献流程
+* 保持透明沟通
+* 公开作出决策（工作组必须发布会议纪要和提案）
+
+未明确流程的项目和工作组默认采用：
+
+* 通过 GitHub 拉取请求和问题进行贡献
+* 在官方 [MCP Contributor Discord](/zh/community/communication#discord) 的公共频道沟通
+
+<div id="maintenance-responsibilities">
+  #### 维护职责
+</div>
+
+没有指定维护者的组件（如文档）由核心维护者负责。这些组件的更改应通过遵循标准贡献指南提交 pull request，由维护者进行评审；对于任何重大变更，将提交升级至核心维护者审核。
+
+鼓励核心维护者和维护者改进 MCP 项目的任何部分，而不受正式维护职责分配的限制。
+
+<div id="specification-project">
+  ### 规范专项
+</div>
+
+<div id="specification-enhancement-proposal-sep">
+  #### 规范增强提案（SEP）
+</div>
+
+对规范的拟议更改必须以书面形式提交，首先提供提案摘要，阐明要解决的**问题**，并提出**解决方案**、**替代方案**、**考量、预期结果**和**风险**。[SEP 指南](/zh/community/sep-guidelines)说明了 SEP 的预期结构。SEP 应作为 [specification 仓库](https://github.com/modelcontextprotocol/specification)中的 issue 创建，并加上 `proposal, sep` 标签。
+
+所有提案必须由 MCP 指导小组（maintainer、core maintainer 或 lead core maintainer）中的一位**发起人**担任赞助。发起人负责确保提案得到积极推进，符合提案质量标准，并在核心维护者会议上进行介绍和讨论。Maintainer 和 Core Maintainer 小组应定期审查没有发起人的开放提案。若提案在六个月内未能找到发起人，将自动被拒绝。
+
+一旦提案有了发起人，即会指派给该发起人，并标记为 `draft`。
+
+<div id="communication">
+  ## 通信
+</div>
+
+<div id="core-maintainer-meetings">
+  ### 核心维护者会议
+</div>
+
+核心维护者小组每两周召开一次会议，讨论提案和项目。提案相关笔记应向公众公开。核心维护者小组将力争每隔 3–6 个月线下见面一次。
+
+<div id="public-chat">
+  ### 公共聊天
+</div>
+
+MCP 项目维护了一个[公开的 Discord 服务器](/zh/community/communication#discord)，为各兴趣小组提供开放聊天。MCP 项目也可能会为特定沟通设置私密频道。
+
+<div id="nominating-confirming-and-removing-maintainers">
+  ## 提名、确认与撤销维护者
+</div>
+
+<div id="the-principles">
+  ### 原则
+</div>
+
+* 模块维护者小组的成员资格基于**个人**的能力授予；候选人需通过贡献、评审和讨论展现其在相关领域的深厚专业能力，并与整体的模型上下文协议（MCP）方向保持一致。
+* 要加入**维护者**小组，个人需持续且有力地体现与模型上下文协议（MCP）总体原则的一致性。
+* 模块维护者或核心维护者不设任期限制。
+* 若工作组或子项目维护者在较长时间内未积极参与，可按宽松标准将其维护职责转为“名誉”状态。每个维护者小组可根据其领域设定适当的不活跃期限。
+* 成员资格授予个人，而非公司。
+
+<div id="nomination-and-removal">
+  ### 提名与撤任
+</div>
+
+* 核心维护者负责增补和撤换维护者，并会参考现有维护者的意见。
+* 首席维护者负责增补和撤换核心维护者。
+
+<div id="nomination-process">
+  #### 提名流程
+</div>
+
+如果一位 Maintainer（或 Core / Lead Maintainer）希望向 Core / Lead Maintainers 提出提名供其考虑，应遵循以下流程：
+
+1. 收集提名的证据材料。通常为所考虑管理的代码库中已合并 PR 的历史记录。
+2. 在相关小组的维护者之间讨论是否支持通过该提名。
+3. 私信一位 Community Moderator 或 Core Maintainer，请其在 Discord 中创建一个私有频道，命名格式为 `nomination-{name}-{group}`。将所有 Core Maintainers、Lead Maintainers 以及相关小组的共同维护者加入该频道。
+4. 提供被提名人的背景与上下文。下文提供了可包含内容的建议。
+5. 在 Discord 发起投票，请 Core / Lead Maintainers 就该提名投 Yes / No。鼓励达成共识，但不是必需。
+6. 在 Core / Lead Maintainers 讨论和/或投票后，如提名获得通过，具备权限的相关成员将更新 GitHub 和 Discord 角色，并将被提名人加入相应小组。提名人应在相关 Discord 频道宣布新的维护者任命。
+7. 临时 Discord 频道将在一周后删除。
+
+向 Core Maintainers 提名某人时可分享的信息建议：
+
+* GitHub 个人资料链接、LinkedIn 个人资料链接、Discord 用户名
+* 你将该个人提名为哪个（哪些）小组的维护者
+* 相关小组是否同意将其提升为维护者
+* 其迄今为止的贡献说明（含最重要贡献的链接）
+* 未来预期的贡献说明（例如：他们是否有意愿成为维护者？是否有精力承担该角色？）
+* 关于该个人的其他背景（例如：当前雇主、参与模型上下文协议（MCP）的动机）
+* 任何你认为与提名相关的其他事项
+
+<div id="current-core-maintainers">
+  ## 现任核心维护者
+</div>
+
+* Inna Harper
+* Basil Hosmer
+* Paul Carleton
+* Nick Cooper
+* Nick Aldridge
+* Che Liu
+* Den Delimarsky
+
+<div id="current-maintainers-and-working-groups">
+  ## 当前维护者与工作组
+</div>
+
+请参阅[维护者名单](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/main/MAINTAINERS.md)。

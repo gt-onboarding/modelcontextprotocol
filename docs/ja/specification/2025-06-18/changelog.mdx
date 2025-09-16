@@ -1,0 +1,42 @@
+---
+title: 主な変更点
+---
+
+<div id="enable-section-numbers" />
+
+このドキュメントでは、前回の改訂版 [2025-03-26](/ja/specification/2025-03-26) 以降に Model Context Protocol（MCP）仕様に加えられた変更点を一覧します。
+
+<div id="major-changes">
+  ## 主要な変更点
+</div>
+
+1. JSON-RPC の**[バッチ処理](https://www.jsonrpc.org/specification#batch)**サポートを削除
+   (PR [#416](https://github.com/modelcontextprotocol/specification/pull/416))
+2. [構造化ツール出力](/ja/specification/2025-06-18/server/tools#structured-content)のサポートを追加
+   (PR [#371](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/371))
+3. MCPサーバーを[OAuth リソースサーバー](/ja/specification/2025-06-18/basic/authorization#authorization-server-discovery)として分類し、
+   対応する認可サーバーを検出できるよう保護リソースのメタデータを追加。
+   (PR [#338](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/338))
+4. 悪意あるサーバーがアクセストークンを取得するのを防ぐため、[RFC 8707](https://www.rfc-editor.org/rfc/rfc8707.html)に記載の Resource Indicators を MCPクライアントで実装することを必須化。
+   (PR [#734](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/734))
+5. 認可仕様および新設の[セキュリティベストプラクティス](/ja/specification/2025-06-18/basic/security_best_practices)ページにおいて、[セキュリティに関する考慮事項](/ja/specification/2025-06-18/basic/authorization#security-considerations)とベストプラクティスを明確化。
+6. **[エリシテーション](/ja/specification/2025-06-18/client/elicitation)**のサポートを追加し、対話中にサーバーがユーザーへ追加情報を要求可能に。
+   (PR [#382](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/382))
+7. ツール呼び出し結果での**[リソースリンク](/ja/specification/2025-06-18/server/tools#resource-links)**のサポートを追加。 (PR [#603](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/603))
+8. HTTP 利用時は、以降のリクエストで `MCP-Protocol-Version` ヘッダーを用いて[合意したプロトコルバージョンを指定することを必須化](/ja/specification/2025-06-18/basic/transports#protocol-version-header) (PR [#548](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/548))。
+9. [ライフサイクルの Operation](/ja/specification/2025-06-18/basic/lifecycle#operation)で **SHOULD** を **MUST** に変更
+
+<div id="other-schema-changes">
+  ## その他のスキーマ変更
+</div>
+
+1. 追加のインターフェース型に `_meta` フィールドを追加（PR [#710](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/710)）し、[正しい使用方法](/ja/specification/2025-06-18/basic#meta)を明記。
+2. `CompletionRequest` に `context` フィールドを追加し、補完リクエストに既に解決済みの変数を含められるようにする（PR [#598](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/598)）。
+3. 人に読みやすい表示名のための `title` フィールドを追加し、`name` はプログラム用の識別子として使用できるようにする（PR [#663](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/663)）。
+
+<div id="full-changelog">
+  ## 変更履歴（完全版）
+</div>
+
+直近のプロトコル改訂以降に行われたすべての変更の一覧は、
+[GitHubをご覧ください](https://github.com/modelcontextprotocol/specification/compare/2025-03-26...2025-06-18)。

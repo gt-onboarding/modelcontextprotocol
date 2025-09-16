@@ -1,0 +1,289 @@
+---
+title: Transportes
+---
+
+<div id="enable-section-numbers" />
+
+<Info>**Revisión del protocolo**: borrador</Info>
+
+MCP usa JSON-RPC para codificar mensajes. Los mensajes de JSON-RPC **DEBEN** estar codificados en UTF-8.
+
+El protocolo define actualmente dos mecanismos de transporte estándar para la
+comunicación entre cliente y servidor:
+
+1. [stdio](#stdio), comunicación a través de la entrada estándar y la salida estándar
+2. [HTTP transmitible](#streamable-http)
+
+Los clientes **DEBERÍAN** admitir stdio siempre que sea posible.
+
+También es posible que clientes y servidores implementen
+[transportes personalizados](#custom-transports) de forma modular.
+
+<div id="stdio">
+  ## stdio
+</div>
+
+En el transporte **stdio**:
+
+* El cliente lanza el Servidor MCP como un subproceso.
+* El servidor lee mensajes JSON-RPC desde su entrada estándar (`stdin`) y envía mensajes
+  a su salida estándar (`stdout`).
+* Los mensajes son solicitudes, notificaciones o respuestas individuales de JSON-RPC.
+* Los mensajes están delimitados por saltos de línea y **NO DEBEN** contener saltos de línea incrustados.
+* El servidor **PUEDE** escribir cadenas UTF-8 en su error estándar (`stderr`) con fines de registro. Los clientes **PUEDEN** capturar, reenviar o ignorar estos registros.
+* El servidor **NO DEBE** escribir nada en su `stdout` que no sea un mensaje MCP válido.
+* El cliente **NO DEBE** escribir nada en el `stdin` del servidor que no sea un
+  mensaje MCP válido.
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Server Process
+
+    Client->>+Server Process: Launch subprocess
+    loop Message Exchange
+        Client->>Server Process: Write to stdin
+        Server Process->>Client: Write to stdout
+        Server Process--)Client: Optional logs on stderr
+    end
+    Client->>Server Process: Close stdin, terminate subprocess
+    deactivate Server Process
+```
+
+<div id="streamable-http">
+  ## HTTP transmitible
+</div>
+
+<Info>
+  Esto reemplaza el [transporte HTTP+SSE](/es/specification/2024-11-05/basic/transports#http-with-sse) de la versión del protocolo 2024-11-05. Consulta la guía de [compatibilidad retroactiva](#backwards-compatibility) a continuación.
+</Info>
+
+En el transporte **HTTP transmitible**, el servidor opera como un proceso independiente que puede gestionar múltiples conexiones de clientes. Este transporte utiliza solicitudes HTTP POST y GET. El servidor puede opcionalmente usar [eventos enviados por el servidor](https://en.wikipedia.org/wiki/Server-sent_events) (SSE) para transmitir múltiples mensajes desde el servidor. Esto permite servidores MCP básicos, así como servidores más avanzados que admiten transmisión y notificaciones y solicitudes de servidor a cliente.
+
+El servidor **DEBE** proporcionar una única ruta de endpoint HTTP (en adelante, el **endpoint MCP**) que admita ambos métodos, POST y GET. Por ejemplo, podría ser una URL como `https://example.com/mcp`.
+
+<div id="security-warning">
+  #### Advertencia de seguridad
+</div>
+
+Al implementar el transporte HTTP transmitible:
+
+1. Los servidores **DEBEN** validar el encabezado `Origin` en todas las conexiones entrantes para prevenir ataques de DNS rebinding
+2. Al ejecutarse localmente, los servidores **DEBERÍAN** vincularse solo a localhost (127.0.0.1) en lugar de a todas las interfaces de red (0.0.0.0)
+3. Los servidores **DEBERÍAN** implementar una autenticación adecuada para todas las conexiones
+
+Sin estas protecciones, los atacantes podrían usar DNS rebinding para interactuar con Servidores MCP locales desde sitios web remotos.
+
+<div id="sending-messages-to-the-server">
+  ### Envío de mensajes al servidor
+</div>
+
+Cada mensaje JSON-RPC enviado desde el cliente **DEBE** ser una nueva solicitud HTTP POST al
+endpoint de MCP.
+
+1. El cliente **DEBE** usar HTTP POST para enviar mensajes JSON-RPC al endpoint de MCP.
+2. El cliente **DEBE** incluir un encabezado `Accept` que liste `application/json` y
+   `text/event-stream` como tipos de contenido admitidos.
+3. El cuerpo de la solicitud POST **DEBE** ser una única *solicitud*, *notificación* o *respuesta* JSON-RPC.
+4. Si la entrada es una *respuesta* o *notificación* JSON-RPC:
+   * Si el servidor acepta la entrada, **DEBE** devolver el código de estado HTTP 202
+     Accepted sin cuerpo.
+   * Si el servidor no puede aceptar la entrada, **DEBE** devolver un código de estado de error HTTP
+     (p. ej., 400 Bad Request). El cuerpo de la respuesta HTTP **PUEDE** consistir en una *respuesta de error*
+     JSON-RPC sin `id`.
+5. Si la entrada es una *solicitud* JSON-RPC, el servidor **DEBE** ya sea
+   devolver `Content-Type: text/event-stream`, para iniciar un flujo SSE, o
+   `Content-Type: application/json`, para devolver un objeto JSON. El cliente **DEBE**
+   admitir ambos casos.
+6. Si el servidor inicia un flujo SSE:
+   * El flujo SSE **DEBERÍA** eventualmente incluir una *respuesta* JSON-RPC para la
+     *solicitud* JSON-RPC enviada en el cuerpo del POST.
+   * El servidor **PUEDE** enviar *solicitudes* y *notificaciones* JSON-RPC antes de enviar la
+     *respuesta* JSON-RPC. Estos mensajes **DEBERÍAN** estar relacionados con la *solicitud*
+     original del cliente.
+   * El servidor **NO DEBERÍA** cerrar el flujo SSE antes de enviar la *respuesta* JSON-RPC
+     para la *solicitud* JSON-RPC recibida, a menos que la [sesión](#session-management)
+     venza.
+   * Después de enviar la *respuesta* JSON-RPC, el servidor **DEBERÍA** cerrar el
+     flujo SSE.
+   * La desconexión **PUEDE** ocurrir en cualquier momento (p. ej., por condiciones de red).
+     Por lo tanto:
+     * La desconexión **NO DEBERÍA** interpretarse como que el cliente cancela su solicitud.
+     * Para cancelar, el cliente **DEBERÍA** enviar explícitamente una `CancelledNotification` de MCP.
+     * Para evitar la pérdida de mensajes por desconexión, el servidor **PUEDE** hacer que el flujo sea
+       [reanudable](#resumability-and-redelivery).
+
+<div id="listening-for-messages-from-the-server">
+  ### Escuchar mensajes del servidor
+</div>
+
+1. El cliente **PUEDE** realizar un HTTP GET al endpoint de MCP. Esto puede usarse para abrir un
+   flujo SSE, lo que permite que el servidor se comunique con el cliente sin que este primero
+   envíe datos mediante HTTP POST.
+2. El cliente **DEBE** incluir un encabezado `Accept`, indicando `text/event-stream` como
+   tipo de contenido admitido.
+3. El servidor **DEBE** devolver `Content-Type: text/event-stream` en respuesta a
+   este HTTP GET, o bien devolver HTTP 405 Method Not Allowed, indicando que el servidor
+   no ofrece un flujo SSE en este endpoint.
+4. Si el servidor inicia un flujo SSE:
+   * El servidor **PUEDE** enviar *solicitudes* y *notificaciones* JSON-RPC en el flujo.
+   * Estos mensajes **DEBERÍAN** no estar relacionados con ninguna *solicitud* JSON-RPC
+     del cliente que se esté ejecutando concurrentemente.
+   * El servidor **NO DEBE** enviar una *respuesta* JSON-RPC en el flujo **a menos que**
+     [reanude](#resumability-and-redelivery) un flujo asociado con una solicitud previa del
+     cliente.
+   * El servidor **PUEDE** cerrar el flujo SSE en cualquier momento.
+   * El cliente **PUEDE** cerrar el flujo SSE en cualquier momento.
+
+<div id="multiple-connections">
+  ### Conexiones múltiples
+</div>
+
+1. El cliente **PUEDE** permanecer conectado a varios flujos SSE simultáneamente.
+2. El servidor **DEBE** enviar cada uno de sus mensajes JSON-RPC en solo uno de los
+   flujos conectados; es decir, **NO DEBE** transmitir el mismo mensaje a través de varios flujos.
+   * El riesgo de pérdida de mensajes **PUEDE** mitigarse haciendo que el flujo sea
+     [reanudable](#resumability-and-redelivery).
+
+<div id="resumability-and-redelivery">
+  ### Reanudación y reentrega
+</div>
+
+Para permitir reanudar conexiones interrumpidas y volver a entregar mensajes que de otro modo podrían perderse:
+
+1. Los servidores **PUEDEN** adjuntar un campo `id` a sus eventos SSE, como se describe en el
+   [estándar SSE](https://html.spec.whatwg.org/multipage/server-sent-events.html#event-stream-interpretation).
+   * Si está presente, el identificador **DEBE** ser globalmente único en todos los flujos dentro de esa
+     [sesión](#session-management), o en todos los flujos con ese cliente específico si no se utiliza la gestión de sesiones.
+2. Si el cliente desea reanudar tras una conexión interrumpida, **DEBERÍA** realizar una
+   petición HTTP GET al endpoint de MCP e incluir la cabecera
+   [`Last-Event-ID`](https://html.spec.whatwg.org/multipage/server-sent-events.html#the-last-event-id-header)
+   para indicar el último identificador de evento que recibió.
+   * El servidor **PUEDE** usar esta cabecera para reproducir los mensajes que se habrían enviado
+     después del último identificador de evento, *en el flujo que se desconectó*, y reanudar el
+     flujo desde ese punto.
+   * El servidor **NO DEBE** reproducir mensajes que se habrían entregado por un
+     flujo diferente.
+
+En otras palabras, estos identificadores de evento deben ser asignados por los servidores por *flujo*, para actuar como un cursor dentro de ese flujo en particular.
+
+<div id="session-management">
+  ### Gestión de sesiones
+</div>
+
+Una “sesión” de MCP consiste en interacciones lógicamente relacionadas entre un cliente y un
+servidor, que comienzan con la [fase de inicialización](/es/specification/draft/basic/lifecycle). Para admitir
+servidores que desean establecer sesiones con estado:
+
+1. Un servidor que use el transporte HTTP transmitible **PUEDE** asignar un ID de sesión en
+   el momento de la inicialización, incluyéndolo en el encabezado `Mcp-Session-Id` de la
+   respuesta HTTP que contiene el `InitializeResult`.
+   * El ID de sesión **DEBERÍA** ser globalmente único y criptográficamente seguro (p. ej., un
+     UUID generado de forma segura, un JWT o un hash criptográfico).
+   * El ID de sesión **DEBE** contener únicamente caracteres ASCII visibles (en el rango de 0x21 a
+     0x7E).
+2. Si el servidor devuelve un `Mcp-Session-Id` durante la inicialización, los clientes que usen
+   el transporte HTTP transmitible **DEBEN** incluirlo en el encabezado `Mcp-Session-Id` en
+   todas sus solicitudes HTTP posteriores.
+   * Los servidores que requieran un ID de sesión **DEBERÍAN** responder a las solicitudes sin
+     el encabezado `Mcp-Session-Id` (que no sean de inicialización) con HTTP 400 Solicitud incorrecta.
+3. El servidor **PUEDE** terminar la sesión en cualquier momento, tras lo cual **DEBE** responder
+   a las solicitudes que contengan ese ID de sesión con HTTP 404 No encontrado.
+4. Cuando un cliente reciba HTTP 404 en respuesta a una solicitud que contenga un
+   `Mcp-Session-Id`, **DEBE** iniciar una nueva sesión enviando un nuevo `InitializeRequest`
+   sin adjuntar un ID de sesión.
+5. Los clientes que ya no necesiten una sesión en particular (p. ej., porque el usuario está saliendo
+   de la aplicación cliente) **DEBERÍAN** enviar una solicitud HTTP DELETE al endpoint de MCP con el
+   encabezado `Mcp-Session-Id`, para terminar explícitamente la sesión.
+   * El servidor **PUEDE** responder a esta solicitud con HTTP 405 Método no permitido,
+     indicando que el servidor no permite que los clientes terminen sesiones.
+
+<div id="sequence-diagram">
+  ### Diagrama de secuencia
+</div>
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Server
+
+    note over Client, Server: inicialización
+
+    Client->>+Server: POST InitializeRequest
+    Server->>-Client: InitializeResponse<br>Mcp-Session-Id: 1868a90c...
+
+    Client->>+Server: POST InitializedNotification<br>Mcp-Session-Id: 1868a90c...
+    Server->>-Client: 202 Aceptado
+
+    note over Client, Server: solicitudes del cliente
+    Client->>+Server: POST ... solicitud ...<br>Mcp-Session-Id: 1868a90c...
+
+    alt respuesta HTTP única
+      Server->>Client: ... respuesta ...
+    else el servidor abre un flujo SSE
+      loop mientras la conexión permanezca abierta
+          Server-)Client: ... mensajes SSE del servidor ...
+      end
+      Server-)Client: evento SSE: ... respuesta ...
+    end
+    deactivate Server
+
+    note over Client, Server: notificaciones/respuestas del cliente
+    Client->>+Server: POST ... notificación/respuesta ...<br>Mcp-Session-Id: 1868a90c...
+    Server->>-Client: 202 Aceptado
+
+    note over Client, Server: solicitudes del servidor
+    Client->>+Server: GET<br>Mcp-Session-Id: 1868a90c...
+    loop mientras la conexión permanezca abierta
+        Server-)Client: ... mensajes SSE del servidor ...
+    end
+    deactivate Server
+
+```
+
+<div id="protocol-version-header">
+  ### Encabezado de versión del protocolo
+</div>
+
+Si se utiliza HTTP, el cliente **DEBE** incluir el encabezado HTTP `MCP-Protocol-Version: <protocol-version>` en todas las solicitudes posteriores al servidor MCP, lo que permite que el servidor MCP responda según la versión del protocolo MCP.
+
+Por ejemplo: `MCP-Protocol-Version: 2025-06-18`
+
+La versión del protocolo enviada por el cliente **DEBERÍA** ser la [negociada durante
+la inicialización](/es/specification/draft/basic/lifecycle#version-negotiation).
+
+Para compatibilidad con versiones anteriores, si el servidor *no* recibe un encabezado `MCP-Protocol-Version`,
+y no tiene otra forma de identificar la versión (por ejemplo, confiando en la versión del
+protocolo negociada durante la inicialización), el servidor **DEBERÍA** asumir la versión del
+protocolo `2025-03-26`.
+
+Si el servidor recibe una solicitud con un `MCP-Protocol-Version` no válido o no admitido,
+**DEBE** responder con `400 Bad Request`.
+
+<div id="backwards-compatibility">
+  ### Compatibilidad retroactiva
+</div>
+
+Los clientes y servidores pueden mantener compatibilidad retroactiva con el [transporte HTTP+SSE](/es/specification/2024-11-05/basic/transports#http-with-sse) en desuso (desde la versión del protocolo 2024-11-05) de la siguiente manera:
+
+**Servidores** que quieran admitir clientes antiguos deberían:
+
+* Seguir alojando tanto los endpoints SSE como POST del transporte antiguo, junto con el nuevo «endpoint MCP» definido para el transporte HTTP transmitible.
+  * También es posible combinar el endpoint POST antiguo y el nuevo endpoint MCP, pero esto puede introducir una complejidad innecesaria.
+
+**Clientes** que quieran admitir servidores antiguos deberían:
+
+1. Aceptar del usuario una URL de Servidor MCP, que puede apuntar a un servidor que use el transporte antiguo o el nuevo.
+2. Intentar enviar por POST una `InitializeRequest` a la URL del servidor, con un encabezado `Accept` como se definió arriba:
+   * Si tiene éxito, el cliente puede asumir que se trata de un servidor que admite el nuevo transporte HTTP transmitible.
+   * Si falla con un código de estado HTTP 4xx (p. ej., 405 Method Not Allowed o 404 Not Found):
+     * Realizar una solicitud GET a la URL del servidor, esperando que esto abra un flujo SSE y devuelva un evento `endpoint` como primer evento.
+     * Cuando llegue el evento `endpoint`, el cliente puede asumir que se trata de un servidor que ejecuta el transporte HTTP+SSE antiguo y debería usar ese transporte para toda la comunicación posterior.
+
+<div id="custom-transports">
+  ## Transportes personalizados
+</div>
+
+Los clientes y servidores **PUEDEN** implementar mecanismos de transporte personalizados adicionales para satisfacer necesidades específicas. El protocolo es independiente del transporte y puede implementarse sobre cualquier canal de comunicación que admita el intercambio bidireccional de mensajes.
+
+Quienes decidan admitir transportes personalizados **DEBEN** asegurarse de preservar el formato de mensajes y los requisitos del ciclo de vida de JSON-RPC definidos por el MCP. Los transportes personalizados **DEBERÍAN** documentar sus patrones específicos de establecimiento de conexión e intercambio de mensajes para facilitar la interoperabilidad.

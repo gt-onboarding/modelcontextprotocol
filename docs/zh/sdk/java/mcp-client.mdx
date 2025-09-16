@@ -1,0 +1,703 @@
+---
+title: Java MCP 客户端
+description: 了解如何实现和配置模型上下文协议（MCP）客户端
+---
+
+<div id="sdk-contents">
+  ## SDK 内容
+</div>
+
+[Java MCP 概览](/zh/sdk/java/mcp-overview)
+
+[Java MCP 客户端](/zh/sdk/java/mcp-client)
+
+[Java MCP 服务器](/zh/sdk/java/mcp-server)
+
+<div id="client-features">
+  ## 客户端功能
+</div>
+
+MCP 客户端是模型上下文协议（MCP）架构中的关键组件，负责与 MCP 服务器建立并管理连接。它实现协议的客户端侧，负责：
+
+* 协议版本协商，确保与服务器兼容
+* 能力协商，确定可用特性
+* 消息传输与 JSON-RPC 通信
+* 工具的发现与执行
+* 资源的访问与管理
+* 提示模板系统交互
+* 可选特性，如根路径管理与采样支持
+
+<Tip>
+  核心 `io.modelcontextprotocol.sdk:mcp` 模块提供 STDIO、可流式 HTTP 和 SSE 客户端传输实现，无需依赖外部 Web 框架。
+
+  面向 [Spring Framework](https://docs.spring.io/spring-ai/reference/api/mcp/mcp-client-boot-starter-docs.html) 用户，提供 **可选** 依赖 `io.modelcontextprotocol.sdk:mcp-spring-webflux` 的 Spring 专用传输实现。
+</Tip>
+
+<Tip>
+  这个基于 Spring AI MCP 的[快速上手示例](/zh/quickstart/client)将演示
+  如何构建一个可连接 MCP 服务器的 AI 客户端。
+</Tip>
+
+该客户端同时提供同步与异步 API，以适配不同的应用场景。
+
+<Tabs>
+  <Tab title="同步 API">
+    ```java
+    // 使用自定义配置创建同步客户端
+    McpSyncClient client = McpClient.sync(transport)
+        .requestTimeout(Duration.ofSeconds(10))
+        .capabilities(ClientCapabilities.builder()
+            .roots(true)      // 启用根路径功能
+            .sampling()       // 启用采样功能
+            .elicitation()    // 启用信息征询功能
+            .build())
+        .sampling(request -> CreateMessageResult.builder()...build())
+        .elicitation(elicitRequest -> ElicitResult.builder()...build())
+        .toolsChangeConsumer((List<McpSchema.Tool> tools) -> ...)
+        .resourcesChangeConsumer((List<McpSchema.Resource> resources) -> ...)
+        .promptsChangeConsumer((List<McpSchema.Prompt> prompts) -> ...)
+        .loggingConsumer((LoggingMessageNotification logging) -> ...)
+        .progressConsumer((ProgressNotification progress) -> ...)
+        .build();
+
+    // 初始化连接
+    client.initialize();
+
+    // 列出可用的工具
+    ListToolsResult tools = client.listTools();
+
+    // 调用工具
+    CallToolResult result = client.callTool(
+        new CallToolRequest("calculator",
+            Map.of("operation", "add", "a", 2, "b", 3))
+    );
+
+    // 列出并读取资源
+    ListResourcesResult resources = client.listResources();
+    ReadResourceResult resource = client.readResource(
+        new ReadResourceRequest("resource://uri")
+    );
+
+    // 列出并使用提示模板
+    ListPromptsResult prompts = client.listPrompts();
+    GetPromptResult prompt = client.getPrompt(
+        new GetPromptRequest("greeting", Map.of("name", "Spring"))
+    );
+
+    // 添加/移除根路径
+    client.addRoot(new Root("file:///path", "description"));
+    client.removeRoot("file:///path");
+
+    // 关闭客户端
+    client.closeGracefully();
+    ```
+  </Tab>
+
+  <Tab title="异步 API">
+    ```java
+    // 使用自定义配置创建异步客户端
+    McpAsyncClient client = McpClient.async(transport)
+        .requestTimeout(Duration.ofSeconds(10))
+        .capabilities(ClientCapabilities.builder()
+            .roots(true)      // 启用根路径功能
+            .sampling()       // 启用采样功能
+            .elicitation()    // 启用信息征询功能
+            .build())
+        .sampling(request -> Mono.just(new CreateMessageResult(response)))
+        .elicitation(elicitRequest -> Mono.just(ElicitResult.builder()...build()))
+        .toolsChangeConsumer(tools -> Mono.fromRunnable(() -> logger.info("工具已更新：{}", tools)))
+        .resourcesChangeConsumer(resources -> Mono.fromRunnable(() -> logger.info("资源已更新：{}", resources)))
+        .promptsChangeConsumer(prompts -> Mono.fromRunnable(() -> logger.info("提示模板已更新：{}", prompts)))
+        .loggingConsumer(notification -> Mono.fromRunnable(() -> logger.info("日志：{}", notification.data())))
+        .progressConsumer(progress -> Mono.fromRunnable(() -> logger.info("进度更新：{}", progress.data())))
+        .build();
+
+    // 初始化连接并使用各项功能
+    client.initialize()
+        .flatMap(initResult -> client.listTools())
+        .flatMap(tools -> {
+            return client.callTool(new CallToolRequest(
+                "calculator",
+                Map.of("operation", "add", "a", 2, "b", 3)
+            ));
+        })
+        .flatMap(result -> {
+            return client.listResources()
+                .flatMap(resources ->
+                    client.readResource(new ReadResourceRequest("resource://uri"))
+                );
+        })
+        .flatMap(resource -> {
+            return client.listPrompts()
+                .flatMap(prompts ->
+                    client.getPrompt(new GetPromptRequest(
+                        "greeting",
+                        Map.of("name", "Spring")
+                    ))
+                );
+        })
+        .flatMap(prompt -> {
+            return client.addRoot(new Root("file:///path", "description"))
+                .then(client.removeRoot("file:///path"));
+        })
+        .doFinally(signalType -> {
+            client.closeGracefully().subscribe();
+        })
+        .subscribe();
+    ```
+  </Tab>
+</Tabs>
+
+<div id="client-transport">
+  ## 客户端传输
+</div>
+
+传输层负责处理 MCP 客户端与服务器之间的通信，并针对不同用例提供多种实现。客户端传输负责消息序列化、建立连接，以及处理特定于协议的通信模式。
+
+<Tabs>
+  <Tab title="STDIO">
+    创建用于进程内通信的传输方式
+
+    ```java
+    ServerParameters params = ServerParameters.builder("npx")
+        .args("-y", "@modelcontextprotocol/server-everything", "dir")
+        .build();
+    McpTransport transport = new StdioClientTransport(params);
+    ```
+  </Tab>
+
+  <Tab title="HttpClient">
+    <Tabs>
+      <Tab title="Streamable-HTTP (HttpClient)">
+        与框架无关（仅使用 JDK API）的可流式 HTTP 客户端传输
+
+        ```java
+        McpTransport transport = HttpClientStreamableHttpTransport
+                                    .builder("http://your-mcp-server")
+                                    .build();
+        ```
+      </Tab>
+
+      <Tab title="SSE (HttpClient)">
+        与框架无关（仅使用 JDK API）的 SSE 客户端传输
+
+        ```java
+        McpTransport transport = HttpClientSseClientTransport
+                                    .builder("http://your-mcp-server")
+                                    .build();
+        ```
+      </Tab>
+    </Tabs>
+
+    **HttpClient：自定义 HTTP 请求**
+
+    要自定义用于每个请求的基础 HTTP 请求构建器，请提供自定义的 `HttpRequestBuilder`。
+    这在可流式 HTTP 和 SSE 传输方式中均适用。
+    当使用自定义的 `HttpRequest.Builder` 时，由传输层发起的每个 HTTP 请求
+    都会使用该构建器中的固定配置。
+    例如，这对于在请求头中附带永不过期的安全令牌很有用。
+    要为每个请求添加 `X-Custom-Header` 请求头，请使用：
+
+    ```java
+    var requestBuilder = HttpRequest
+        .newBuilder()
+        .header("X-Custom-Header", "some header value");
+
+    HttpClientStreamableHttpTransport
+        .builder("https://mcp.example.com")
+        .requestBuilder(requestBuilder)
+        .build();
+    ```
+
+    若需在发送前动态修改 HTTP 请求，请实现 `McpSyncHttpClientRequestCustomizer` 或 `McpAsyncHttpClientRequestCustomizer`。
+    选择与 MCP 客户端类型（同步或异步）匹配的请求定制器。
+    请注意，在线程本地变量可能在定制器中不可用，需通过 `McpTransportContext` 获取与上下文相关的信息（参见 [添加上下文信息](#adding-context-information)）。
+    示例实现：
+
+    ```java
+    // Sync
+    class MyRequestCustomizer implements McpSyncHttpClientRequestCustomizer {
+        @Override
+        public void customize(HttpRequest.Builder builder, String method,
+            URI endpoint, String body, McpTransportContext context) {
+            // ... custom logic ...
+            var token = obtainAccessToken(context);
+            builder.header("Authorization", "Bearer " + token);
+        }
+    }
+
+    // Async
+    class MyAsyncRequestCustomizer implements McpAsyncHttpClientRequestCustomizer {
+        @Override
+        public Publisher<HttpRequest.Builder> customize(HttpRequest.Builder builder,
+            String method, URI endpoint, String body, McpTransportContext context) {
+            // ... custom logic ...
+            Mono<String> token = obtainAccessToken(context);
+            return token.map(t ->
+                builder.copy()
+                    .header("Authorization", "Bearer " + t)
+            );
+        }
+    }
+    ```
+
+    可将传输方式（可流式 HTTP 和 SSE）配置为仅使用一个定制器。
+
+    ```java
+    HttpClientStreamableHttpTransport
+        .builder("https://mcp.example.com")
+        .httpRequestCustomizer(new MyRequestCustomizer()) // sync
+        .asyncHttpRequestCustomizer(new MyAsyncRequestCustomizer()) // OR async
+        .build();
+    ```
+
+    要组合多个定制器，请使用 `DelegatingMcpSyncHttpClientRequestCustomizer` 或 `DelegatingMcpAsyncHttpClientRequestCustomizer`。
+  </Tab>
+
+  <Tab title="WebClient">
+    <p>基于 WebClient 的客户端传输。需要 `mcp-spring-webflux` 依赖。</p>
+
+    <Tabs>
+      <Tab title="Streamable-HTTP (WebClient)">
+        ```java
+        WebClient.Builder webClientBuilder = WebClient.builder()
+                                    .baseUrl("http://your-mcp-server");
+
+        McpTransport transport = WebClientStreamableHttpTransport
+                                    .builder(webClientBuilder)
+                                    .build();
+        ```
+      </Tab>
+
+      <Tab title="SSE (WebClient)">
+        ```java
+        WebClient.Builder webClientBuilder = WebClient.builder()
+                                    .baseUrl("http://your-mcp-server");
+
+        McpTransport transport = WebFluxSseClientTransport(webClientBuilder)
+                                    .builder(webClientBuilder)
+                                    .build();
+        ```
+      </Tab>
+    </Tabs>
+
+    **WebClient：自定义 HTTP 请求**
+
+    要自定义发出的 HTTP 请求，请提供自定义的 `WebClient.Builder`。
+    使用自定义构建器时，传输层发出的每个请求都会被定制化。
+    例如，这对于在请求头中提供永不过期的安全令牌很有用。
+    要为每个请求添加 `X-Custom-Header` 请求头，请使用：
+
+    ```java
+    var webClientBuilder = WebClient.builder()
+        .defaultHeader("X-Custom-Header", "some header value");
+
+    McpTransport transport = WebClientStreamableHttpTransport
+                                .builder(webClientBuilder)
+                                .build();
+    ```
+
+    若需动态修改 HTTP 请求，构建器提供了专用 API：`ExchangeFilterFunction`。
+    在该函数中，可以在运行时生成新请求，并可从 [Reactor 上下文](https://projectreactor.io/docs/core/release/reference/advancedFeatures/context.html) 获取附加信息。
+    通常会将上下文信息存储在 Reactor 上下文中的 `McpTransportContext` 中，
+    一般在 McpSyncClient 中进行，但也可以使用任何上下文键。例如：
+
+    ```java
+    WebClient.builder()
+        .filter((request, next) -> {
+            return Mono.deferContextual(ctx -> {
+                var transportContext = ctx.get(McpTransportContext.KEY);
+                var otherInfo = ctx.get("your-context-key");
+                Mono<String> token = obtainAccessToken(transportContext, otherInfo);
+                return token.map(t -> {
+                    var newRequest = ClientRequest.from(request)
+                        .header("Authorization", "Bearer " + t)
+                        .build();
+                    // 确保调用 next.exchange 来执行该 HTTP 请求
+                    return next.exchange(newRequest);
+                });
+            });
+        });
+    ```
+
+    要了解如何填充上下文信息，请参见[添加上下文信息](#adding-context-information)。
+  </Tab>
+</Tabs>
+
+<div id="client-capabilities">
+  ## 客户端能力
+</div>
+
+客户端可以配置多种能力：
+
+```java
+var capabilities = ClientCapabilities.builder()
+    .roots(true)      // 启用文件系统根路径支持，并提供列表变更通知
+    .sampling()       // 启用 LLM 采样支持
+    .elicitation()    // 启用信息征询功能
+    .build();
+```
+
+<div id="roots-support">
+  ### 根路径支持
+</div>
+
+根路径定义了服务器在文件系统中可操作的范围边界：
+
+```java
+// 动态添加根路径
+client.addRoot(new Root("file:///path", "description"));
+
+// 移除根路径
+client.removeRoot("file:///path");
+
+// 通知服务器根路径发生变更
+client.rootsListChangedNotification();
+```
+
+根路径能力使服务器可以：
+
+* 请求可访问的文件系统根路径列表
+* 在根路径列表发生变化时接收通知
+* 明确其可访问的目录和文件
+
+<div id="sampling-support">
+  ### 采样支持
+</div>
+
+采样使服务器能够通过客户端请求与 LLM 的交互（“补全”或“生成”）：
+
+```java
+// 配置采样处理器
+Function<CreateMessageRequest, CreateMessageResult> samplingHandler = request -> {
+    // 与 LLM 对接的采样实现
+    return new CreateMessageResult(response);
+};
+
+// 创建支持采样的客户端
+var client = McpClient.sync(transport)
+    .capabilities(ClientCapabilities.builder()
+        .sampling()
+        .build())
+    .sampling(samplingHandler)
+    .build();
+```
+
+该能力使得：
+
+* 服务器无需 API 密钥即可利用 AI 能力
+* 客户端可保持对模型访问与权限的控制
+* 同时支持文本与图像交互
+* 可选在提示模板中包含 MCP 服务器上下文
+
+<div id="elicitation-support">
+  ### 信息征询支持
+</div>
+
+信息征询使服务器能够向客户端请求特定信息或进一步澄清：
+
+```java
+// 配置信息征询处理器
+Function<ElicitRequest, ElicitResult> elicitationHandler = request -> {
+    // 与 LLM 对接的信息征询实现
+    return ElicitResult.builder()...build();
+};
+
+// 创建支持信息征询的客户端
+var client = McpClient.sync(transport)
+    .capabilities(ClientCapabilities.builder()
+        .elicitation() // 启用信息征询功能
+        .build())
+    .elicitation(elicitationHandler) // 注册信息征询处理器
+    .build();
+```
+
+<div id="logging-support">
+  ### 日志支持
+</div>
+
+客户端可以注册日志消费者以接收来自服务器的日志消息，并设置最低日志级别以进行消息过滤：
+
+```java
+var mcpClient = McpClient.sync(transport)
+        .loggingConsumer((LoggingMessageNotification notification) -> {
+            System.out.println("Received log message: " + notification.data());
+        })
+        .build();
+
+mcpClient.initialize();
+
+mcpClient.setLoggingLevel(McpSchema.LoggingLevel.INFO);
+
+// 调用会发送日志通知的工具
+CallToolResult result = mcpClient.callTool(new McpSchema.CallToolRequest("logging-test", Map.of()));
+```
+
+客户端可以通过 `mcpClient.setLoggingLevel(level)` 请求控制接收的最低日志级别。低于所设级别的消息将被过滤。
+支持的日志级别（按严重性递增）：DEBUG (0)、INFO (1)、NOTICE (2)、WARNING (3)、ERROR (4)、CRITICAL (5)、ALERT (6)、EMERGENCY (7)
+
+<div id="progress-support">
+  ### 进度支持
+</div>
+
+客户端可以注册进度消费者，以接收来自服务器的进度更新：
+
+```java
+var mcpClient = McpClient.sync(transport)
+        .progressConsumer((ProgressNotification progress) -> {
+            System.out.println("Received progress update: " + progress.data());
+        })
+        .build();
+
+mcpClient.initialize();
+
+// 调用可发送进度通知的工具
+CallToolResult result = mcpClient.callTool(new McpSchema.CallToolRequest("progress-test", Map.of()));
+```
+
+<div id="change-notifications">
+  ### 变更通知
+</div>
+
+客户端可以注册变更消费者，以接收来自服务器的工具、资源或提示模板更新通知：
+
+```java
+
+var spec = McpClient.sync(transport);
+
+// 当可用工具发生变化（例如新增或移除）时，添加一个消费者进行通知。
+spec.toolsChangeConsumer((List<McpSchema.Tool> tools) -> {
+    // 处理工具变更
+});
+
+// 当可用资源发生变化（例如新增或移除）时，添加一个消费者进行通知。
+spec.resourcesChangeConsumer((List<McpSchema.Resource> resources) -> {
+    // 处理资源变更
+});
+
+// 当可用提示模板发生变化（例如新增或移除）时，添加一个消费者进行通知。
+spec.promptsChangeConsumer((List<McpSchema.Prompt> prompts) -> {
+    // 处理提示模板变更
+
+});
+```
+
+<div id="using-mcp-clients">
+  ## 使用 MCP 客户端
+</div>
+
+<div id="tool-execution">
+  ### 工具执行
+</div>
+
+工具是由服务器端提供、可供客户端发现并调用的函数。MCP 客户端提供方法用于列出可用的工具，并通过指定参数来执行它们。每个工具都有唯一名称，并接受一个参数映射。
+
+<Tabs>
+  <Tab title="同步 API">
+    ```java
+    // 列出可用的工具及其名称
+    var tools = client.listTools();
+    tools.forEach(tool -> System.out.println(tool.getName()));
+
+    // 通过参数调用工具
+    var result = client.callTool("calculator", Map.of(
+        "operation", "add",
+        "a", 1,
+        "b", 2
+    ));
+    ```
+  </Tab>
+
+  <Tab title="异步 API">
+    ```java
+    // 异步列出可用的工具
+    client.listTools()
+        .doOnNext(tools -> tools.forEach(tool ->
+            System.out.println(tool.getName())))
+        .subscribe();
+
+    // 异步调用工具
+    client.callTool("calculator", Map.of(
+            "operation", "add",
+            "a", 1,
+            "b", 2
+        ))
+        .subscribe();
+    ```
+  </Tab>
+</Tabs>
+
+<div id="resource-access">
+  ### 资源访问
+</div>
+
+资源表示服务器端的数据源，客户端可通过 URI 模板进行访问。MCP 客户端通过标准化接口提供方法，用于发现可用的资源并获取其内容。
+
+<Tabs>
+  <Tab title="Sync API">
+    ```java
+    // 列出可用资源及其名称
+    var resources = client.listResources();
+    resources.forEach(resource -> System.out.println(resource.getName()));
+
+    // 使用 URI 模板获取资源内容
+    var content = client.getResource("file", Map.of(
+        "path", "/path/to/file.txt"
+    ));
+    ```
+  </Tab>
+
+  <Tab title="Async API">
+    ```java
+    // 异步列出可用资源
+    client.listResources()
+        .doOnNext(resources -> resources.forEach(resource ->
+            System.out.println(resource.getName())))
+        .subscribe();
+
+    // 异步获取资源内容
+    client.getResource("file", Map.of(
+            "path", "/path/to/file.txt"
+        ))
+        .subscribe();
+    ```
+  </Tab>
+</Tabs>
+
+<div id="prompt-system">
+  ### 提示模板系统
+</div>
+
+提示模板系统用于与服务端的提示模板交互。可以发现这些模板并传入自定义参数执行，基于预定义的模式动态生成文本。
+
+<Tabs>
+  <Tab title="同步 API">
+    ```java
+    // 列出可用的提示模板
+    var prompts = client.listPrompts();
+    prompts.forEach(prompt -> System.out.println(prompt.getName()));
+
+    // 传入参数执行提示模板
+    var response = client.executePrompt("echo", Map.of(
+        "text", "Hello, World!"
+    ));
+    ```
+  </Tab>
+
+  <Tab title="异步 API">
+    ```java
+    // 异步列出可用的提示模板
+    client.listPrompts()
+        .doOnNext(prompts -> prompts.forEach(prompt ->
+            System.out.println(prompt.getName())))
+        .subscribe();
+
+    // 异步执行提示模板
+    client.executePrompt("echo", Map.of(
+            "text", "Hello, World!"
+        ))
+        .subscribe();
+    ```
+  </Tab>
+</Tabs>
+
+<div id="using-completion">
+  ### 使用补全
+</div>
+
+作为[Completion 功能](/zh/specification/2025-03-26/server/utilities/completion)的一部分，MCP 提供了一种标准化方式，允许服务器为提示模板参数和资源 URI 提供自动补全建议。
+
+查看[服务器端 Completion 功能](/zh/sdk/java/mcp-server#completion-specification)，了解如何在服务器端启用和配置补全。
+
+在客户端，MCP 客户端提供用于请求自动补全的方法：
+
+<Tabs>
+  <Tab title="Sync API">
+    ```java
+
+    CompleteRequest request = new CompleteRequest(
+            new PromptReference("code_review"),
+            new CompleteRequest.CompleteArgument("language", "py"));
+
+    CompleteResult result = syncMcpClient.completeCompletion(request);
+
+    ```
+  </Tab>
+
+  <Tab title="Async API">
+    ```java
+
+    CompleteRequest request = new CompleteRequest(
+            new PromptReference("code_review"),
+            new CompleteRequest.CompleteArgument("language", "py"));
+
+    Mono<CompleteResult> result = mcpClient.completeCompletion(request);
+
+    ```
+  </Tab>
+</Tabs>
+
+<div id="adding-context-information">
+  ### 添加上下文信息
+</div>
+
+通过 服务器发送事件（SSE）或 可流式 HTTP 传输方式 发送的 HTTP 请求可以使用专用 API 进行定制（参见 [client transport](#client-transport)）。这些定制器可能需要在客户端层注入额外的上下文特定信息。
+
+<Tabs>
+  <Tab title="Sync API">
+    `McpSyncClient` 用于阻塞式环境，可能依赖线程本地变量（thread-locals）来共享信息。
+    例如，某些框架会将当前服务器请求或安全令牌存储在线程本地中。
+    要让底层传输获取此类信息，请使用 `SyncSpec#transportContextProvider`：
+
+    ```java
+    McpClient.sync(transport)
+        .transportContextProvider(() -> {
+            var data = obtainDataFromThreadLocals();
+            return McpTransportContext.create(
+                    Map.of("some-data", data)
+            );
+        })
+        .build();
+    ```
+
+    该 `McpTransportContext` 将在基于 HttpClient 的 `McpSyncHttpClientRequestCustomizer`
+    以及基于 WebClient 的 `ExchangeFilterFunction` 中可用。
+  </Tab>
+
+  <Tab title="Async API">
+    `McpAsyncClient` 用于响应式环境。
+    信息通过响应式链使用 [Reactor 上下文](https://projectreactor.io/docs/core/release/reference/advancedFeatures/context.html) 进行传递。
+    要向 Reactor 上下文插入数据，请在调用客户端操作时使用 `contextWrite`：
+
+    ```java
+    var client = McpClient.async(transport)
+        // ...
+        .build();
+
+    Mono<McpSchema.ListToolsResult> toolList = client
+        .listTools()
+        .contextWrite(ctx -> {
+            var transportContext = McpTransportContext.create(
+                Map.of("some-key", "some value")
+            );
+            return ctx.put(McpTransportContext.KEY, transportContext)
+                .put("reactor-context-key", "some reactor value");
+        });
+    ```
+
+    这样，`McpTransportContext` 将在基于 HttpClient 的 `McpAsyncHttpClientRequestCustomizer` 中可用。
+    完整的 Reactor 上下文也可通过 `Mono.deferContextual` 在 `McpAsyncHttpClientRequestCustomizer`
+    以及 WebClient 的 `ExchangeFilterFunction` 中获取：
+
+    ```java
+    WebClient.builder()
+        .filter((request, next) -> {
+            return Mono.deferContextual(ctx -> {
+                var transportContext = ctx.get(McpTransportContext.KEY);
+                var someReactorValue = ctx.get("reactor-context-key");
+                // ... use context values ...
+            });
+        });
+    ```
+  </Tab>
+</Tabs>

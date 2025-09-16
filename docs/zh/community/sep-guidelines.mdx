@@ -1,0 +1,127 @@
+---
+title: SEP 指南
+description: 用于提议修改模型上下文协议（MCP）的规范增强提案（SEP）指南
+---
+
+<div id="what-is-a-sep">
+  ## 什么是 SEP？
+</div>
+
+SEP 是 Specification Enhancement Proposal（规范增强提案）的缩写。SEP 是一种设计文档，用于向 MCP 社区提供信息，或描述模型上下文协议（MCP）、其流程或其环境中的新特性。SEP 应提供该特性的简明技术规范以及引入该特性的理由。
+
+我们希望 SEP 成为提出重大新特性的主要机制、收集社区对相关议题意见的渠道，以及记录 MCP 设计决策的文档。SEP 的作者负责在社区内促成共识，并记录不同意见。
+
+由于 SEP 以文本文件形式维护在带版本的代码库（GitHub Issues）中，其修订历史即构成该特性提案的历史记录。
+
+<div id="what-qualifies-a-sep">
+  ## 哪些提案需要提交 SEP？
+</div>
+
+我们的目标是将 SEP 流程用于那些足够重大、需要广泛社区讨论、正式设计文档，以及对决策过程进行历史记录的变更。对于较小或更直接的变更，常规的 GitHub issue 或 pull request 通常更合适。
+
+如果你的变更涉及以下任一情况，请考虑提交 SEP：
+
+- **新增功能或协议变更**：任何在模型上下文协议（MCP）中添加、修改或移除功能的变更。包括：
+  - 添加新的 API 端点或方法。
+  - 更改现有数据结构或消息的语法或语义。
+  - 为不同 MCP 兼容工具之间的互操作性引入新的标准。
+  - 对规范本身的定义、呈现或验证方式进行重大更改。
+- **破坏性变更**：任何与旧版本不兼容的变更。
+- **治理或流程变更**：任何改变项目决策机制、贡献指南（例如本文档本身）的提案。
+- **复杂或具争议的话题**：如果某项变更可能存在多种可行方案或可能引发重大争论，SEP 流程提供必要的框架来探索替代方案、记录论证理由，并在实施开始前建立社区共识。
+
+<div id="sep-types">
+  ## SEP 类型
+</div>
+
+SEP 有三种类型：
+
+1. **标准轨（Standards Track）**SEP 描述模型上下文协议（MCP）的新功能或实现。它也可以描述将在核心协议规范之外支持的互操作性标准。
+2. **信息性（Informational）**SEP 描述模型上下文协议的设计问题，或为 MCP 社区提供一般性指南或信息，但不提出新功能。信息性 SEP 不一定代表 MCP 社区的共识或建议。
+3. **流程（Process）**SEP 描述与 MCP 相关的流程，或提议对某个流程进行变更（或流程中的某个事件）。流程 SEP 与标准轨 SEP 类似，但适用于 MCP 协议本身以外的领域。
+
+<div id="submitting-a-sep">
+  ## 提交 SEP
+</div>
+
+SEP 流程始于关于模型上下文协议（Model Context Protocol，MCP）的一个新想法。强烈建议每个 SEP 仅包含一个关键提案或新想法。小幅增强或补丁通常无需 SEP，可通过向 MCP 仓库提交 pull request 的方式直接并入 MCP 的开发工作流。SEP 越聚焦，往往越容易成功。
+
+每个 SEP 必须有一位**SEP 作者**——按照下文描述的风格和格式撰写 SEP，在适当的论坛中引导讨论，并尝试围绕该想法建立社区共识。SEP 作者应首先判断该想法是否适合通过 SEP 提出。向 MCP 社区论坛（Discord、GitHub Discussions）发帖是进行这一步的最佳方式。
+
+<div id="sep-workflow">
+  ### SEP 工作流
+</div>
+
+应将 SEP 作为 GitHub Issue 提交到[规范仓库](https://github.com/modelcontextprotocol/modelcontextprotocol)。标准的 SEP 工作流如下：
+
+1. 你，作为 SEP 作者，创建一个[格式规范](#sep-format)且带有 `SEP` 和 `proposal` 标签的 GitHub Issue。SEP 编号与 GitHub Issue 编号相同，这两个编号可以互相替代使用。
+2. 找到一位 Core Maintainer 或 Maintainer 作为你的提案赞助者。Core Maintainers 和 Maintainers 会定期查看未关闭的提案列表，以决定要赞助哪些提案。你可以在提案中从[维护者列表](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/main/MAINTAINERS.md)中@相关维护者。
+3. 一旦找到赞助者，该 GitHub Issue 将分配给该赞助者。赞助者会添加 `draft` 标签，确保标题中包含 SEP 编号，并分配一个里程碑。
+4. 赞助者将进行非正式审阅，并可能根据社区反馈提出修改要求。准备好进入正式评审时，赞助者会添加 `in-review` 标签。
+5. 添加 `in-review` 标签后，SEP 将进入 Core Maintainers 团队的正式评审阶段。SEP 可能被接受、拒绝，或退回修改。
+6. 如果 SEP 在三个月内未找到赞助者，Core Maintainers 可能会将该 SEP 标记为 `dormant` 并关闭。
+
+<div id="sep-format">
+  ### SEP 格式
+</div>
+
+每个 SEP 应包含以下部分：
+
+1. **序言（Preamble）** —— 简短的描述性标题、各作者姓名与联系信息、当前状态。
+2. **摘要（Abstract）** —— 对待解决技术问题的简短（约 200 字）描述。
+3. **动机（Motivation）** —— 应清晰解释为何现有协议规范不足以解决该 SEP 所处理的问题。对于拟修改模型上下文协议（Model Context Protocol，MCP）的 SEP，动机至关重要。缺乏充分动机的 SEP 可能会被直接拒绝。
+4. **规范（Specification）** —— 技术规范应描述任何新协议功能的语法与语义。规范应详细到足以允许相互竞争且可互操作的实现。应提供一个包含规范变更的 PR。
+5. **理由（Rationale）** —— 解释为何做出特定设计决策，并描述曾考虑的替代设计及相关工作。应提供社区内部达成共识的证据，并讨论在讨论过程中提出的重要反对意见或关注点。
+6. **向后兼容性（Backward Compatibility）** —— 所有引入向后不兼容性的 SEP 必须包含一节，说明这些不兼容性及其严重程度，并解释作者拟如何处理这些不兼容性。
+7. **参考实现（Reference Implementation）** —— 在任何 SEP 获得“Final”状态之前，参考实现必须完成，但无需在 SEP 被接受前完成。尽管先就规范和理由达成共识再编写代码有其价值，但“粗略共识与可运行代码”的原则在解决许多协议细节讨论时仍然行之有效。
+8. **安全影响（Security Implications）** —— 如与该 SEP 相关的安全问题存在，应明确写出，以确保审阅者充分知悉。
+
+<div id="sep-states">
+  ### SEP 状态
+</div>
+
+SEP 可以处于以下状态之一：
+
+- `proposal`: 无赞助者的 SEP 提案。
+- `draft`: 有赞助者的 SEP 提案。
+- `in-review`: 已准备好评审的 SEP 提案。
+- `accepted`: 已被核心维护者接受，但仍需最终措辞和参考实现的 SEP。
+- `rejected`: 被核心维护者拒绝的 SEP。
+- `withdrawn`: 已撤回的 SEP。
+- `final`: 已定稿的 SEP。
+- `superseded`: 已被更新的 SEP 取代的 SEP。
+- `dormant`: 未获得赞助者而随后被关闭的 SEP。
+
+<div id="sep-review-resolution">
+  ### SEP 审核与决议
+</div>
+
+MCP 核心维护团队每两周会对 SEP 进行审核。
+
+要使 SEP 被接受，必须满足以下最低标准：
+
+- 提供能演示该提案的原型实现
+- 为 MCP 生态系统带来明确的益处
+- 获得社区支持并达成共识
+
+一旦 SEP 被接受，必须完成参考实现。当参考实现完成并合并到主源码仓库后，其状态将更改为“Final”。
+
+SEP 也可能被标记为“Rejected”或“Withdrawn”。标记为“Withdrawn”的 SEP 可以在日后重新提交。
+
+<div id="reporting-sep-bugs-or-submitting-sep-updates">
+  ## 报告 SEP Bug 或提交 SEP 更新
+</div>
+
+如何报告 Bug 或提交 SEP 更新取决于多个因素，例如 SEP 的成熟度、SEP 作者的偏好，以及你的评论性质。对于尚未处于 `final` 状态的 SEP，通常最好将你的评论和修改直接发送给 SEP 作者。SEP 一旦定稿，你可以在参考实现对应的 issue 或 pull request 中通过 GitHub 评论提交更正。
+
+<div id="transferring-sep-ownership">
+  ## 转移 SEP 所有权
+</div>
+
+在某些情况下需要将 SEP 的所有权转移给新的 SEP 作者。一般来说，我们希望保留原作者作为被转移 SEP 的合著者，但这最终取决于原作者的意愿。合适的转移理由包括原作者无暇或无意继续更新或推进 SEP 流程，或者已经在网络上“失联”（即无法联系或不回复邮件）。不合适的转移理由是你不同意该 SEP 的方向。我们会尽力围绕某个 SEP 建立共识，但如果无法达成，你始终可以提交一份竞争性 SEP。
+
+<div id="copyright">
+  ## 版权
+</div>
+
+本文件已置于公共领域或采用 CC0-1.0-Universal 许可协议，以更宽松者为准。

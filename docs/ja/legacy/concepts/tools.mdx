@@ -1,0 +1,530 @@
+---
+title: "ツール"
+description: "サーバー経由でLLMがアクションを実行できるようにする"
+---
+
+ツールはModel Context Protocol（MCP）における強力な基盤機能で、サーバーが実行可能な機能をクライアントに公開するための仕組みです。ツールを通じて、LLMは外部システムと連携し、計算を実行し、現実世界でアクションを実行できます。
+
+<Note>
+  ツールは**モデル主導**であるように設計されています。つまり、ツールはサーバーからクライアントへ公開され、AIモデルが（人間の承認を挟んだうえで）自動的に呼び出せることを前提としています。
+</Note>
+
+<div id="overview">
+  ## 概要
+</div>
+
+MCPのツールは、サーバーがクライアントから呼び出せ、LLMがアクション実行に利用できる実行可能な関数を公開する仕組みです。ツールの主な要素は次のとおりです。
+
+* **ディスカバリー**: クライアントは `tools/list` リクエストを送信して、利用可能なツールの一覧を取得できます
+* **呼び出し**: ツールは `tools/call` リクエストで呼び出され、サーバーが要求された操作を実行して結果を返します
+* **柔軟性**: ツールは単純な計算から複雑なAPI連携まで幅広く対応できます
+
+[リソース](/ja/legacy/concepts/resources)と同様に、ツールは一意の名前で識別され、利用方法を示す説明を含められます。ただしリソースと異なり、ツールは状態を変更したり外部システムと連携したりする動的な操作を表します。
+
+<div id="tool-definition-structure">
+  ## ツール定義の構造
+</div>
+
+各ツールは次の構造で定義されます:
+
+```typescript
+{
+  name: string;          // ツールの一意の識別子
+  description?: string;  // 人間が読める説明
+  inputSchema: {         // ツールのパラメータ用の JSON Schema
+    type: "object",
+    properties: { ... }  // ツール固有のパラメータ
+  },
+  annotations?: {        // ツールの挙動に関する任意のヒント
+    title?: string;      // ツールの人間が読めるタイトル
+    readOnlyHint?: boolean;    // true の場合、ツールは環境を変更しない
+    destructiveHint?: boolean; // true の場合、ツールは破壊的な更新を行う可能性がある
+    idempotentHint?: boolean;  // true の場合、同じ引数で繰り返し呼び出しても追加の効果はない
+    openWorldHint?: boolean;   // true の場合、ツールは外部のエンティティとやり取りする
+  }
+}
+```
+
+<div id="implementing-tools">
+  ## ツールの実装
+</div>
+
+以下は、MCPサーバーで基本的なツールを実装する例です。
+
+<CodeGroup>
+  ```typescript TypeScript
+  const server = new Server(
+    {
+      name: "example-server",
+      version: "1.0.0",
+    },
+    {
+      capabilities: {
+        tools: {},
+      },
+    },
+  );
+
+  // 利用可能なツールを定義
+  server.setRequestHandler(ListToolsRequestSchema, async () => {
+    return {
+      tools: [
+        {
+          name: "calculate_sum",
+          description: "2 つの数値を加算します",
+          inputSchema: {
+            type: "object",
+            properties: {
+              a: { type: "number" },
+              b: { type: "number" },
+            },
+            required: ["a", "b"],
+          },
+        },
+      ],
+    };
+  });
+
+  // ツールの実行を処理
+  server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    if (request.params.name === "calculate_sum") {
+      const { a, b } = request.params.arguments;
+      return {
+        content: [
+          {
+            type: "text",
+            text: String(a + b),
+          },
+        ],
+      };
+    }
+    throw new Error("Tool not found");
+  });
+  ```
+
+  ```python Python
+  app = Server("example-server")
+
+  @app.list_tools()
+  async def list_tools() -> list[types.Tool]:
+      return [
+          types.Tool(
+              name="calculate_sum",
+              description="2 つの数値を加算します",
+              inputSchema={
+                  "type": "object",
+                  "properties": {
+                      "a": {"type": "number"},
+                      "b": {"type": "number"}
+                  },
+                  "required": ["a", "b"]
+              }
+          )
+      ]
+
+  @app.call_tool()
+  async def call_tool(
+      name: str,
+      arguments: dict
+  ) -> list[types.TextContent | types.ImageContent | types.EmbeddedResource]:
+      if name == "calculate_sum":
+          a = arguments["a"]
+          b = arguments["b"]
+          result = a + b
+          return [types.TextContent(type="text", text=str(result))]
+      raise ValueError(f"Tool not found: {name}")
+  ```
+</CodeGroup>
+
+<div id="example-tool-patterns">
+  ## ツールのパターン例
+</div>
+
+サーバーが提供できるツールの種類の例をいくつか示します：
+
+<div id="system-operations">
+  ### システム操作
+</div>
+
+ローカルシステムとやり取りするツール:
+
+```typescript
+{
+  name: "execute_command",
+  description: "シェルコマンドを実行する",
+  inputSchema: {
+    type: "object",
+    properties: {
+      command: { type: "string" },
+      args: { type: "array", items: { type: "string" } }
+    }
+  }
+}
+```
+
+<div id="api-integrations">
+  ### API連携
+</div>
+
+外部APIをラップするツール：
+
+```typescript
+{
+  name: "github_create_issue",
+  description: "Create a GitHub issue",
+  inputSchema: {
+    type: "object",
+    properties: {
+      title: { type: "string" },
+      body: { type: "string" },
+      labels: { type: "array", items: { type: "string" } }
+    }
+  }
+}
+```
+
+<div id="data-processing">
+  ### データ処理
+</div>
+
+データを変換または分析するツール：
+
+```typescript
+{
+  name: "analyze_csv",
+  description: "Analyze a CSV file",
+  inputSchema: {
+    type: "object",
+    properties: {
+      filepath: { type: "string" },
+      operations: {
+        type: "array",
+        items: {
+          enum: ["sum", "average", "count"]
+        }
+      }
+    }
+  }
+}
+```
+
+<div id="best-practices">
+  ## ベストプラクティス
+</div>
+
+ツールを実装する際は次を行ってください:
+
+1. わかりやすく、説明的な名前と説明を付ける
+2. パラメータには詳細な JSON Schema 定義を用いる
+3. モデルがどのように使うべきかが伝わる例をツールの説明に含める
+4. 適切なエラーハンドリングとバリデーションを実装する
+5. 長時間の処理には進捗報告を行う
+6. ツールの操作は目的を絞り、できるだけ小さな単位（アトミック）に保つ
+7. 期待される戻り値の構造を明確にドキュメント化する
+8. 適切なタイムアウトを設定する
+9. リソース負荷の高い操作にはレート制限を検討する
+10. デバッグと監視のためにツールの利用状況を記録する
+
+<div id="tool-name-conflicts">
+  ### ツール名の競合
+</div>
+
+MCPクライアントアプリケーションやMCPサーバープロキシは、独自のツール一覧を作成する際にツール名の競合に直面することがあります。たとえば、接続済みの2つのMCPサーバー `web1` と `web2` が、どちらも `search_web` という名前のツールを公開している場合があります。
+
+アプリケーションは、次のいずれかの戦略（ほかにもあり、網羅的ではありません）でツールを判別できます。
+
+* ユーザー定義の一意なサーバー名をツール名に連結する。例: `web1___search_web` および `web2___search_web`。この戦略は、設定ファイルでユーザーが既に一意のサーバー名を指定している場合に適しています。
+* ツール名にランダムなプレフィックスを付与する。例: `jrwxs___search_web` および `6cq52___search_web`。この戦略は、ユーザー定義の一意名が利用できないサーバープロキシで有効です。
+* サーバーURIをツール名のプレフィックスとして使用する。例: `web1.example.com:search_web` および `web2.example.com:search_web`。この戦略は、リモートのMCPサーバーを扱う場合に適しています。
+
+初期化フローでサーバーから提供される名前は一意であることが保証されておらず、一般に判別の目的には適していない点に注意してください。
+
+<div id="security-considerations">
+  ## セキュリティ上の留意事項
+</div>
+
+ツールを公開する場合:
+
+<div id="input-validation">
+  ### 入力検証
+</div>
+
+* すべてのパラメータをスキーマに基づいて検証する
+* ファイルパスやシステムコマンドを適切にサニタイズする
+* URLや外部識別子を検証する
+* パラメータのサイズや範囲をチェックする
+* コマンドインジェクションを防ぐ
+
+<div id="access-control">
+  ### アクセス制御
+</div>
+
+* 必要に応じて認証を実装する
+* 適切な認可チェックを行う
+* ツールの利用状況を監査する
+* リクエストをレート制限する
+* 悪用を監視する
+
+<div id="error-handling">
+  ### エラー処理
+</div>
+
+* 内部エラーをクライアントに露出しない
+* セキュリティ関連のエラーを記録する
+* タイムアウトを適切に処理する
+* エラー発生後はリソースを確実にクリーンアップする
+* 戻り値を検証する
+
+<div id="tool-discovery-and-updates">
+  ## ツールの検出と更新
+</div>
+
+MCP は動的なツールの検出をサポートします:
+
+1. MCPクライアントは、いつでも利用可能なツールを一覧できます
+2. MCPサーバーは、`notifications/tools/list_changed` を用いてツールの変更をクライアントに通知できます
+3. 実行時にツールを追加・削除できます
+4. ツール定義は更新できます（ただし慎重に行ってください）
+
+<div id="error-handling">
+  ## エラー処理
+</div>
+
+ツールによるエラーは、MCPのプロトコルレベルのエラーとしてではなく、結果オブジェクト内で報告してください。こうすることで、LLMがエラーを把握し、必要に応じて対処できます。ツールでエラーが発生した場合は次のようにします。
+
+1. 結果の `isError` を `true` に設定する
+2. `content` 配列にエラーの詳細を含める
+
+以下は、ツールにおける適切なエラー処理の例です。
+
+<CodeGroup>
+  ```typescript TypeScript
+  try {
+    // Tool operation
+    const result = performOperation();
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Operation successful: ${result}`,
+        },
+      ],
+    };
+  } catch (error) {
+    return {
+      isError: true,
+      content: [
+        {
+          type: "text",
+          text: `Error: ${error.message}`,
+        },
+      ],
+    };
+  }
+  ```
+
+  ```python Python
+  try:
+      # Tool operation
+      result = perform_operation()
+      return types.CallToolResult(
+          content=[
+              types.TextContent(
+                  type="text",
+                  text=f"Operation successful: {result}"
+              )
+          ]
+      )
+  except Exception as error:
+      return types.CallToolResult(
+          isError=True,
+          content=[
+              types.TextContent(
+                  type="text",
+                  text=f"Error: {str(error)}"
+              )
+          ]
+      )
+  ```
+</CodeGroup>
+
+この方法により、LLMはエラーの発生を認識し、必要に応じて是正措置を取ったり、人間への介入を依頼したりできます。
+
+<div id="tool-annotations">
+  ## ツール注釈
+</div>
+
+ツール注釈はツールの動作に関する追加メタデータを提供し、クライアントがツールの提示や管理方法を把握するのに役立ちます。これらの注釈はツールの性質や影響を示すヒントですが、セキュリティ上の判断には用いるべきではありません。
+
+<div id="purpose-of-tool-annotations">
+  ### ツール注釈の目的
+</div>
+
+ツール注釈には次のような主な目的があります。
+
+1. モデルのコンテキストに影響を与えずに、UX固有の情報を提供する
+2. クライアントがツールを適切に分類・表示できるようにする
+3. ツールの潜在的な副作用に関する情報を伝える
+4. ツール承認のための直感的なインターフェース設計を支援する
+
+<div id="available-tool-annotations">
+  ### 利用可能なツール注釈
+</div>
+
+MCP仕様は、ツール向けに次の注釈を定義しています:
+
+| 注釈              | 型      | 既定値 | 説明                                                                                                                  |
+| ----------------- | ------- | ------ | --------------------------------------------------------------------------------------------------------------------- |
+| `title`           | string  | -      | ツールの人間に読みやすいタイトル。UI表示に便利                                                                         |
+| `readOnlyHint`    | boolean | false  | true の場合、ツールが実行環境を変更しないことを示します                                                                |
+| `destructiveHint` | boolean | true   | true の場合、ツールが破壊的な更新を行う可能性があります（`readOnlyHint` が false のときのみ意味があります）             |
+| `idempotentHint`  | boolean | false  | true の場合、同じ引数で繰り返し呼び出しても結果が変わらないことを示します（`readOnlyHint` が false のときのみ意味があります） |
+| `openWorldHint`   | boolean | true   | true の場合、ツールが外部の「オープンワールド」と相互作用する可能性があります                                          |
+
+<div id="example-usage">
+  ### 使用例
+</div>
+
+さまざまな状況に応じて、注釈付きでツールを定義する方法は次のとおりです。
+
+```typescript
+// 読み取り専用の検索ツール
+{
+  name: "web_search",
+  description: "ウェブ上の情報を検索する",
+  inputSchema: {
+    type: "object",
+    properties: {
+      query: { type: "string" }
+    },
+    required: ["query"]
+  },
+  annotations: {
+    title: "Web Search",
+    readOnlyHint: true,
+    openWorldHint: true
+  }
+}
+
+// 破壊的なファイル削除ツール
+{
+  name: "delete_file",
+  description: "ファイルシステムからファイルを削除する",
+  inputSchema: {
+    type: "object",
+    properties: {
+      path: { type: "string" }
+    },
+    required: ["path"]
+  },
+  annotations: {
+    title: "Delete File",
+    readOnlyHint: false,
+    destructiveHint: true,
+    idempotentHint: true,
+    openWorldHint: false
+  }
+}
+
+// 非破壊的なデータベースレコード作成ツール
+{
+  name: "create_record",
+  description: "データベースに新しいレコードを作成する",
+  inputSchema: {
+    type: "object",
+    properties: {
+      table: { type: "string" },
+      data: { type: "object" }
+    },
+    required: ["table", "data"]
+  },
+  annotations: {
+    title: "Create Database Record",
+    readOnlyHint: false,
+    destructiveHint: false,
+    idempotentHint: false,
+    openWorldHint: false
+  }
+}
+```
+
+<div id="integrating-annotations-in-server-implementation">
+  ### サーバー実装でのアノテーション統合
+</div>
+
+<CodeGroup>
+  ```typescript TypeScript
+  server.setRequestHandler(ListToolsRequestSchema, async () => {
+    return {
+      tools: [
+        {
+          name: "calculate_sum",
+          description: "Add two numbers together",
+          inputSchema: {
+            type: "object",
+            properties: {
+              a: { type: "number" },
+              b: { type: "number" },
+            },
+            required: ["a", "b"],
+          },
+          annotations: {
+            title: "Calculate Sum",
+            readOnlyHint: true,
+            openWorldHint: false,
+          },
+        },
+      ],
+    };
+  });
+  ```
+
+  ```python Python
+  from mcp.server.fastmcp import FastMCP
+
+  mcp = FastMCP("example-server")
+
+  @mcp.tool(
+      annotations={
+          "title": "Calculate Sum",
+          "readOnlyHint": True,
+          "openWorldHint": False
+      }
+  )
+  async def calculate_sum(a: float, b: float) -> str:
+      """2つの数値を加算します。
+
+      Args:
+          a: 1つ目の加算対象
+          b: 2つ目の加算対象
+      """
+      result = a + b
+      return str(result)
+  ```
+</CodeGroup>
+
+<div id="best-practices-for-tool-annotations">
+  ### ツール注釈のベストプラクティス
+</div>
+
+1. **副作用を正確に示す**: ツールが環境を変更するかどうか、またその変更が破壊的かどうかを明確に記載する。
+
+2. **説明的なタイトルを付ける**: ツールの目的がひと目で分かる、人にとって分かりやすいタイトルを付ける。
+
+3. **べき等性を正しく示す**: 同じ引数で繰り返し呼び出しても本当に追加の効果がない場合に限り、ツールをべき等とマークする。
+
+4. **適切な閉世界/開世界のヒントを設定する**: ツールがデータベースのような閉じたシステムとやり取りするのか、ウェブのような開かれたシステムとやり取りするのかを示す。
+
+5. **注釈はあくまでヒントであることを忘れない**: ToolAnnotations のすべてのプロパティはヒントであり、ツールの動作を忠実に示すことは保証されない。クライアントは注釈のみに基づいてセキュリティ上重要な判断を決して行うべきではない。
+
+<div id="testing-tools">
+  ## テスト用ツール
+</div>
+
+MCPのツール向けの包括的なテスト戦略には、次を含めるべきです:
+
+* **機能テスト**: 有効な入力でツールが正しく動作し、無効な入力を適切に扱えることを検証する
+* **統合テスト**: 実環境およびモックの依存関係の両方を用いて、外部システムとのツールの連携をテストする
+* **セキュリティテスト**: 認証、認可、入力のサニタイズ、レート制限を検証する
+* **パフォーマンステスト**: 負荷時の挙動、タイムアウト処理、リソースのクリーンアップを確認する
+* **エラーハンドリング**: MCPプロトコル経由でエラーを適切に報告し、リソースをクリーンアップできることを保証する

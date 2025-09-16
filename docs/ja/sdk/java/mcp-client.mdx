@@ -1,0 +1,706 @@
+---
+title: Java MCPクライアント
+description: Model Context Protocol（MCP）クライアントの実装と設定方法を学ぶ
+---
+
+<div id="sdk-contents">
+  ## SDK の内容
+</div>
+
+[Java MCP 概要](/ja/sdk/java/mcp-overview)
+
+[Java MCP クライアント](/ja/sdk/java/mcp-client)
+
+[Java MCP サーバー](/ja/sdk/java/mcp-server)
+
+<div id="client-features">
+  ## クライアント機能
+</div>
+
+MCPクライアントは Model Context Protocol（MCP）アーキテクチャにおける主要コンポーネントで、MCPサーバーとの接続の確立と管理を担います。プロトコルのクライアント側を実装し、次の処理を行います：
+
+* サーバーとの互換性を確保するためのプロトコルバージョン交渉
+* 利用可能な機能を特定するための機能交渉
+* メッセージのトランスポートおよび JSON-RPC 通信
+* ツールの検出と実行
+* リソースへのアクセスと管理
+* プロンプトシステムとのやり取り
+* ルーツ管理やサンプリング対応などのオプション機能
+
+<Tip>
+  コアの `io.modelcontextprotocol.sdk:mcp` モジュールは、外部のWebフレームワークを必要とせずに、STDIO、ストリーム対応HTTP、SSE のクライアントトランスポート実装を提供します。
+
+  Spring 向けのトランスポート実装は、**オプション**の依存関係 `io.modelcontextprotocol.sdk:mcp-spring-webflux` として [Spring Framework](https://docs.spring.io/spring-ai/reference/api/mcp/mcp-client-boot-starter-docs.html) ユーザー向けに利用可能です。
+</Tip>
+
+<Tip>
+  この [クイックスタートデモ](/ja/quickstart/client) は Spring AI MCP をベースに、
+  MCPサーバーに接続するAIクライアントの作り方を紹介します。
+</Tip>
+
+クライアントは、さまざまなアプリケーション文脈で柔軟に利用できるよう、同期・非同期の両APIを提供します。
+
+<Tabs>
+  <Tab title="同期API">
+    ```java
+    // カスタム設定で同期クライアントを作成
+    McpSyncClient client = McpClient.sync(transport)
+        .requestTimeout(Duration.ofSeconds(10))
+        .capabilities(ClientCapabilities.builder()
+            .roots(true)      // ルーツ機能を有効にする
+            .sampling()       // サンプリング機能を有効にする
+            .elicitation()    // エリシテーション機能を有効にする
+            .build())
+        .sampling(request -> CreateMessageResult.builder()...build())
+        .elicitation(elicitRequest -> ElicitResult.builder()...build())
+        .toolsChangeConsumer((List<McpSchema.Tool> tools) -> ...)
+        .resourcesChangeConsumer((List<McpSchema.Resource> resources) -> ...)
+        .promptsChangeConsumer((List<McpSchema.Prompt> prompts) -> ...)
+        .loggingConsumer((LoggingMessageNotification logging) -> ...)
+        .progressConsumer((ProgressNotification progress) -> ...)
+        .build();
+
+    // 接続を初期化
+    client.initialize();
+
+    // 利用可能なツールを一覧表示
+    ListToolsResult tools = client.listTools();
+
+    // ツールを呼び出す
+    CallToolResult result = client.callTool(
+        new CallToolRequest("calculator",
+            Map.of("operation", "add", "a", 2, "b", 3))
+    );
+
+    // リソースを一覧表示して読み取る
+    ListResourcesResult resources = client.listResources();
+    ReadResourceResult resource = client.readResource(
+        new ReadResourceRequest("resource://uri")
+    );
+
+    // プロンプトを一覧表示して利用
+    ListPromptsResult prompts = client.listPrompts();
+    GetPromptResult prompt = client.getPrompt(
+        new GetPromptRequest("greeting", Map.of("name", "Spring"))
+    );
+
+    // ルーツを追加・削除
+    client.addRoot(new Root("file:///path", "description"));
+    client.removeRoot("file:///path");
+
+    // クライアントを正常終了
+    client.closeGracefully();
+    ```
+  </Tab>
+
+  <Tab title="非同期API">
+    ```java
+    // カスタム設定で非同期クライアントを作成
+    McpAsyncClient client = McpClient.async(transport)
+        .requestTimeout(Duration.ofSeconds(10))
+        .capabilities(ClientCapabilities.builder()
+            .roots(true)      // ルーツ機能を有効にする
+            .sampling()       // サンプリング機能を有効にする
+            .elicitation()    // エリシテーション機能を有効にする
+            .build())
+        .sampling(request -> Mono.just(new CreateMessageResult(response)))
+        .elicitation(elicitRequest -> Mono.just(ElicitResult.builder()...build()))
+        .toolsChangeConsumer(tools -> Mono.fromRunnable(() -> logger.info("ツールを更新: {}", tools)))
+        .resourcesChangeConsumer(resources -> Mono.fromRunnable(() -> logger.info("リソースを更新: {}", resources)))
+        .promptsChangeConsumer(prompts -> Mono.fromRunnable(() -> logger.info("プロンプトを更新: {}", prompts)))
+        .loggingConsumer(notification -> Mono.fromRunnable(() -> logger.info("ログ: {}", notification.data())))
+        .progressConsumer(progress -> Mono.fromRunnable(() -> logger.info("進捗更新: {}", progress.data())))
+        .build();
+
+    // 接続を初期化して機能を利用
+    client.initialize()
+        .flatMap(initResult -> client.listTools())
+        .flatMap(tools -> {
+            return client.callTool(new CallToolRequest(
+                "calculator",
+                Map.of("operation", "add", "a", 2, "b", 3)
+            ));
+        })
+        .flatMap(result -> {
+            return client.listResources()
+                .flatMap(resources ->
+                    client.readResource(new ReadResourceRequest("resource://uri"))
+                );
+        })
+        .flatMap(resource -> {
+            return client.listPrompts()
+                .flatMap(prompts ->
+                    client.getPrompt(new GetPromptRequest(
+                        "greeting",
+                        Map.of("name", "Spring")
+                    ))
+                );
+        })
+        .flatMap(prompt -> {
+            return client.addRoot(new Root("file:///path", "description"))
+                .then(client.removeRoot("file:///path"));
+        })
+        .doFinally(signalType -> {
+            client.closeGracefully().subscribe();
+        })
+        .subscribe();
+    ```
+  </Tab>
+</Tabs>
+
+<div id="client-transport">
+  ## クライアントトランスポート
+</div>
+
+トランスポート層は、MCPクライアントとサーバー間の通信を担い、用途に応じて複数の実装を提供します。クライアントトランスポートは、メッセージのシリアライゼーション、接続の確立、プロトコル特有の通信パターンの管理を行います。
+
+<Tabs>
+  <Tab title="STDIO">
+    プロセス内通信向けのトランスポートを作成します
+
+    ```java
+    ServerParameters params = ServerParameters.builder("npx")
+        .args("-y", "@modelcontextprotocol/server-everything", "dir")
+        .build();
+    McpTransport transport = new StdioClientTransport(params);
+    ```
+  </Tab>
+
+  <Tab title="HttpClient">
+    <Tabs>
+      <Tab title="Streamable-HTTP (HttpClient)">
+        フレームワーク非依存（JDK API のみを使用）なストリーム対応HTTPクライアントトランスポート
+
+        ```java
+        McpTransport transport = HttpClientStreamableHttpTransport
+                                    .builder("http://your-mcp-server")
+                                    .build();
+        ```
+      </Tab>
+
+      <Tab title="SSE (HttpClient)">
+        フレームワーク非依存（JDK API のみを使用）な SSE クライアントトランスポート
+
+        ```java
+        McpTransport transport = HttpClientSseClientTransport
+                                    .builder("http://your-mcp-server")
+                                    .build();
+        ```
+      </Tab>
+    </Tabs>
+
+    **HttpClient: HTTP リクエストのカスタマイズ**
+
+    すべてのリクエストで使用されるベースの HTTP リクエストビルダーをカスタマイズするには、カスタムの `HttpRequestBuilder` を指定します。
+    これはストリーム対応HTTPと SSE の両トランスポートで利用できます。
+    カスタムの `HttpRequest.Builder` を使用すると、トランスポートが発行するすべての HTTP リクエストは
+    ビルダーにハードコードされた設定を使用します。
+    たとえば、ヘッダーに有効期限のないセキュリティトークンを付与するのに役立ちます。
+    すべてのリクエストに `X-Custom-Header` ヘッダーを追加するには、次のようにします:
+
+    ```java
+    var requestBuilder = HttpRequest
+        .newBuilder()
+        .header("X-Custom-Header", "some header value");
+
+    HttpClientStreamableHttpTransport
+        .builder("https://mcp.example.com")
+        .requestBuilder(requestBuilder)
+        .build();
+    ```
+
+    送信前に HTTP リクエストを動的に変更するには、`McpSyncHttpClientRequestCustomizer` または `McpAsyncHttpClientRequestCustomizer` のいずれかを実装します。
+    MCPクライアントのタイプ（同期または非同期）に合ったリクエストカスタマイザを選択してください。
+    なお、カスタマイザ内では thread-local が利用できない場合があります。コンテキスト関連の情報には
+    `McpTransportContext` を通じてアクセスしてください（[コンテキスト情報の追加](#adding-context-information) を参照）。
+    実装例:
+
+    ```java
+    // Sync
+    class MyRequestCustomizer implements McpSyncHttpClientRequestCustomizer {
+        @Override
+        public void customize(HttpRequest.Builder builder, String method,
+            URI endpoint, String body, McpTransportContext context) {
+            // ... custom logic ...
+            var token = obtainAccessToken(context);
+            builder.header("Authorization", "Bearer " + token);
+        }
+    }
+
+    // Async
+    class MyAsyncRequestCustomizer implements McpAsyncHttpClientRequestCustomizer {
+        @Override
+        public Publisher<HttpRequest.Builder> customize(HttpRequest.Builder builder,
+            String method, URI endpoint, String body, McpTransportContext context) {
+            // ... custom logic ...
+            Mono<String> token = obtainAccessToken(context);
+            return token.map(t ->
+                builder.copy()
+                    .header("Authorization", "Bearer " + t)
+            );
+        }
+    }
+    ```
+
+    ストリーム対応HTTPと SSE の両トランスポートは、単一のカスタマイザを使用するように構成できます。
+
+    ```java
+    HttpClientStreamableHttpTransport
+        .builder("https://mcp.example.com")
+        .httpRequestCustomizer(new MyRequestCustomizer()) // sync
+        .asyncHttpRequestCustomizer(new MyAsyncRequestCustomizer()) // OR async
+        .build();
+    ```
+
+    複数のカスタマイザを合成するには、`DelegatingMcpSyncHttpClientRequestCustomizer` または `DelegatingMcpAsyncHttpClientRequestCustomizer` を使用します。
+  </Tab>
+
+  <Tab title="WebClient">
+    <p>WebClient ベースのクライアントトランスポートです。`mcp-spring-webflux` の依存関係が必要です。</p>
+
+    <Tabs>
+      <Tab title="Streamable-HTTP (WebClient)">
+        ```java
+        WebClient.Builder webClientBuilder = WebClient.builder()
+                                    .baseUrl("http://your-mcp-server");
+
+        McpTransport transport = WebClientStreamableHttpTransport
+                                    .builder(webClientBuilder)
+                                    .build();
+        ```
+      </Tab>
+
+      <Tab title="SSE (WebClient)">
+        ```java
+        WebClient.Builder webClientBuilder = WebClient.builder()
+                                    .baseUrl("http://your-mcp-server");
+
+        McpTransport transport = WebFluxSseClientTransport(webClientBuilder)
+                                    .builder(webClientBuilder)
+                                    .build();
+        ```
+      </Tab>
+    </Tabs>
+
+    **WebClient: HTTP リクエストのカスタマイズ**
+
+    送信する HTTP リクエストをカスタマイズするには、カスタムの `WebClient.Builder` を指定します。
+    カスタムビルダーを使用すると、トランスポートが送信するすべてのリクエストがカスタマイズされます。
+    たとえば、失効しないセキュリティトークンをヘッダーで渡すのに便利です。
+    すべてのリクエストに `X-Custom-Header` ヘッダーを追加するには、次を使用します:
+
+    ```java
+    var webClientBuilder = WebClient.builder()
+        .defaultHeader("X-Custom-Header", "some header value");
+
+    McpTransport transport = WebClientStreamableHttpTransport
+                                .builder(webClientBuilder)
+                                .build();
+    ```
+
+    HTTP リクエストを動的に変更するために、ビルダーには専用の API `ExchangeFilterFunction` があります。
+    その関数内で、新しいリクエストは実行時に組み立てることができ、追加情報は
+    [Reactor コンテキスト](https://projectreactor.io/docs/core/release/reference/advancedFeatures/context.html) から取得できます。
+    `McpTransportContext` を Reactor コンテキスト内に保持するのが一般的で、通常は McpSyncClient 内で行いますが、任意のコンテキストキーを使用できます。例:
+
+    ```java
+    WebClient.builder()
+        .filter((request, next) -> {
+            return Mono.deferContextual(ctx -> {
+                var transportContext = ctx.get(McpTransportContext.KEY);
+                var otherInfo = ctx.get("your-context-key");
+                Mono<String> token = obtainAccessToken(transportContext, otherInfo);
+                return token.map(t -> {
+                    var newRequest = ClientRequest.from(request)
+                        .header("Authorization", "Bearer " + t)
+                        .build();
+                    // HTTP リクエストを実行するには必ず next.exchange を呼び出してください
+                    return next.exchange(newRequest);
+                });
+            });
+        });
+    ```
+
+    コンテキスト情報の設定方法については、[コンテキスト情報の追加](#adding-context-information) を参照してください。
+  </Tab>
+</Tabs>
+
+<div id="client-capabilities">
+  ## クライアントの機能
+</div>
+
+クライアントはさまざまな機能を設定できます:
+
+```java
+var capabilities = ClientCapabilities.builder()
+    .roots(true)      // ファイルシステムのルーツ対応を有効にし、リストの変更通知を受け取る
+    .sampling()       // LLMのサンプリング対応を有効化
+    .elicitation()    // エリシテーション機能を有効化
+    .build();
+```
+
+<div id="roots-support">
+  ### ルーツのサポート
+</div>
+
+ルーツは、サーバーがファイルシステム内で動作できる範囲の境界を定義します。
+
+```java
+// ルーツを動的に追加
+client.addRoot(new Root("file:///path", "description"));
+
+// ルーツを削除
+client.removeRoot("file:///path");
+
+// ルーツの変更をサーバーに通知
+client.rootsListChangedNotification();
+```
+
+ルーツ機能により、サーバーは次のことが可能になります。
+
+* アクセス可能なファイルシステムのルーツ一覧を要求する
+* ルーツ一覧に変更があったときに通知を受け取る
+* アクセス可能なディレクトリやファイルを把握する
+
+<div id="sampling-support">
+  ### サンプリングのサポート
+</div>
+
+サンプリングにより、サーバーはクライアント経由でLLMとの対話（「completion」や「generation」）をリクエストできます：
+
+```java
+// サンプリングハンドラーを設定
+Function<CreateMessageRequest, CreateMessageResult> samplingHandler = request -> {
+    // LLM と連携するサンプリング実装
+    return new CreateMessageResult(response);
+};
+
+// サンプリング対応のクライアントを作成
+var client = McpClient.sync(transport)
+    .capabilities(ClientCapabilities.builder()
+        .sampling()
+        .build())
+    .sampling(samplingHandler)
+    .build();
+```
+
+この機能により、次のことが可能になります：
+
+* サーバーは API キーなしで AI 機能を活用できる
+* クライアントはモデルへのアクセスや権限を制御できる
+* テキストおよび画像ベースの対話の両方をサポート
+* プロンプトに任意で MCPサーバーのコンテキストを含められる
+
+<div id="elicitation-support">
+  ### エリシテーションのサポート
+</div>
+
+エリシテーションにより、サーバーはクライアントに特定の情報や確認を求めることができます。
+
+```java
+// エリシテーションハンドラーを設定
+Function<ElicitRequest, ElicitResult> elicitationHandler = request -> {
+    // LLM と連携するエリシテーション実装
+    return ElicitResult.builder()...build();
+};
+
+// エリシテーション対応のクライアントを作成
+var client = McpClient.sync(transport)
+    .capabilities(ClientCapabilities.builder()
+        .elicitation() // エリシテーション機能を有効化
+        .build())
+    .elicitation(elicitationHandler) // エリシテーションハンドラーを登録
+    .build();
+```
+
+<div id="logging-support">
+  ### ログ記録のサポート
+</div>
+
+クライアントは、サーバーからのログメッセージを受け取るためのログコンシューマを登録し、メッセージを絞り込む最小ログレベルを設定できます:
+
+```java
+var mcpClient = McpClient.sync(transport)
+        .loggingConsumer((LoggingMessageNotification notification) -> {
+            System.out.println("Received log message: " + notification.data());
+        })
+        .build();
+
+mcpClient.initialize();
+
+mcpClient.setLoggingLevel(McpSchema.LoggingLevel.INFO);
+
+// ログ通知を送信するツールを呼び出す
+CallToolResult result = mcpClient.callTool(new McpSchema.CallToolRequest("logging-test", Map.of()));
+```
+
+クライアントは `mcpClient.setLoggingLevel(level)` リクエストで受信する最小ログレベルを制御できます。設定したレベル未満のメッセージはフィルタリングされます。
+サポートされるログレベル（重大度の低い順）: DEBUG (0)、INFO (1)、NOTICE (2)、WARNING (3)、ERROR (4)、CRITICAL (5)、ALERT (6)、EMERGENCY (7)
+
+<div id="progress-support">
+  ### 進捗サポート
+</div>
+
+クライアントは、サーバーからの進捗更新を受け取るために進捗コンシューマを登録できます。
+
+```java
+var mcpClient = McpClient.sync(transport)
+        .progressConsumer((ProgressNotification progress) -> {
+            System.out.println("Received progress update: " + progress.data());
+        })
+        .build();
+
+mcpClient.initialize();
+
+// 進捗通知を送信できるツールを呼び出す
+CallToolResult result = mcpClient.callTool(new McpSchema.CallToolRequest("progress-test", Map.of()));
+```
+
+<div id="change-notifications">
+  ### 変更通知
+</div>
+
+クライアントは、サーバーからのツール、リソース、またはプロンプトの更新に関する通知を受け取るために、変更用コンシューマーを登録できます:
+
+```java
+
+var spec = McpClient.sync(transport);
+
+// 利用可能なツールに、追加や削除などの変更があった際に通知されるコンシューマーを追加します。
+spec.toolsChangeConsumer((List<McpSchema.Tool> tools) -> {
+    // ツールの変更を処理
+});
+
+// 利用可能なリソースに、追加や削除などの変更があった際に通知されるコンシューマーを追加します。
+spec.resourcesChangeConsumer((List<McpSchema.Resource> resources) -> {
+    // リソースの変更を処理
+});
+
+// 利用可能なプロンプトに、追加や削除などの変更があった際に通知されるコンシューマーを追加します。
+spec.promptsChangeConsumer((List<McpSchema.Prompt> prompts) -> {
+    // プロンプトの変更を処理
+
+});
+```
+
+<div id="using-mcp-clients">
+  ## MCPクライアントの使い方
+</div>
+
+<div id="tool-execution">
+  ### ツールの実行
+</div>
+
+ツールは、クライアントが検出して実行できるサーバー側の関数です。MCPクライアントは、利用可能なツールの一覧取得や、指定したパラメータでの実行を行うメソッドを提供します。各ツールには固有の名前があり、パラメータのマップを受け取ります。
+
+<Tabs>
+  <Tab title="Sync API">
+    ```java
+    // 利用可能なツールとその名前を一覧表示
+    var tools = client.listTools();
+    tools.forEach(tool -> System.out.println(tool.getName()));
+
+    // パラメータを指定してツールを実行
+    var result = client.callTool("calculator", Map.of(
+        "operation", "add",
+        "a", 1,
+        "b", 2
+    ));
+    ```
+  </Tab>
+
+  <Tab title="Async API">
+    ```java
+    // 利用可能なツールを非同期で一覧表示
+    client.listTools()
+        .doOnNext(tools -> tools.forEach(tool ->
+            System.out.println(tool.getName())))
+        .subscribe();
+
+    // ツールを非同期で実行
+    client.callTool("calculator", Map.of(
+            "operation", "add",
+            "a", 1,
+            "b", 2
+        ))
+        .subscribe();
+    ```
+  </Tab>
+</Tabs>
+
+<div id="resource-access">
+  ### リソースへのアクセス
+</div>
+
+リソースは、クライアントがURIテンプレートを用いてアクセスできるサーバー側のデータソースを表します。MCPクライアントは、利用可能なリソースの探索や、その内容を標準化インターフェース経由で取得するためのメソッドを提供します。
+
+<Tabs>
+  <Tab title="Sync API">
+    ```java
+    // 利用可能なリソースとその名称を一覧表示
+    var resources = client.listResources();
+    resources.forEach(resource -> System.out.println(resource.getName()));
+
+    // URIテンプレートを使ってリソースの内容を取得
+    var content = client.getResource("file", Map.of(
+        "path", "/path/to/file.txt"
+    ));
+    ```
+  </Tab>
+
+  <Tab title="Async API">
+    ```java
+    // 利用可能なリソースを非同期で一覧表示
+    client.listResources()
+        .doOnNext(resources -> resources.forEach(resource ->
+            System.out.println(resource.getName())))
+        .subscribe();
+
+    // 非同期でリソースの内容を取得
+    client.getResource("file", Map.of(
+            "path", "/path/to/file.txt"
+        ))
+        .subscribe();
+    ```
+  </Tab>
+</Tabs>
+
+<div id="prompt-system">
+  ### プロンプトシステム
+</div>
+
+プロンプトシステムは、サーバー側のプロンプトテンプレートとのやり取りを可能にします。テンプレートは発見可能で、カスタムパラメータを指定して実行でき、あらかじめ定義されたパターンに基づく動的なテキスト生成を行えます。
+
+<Tabs>
+  <Tab title="Sync API">
+    ```java
+    // 利用可能なプロンプトテンプレートを一覧表示
+    var prompts = client.listPrompts();
+    prompts.forEach(prompt -> System.out.println(prompt.getName()));
+
+    // パラメータを指定してプロンプトテンプレートを実行
+    var response = client.executePrompt("echo", Map.of(
+        "text", "Hello, World!"
+    ));
+    ```
+  </Tab>
+
+  <Tab title="Async API">
+    ```java
+    // 利用可能なプロンプトテンプレートを非同期で一覧表示
+    client.listPrompts()
+        .doOnNext(prompts -> prompts.forEach(prompt ->
+            System.out.println(prompt.getName())))
+        .subscribe();
+
+    // プロンプトテンプレートを非同期で実行
+    client.executePrompt("echo", Map.of(
+            "text", "Hello, World!"
+        ))
+        .subscribe();
+    ```
+  </Tab>
+</Tabs>
+
+<div id="using-completion">
+  ### Completion の使用
+</div>
+
+[Completion 機能](/ja/specification/2025-03-26/server/utilities/completion)の一部として、MCP はサーバーがプロンプトやリソース URI に対する引数のオートコンプリート候補を提供できる、標準化された仕組みを備えています。
+
+サーバー側でのオートコンプリートの有効化と設定方法は、[Server Completion 機能](/ja/sdk/java/mcp-server#completion-specification)を参照してください。
+
+クライアント側では、MCPクライアントがオートコンプリートを要求するためのメソッドを提供します:
+
+<Tabs>
+  <Tab title="Sync API">
+    ```java
+
+    CompleteRequest request = new CompleteRequest(
+            new PromptReference("code_review"),
+            new CompleteRequest.CompleteArgument("language", "py"));
+
+    CompleteResult result = syncMcpClient.completeCompletion(request);
+
+    ```
+  </Tab>
+
+  <Tab title="Async API">
+    ```java
+
+    CompleteRequest request = new CompleteRequest(
+            new PromptReference("code_review"),
+            new CompleteRequest.CompleteArgument("language", "py"));
+
+    Mono<CompleteResult> result = mcpClient.completeCompletion(request);
+
+    ```
+  </Tab>
+</Tabs>
+
+<div id="adding-context-information">
+  ### コンテキスト情報の追加
+</div>
+
+サーバー送信イベント（SSE）またはストリーム対応HTTPのトランスポート経由で送信されるHTTPリクエストは、
+専用のAPIでカスタマイズできます（[client transport](#client-transport)を参照）。これらのカスタマイザーは、
+クライアント側で注入する必要のあるコンテキスト固有の追加情報を求める場合があります。
+
+<Tabs>
+  <Tab title="Sync API">
+    `McpSyncClient` はブロッキング環境で使用され、情報共有のためにスレッドローカルに依存する場合があります。
+    たとえば、いくつかのフレームワークは現在のサーバーリクエストやセキュリティトークンをスレッドローカルに保存します。
+    この種の情報を下位のトランスポートで利用可能にするには、`SyncSpec#transportContextProvider` を使用します:
+
+    ```java
+    McpClient.sync(transport)
+        .transportContextProvider(() -> {
+            var data = obtainDataFromThreadLocals();
+            return McpTransportContext.create(
+                    Map.of("some-data", data)
+            );
+        })
+        .build();
+    ```
+
+    この `McpTransportContext` は、HttpClient ベースの `McpSyncHttpClientRequestCustomizer`
+    および WebClient ベースの `ExchangeFilterFunction` で利用可能になります。
+  </Tab>
+
+  <Tab title="Async API">
+    `McpAsyncClient` はリアクティブ環境で使用されます。
+    情報は [Reactor context](https://projectreactor.io/docs/core/release/reference/advancedFeatures/context.html) を介してリアクティブチェーンに渡されます。
+    Reactor コンテキストにデータを挿入するには、クライアント操作を呼び出す際に `contextWrite` を使用します:
+
+    ```java
+    var client = McpClient.async(transport)
+        // ...
+        .build();
+
+    Mono<McpSchema.ListToolsResult> toolList = client
+        .listTools()
+        .contextWrite(ctx -> {
+            var transportContext = McpTransportContext.create(
+                Map.of("some-key", "some value")
+            );
+            return ctx.put(McpTransportContext.KEY, transportContext)
+                .put("reactor-context-key", "some reactor value");
+        });
+    ```
+
+    これにより、`McpTransportContext` は HttpClient ベースの `McpAsyncHttpClientRequestCustomizer` で利用可能になります。
+    また、`McpAsyncHttpClientRequestCustomizer` と WebClient の `ExchangeFilterFunction` の両方で、`Mono.deferContextual` を通じて
+    Reactor コンテキスト全体を利用できます:
+
+    ```java
+    WebClient.builder()
+        .filter((request, next) -> {
+            return Mono.deferContextual(ctx -> {
+                var transportContext = ctx.get(McpTransportContext.KEY);
+                var someReactorValue = ctx.get("reactor-context-key");
+                // ... use context values ...
+            });
+        });
+    ```
+  </Tab>
+</Tabs>

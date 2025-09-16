@@ -1,0 +1,288 @@
+---
+title: "Échantillonnage"
+description: "Permettez à vos serveurs de demander des complétions aux LLM"
+---
+
+L’échantillonnage est une fonctionnalité puissante de MCP qui permet aux serveurs de demander, via le client, des complétions auprès de LLM, ce qui permet des comportements d’agents sophistiqués tout en préservant la sécurité et la confidentialité.
+
+<Info>
+
+Cette fonctionnalité de MCP n’est pas encore prise en charge dans le client Claude Desktop.
+
+</Info>
+
+<div id="how-sampling-works">
+  ## Fonctionnement de l’échantillonnage
+</div>
+
+Le flux d’échantillonnage suit les étapes suivantes :
+
+1. Le serveur envoie une requête `sampling/createMessage` au client
+2. Le client examine la requête et peut la modifier
+3. Le client effectue un échantillonnage à partir d’un LLM
+4. Le client examine le résultat de génération
+5. Le client renvoie le résultat au serveur
+
+Cette approche avec humain dans la boucle garantit que les utilisateurs gardent le contrôle sur ce que le LLM voit et génère.
+
+<div id="message-format">
+  ## Format de message
+</div>
+
+Les requêtes d’échantillonnage utilisent un format de message standardisé :
+
+```typescript
+{
+  messages: [
+    {
+      role: "user" | "assistant",
+      content: {
+        type: "text" | "image",
+
+        // Pour le texte :
+        text?: string,
+
+        // Pour les images :
+        data?: string,             // encodé en base64
+        mimeType?: string
+      }
+    }
+  ],
+  modelPreferences?: {
+    hints?: [{
+      name?: string                // Nom ou famille de modèle suggéré(e)
+    }],
+    costPriority?: number,         // 0-1, importance de la minimisation du coût
+    speedPriority?: number,        // 0-1, importance d’une faible latence
+    intelligencePriority?: number  // 0-1, importance des capacités
+  },
+  systemPrompt?: string,
+  includeContext?: "none" | "thisServer" | "allServers",
+  temperature?: number,
+  maxTokens: number,
+  stopSequences?: string[],
+  metadata?: Record<string, unknown>
+}
+```
+
+<div id="request-parameters">
+  ## Paramètres de la requête
+</div>
+
+<div id="messages">
+  ### Messages
+</div>
+
+Le tableau `messages` contient l’historique de la conversation à envoyer au LLM. Chaque message comprend :
+
+- `role` : « user » ou « assistant »
+- `content` : le contenu du message, qui peut être :
+  - Du texte avec un champ `text`
+  - Une image avec des champs `data` (base64) et `mimeType`
+
+<div id="model-preferences">
+  ### Préférences de modèle
+</div>
+
+L'objet `modelPreferences` permet aux serveurs d’indiquer leurs préférences en matière de sélection de modèle :
+
+- `hints` : Tableau de suggestions de noms de modèles que les clients peuvent utiliser pour choisir un modèle approprié :
+  - `name` : Chaîne pouvant correspondre à des noms de modèles complets ou partiels (p. ex. « claude-3 », « sonnet »)
+  - Les clients peuvent faire correspondre ces suggestions à des modèles équivalents offerts par différents fournisseurs
+  - Plusieurs suggestions sont évaluées selon l’ordre de préférence
+
+- Valeurs de priorité (normalisées de 0 à 1) :
+  - `costPriority` : Importance accordée à la minimisation des coûts
+  - `speedPriority` : Importance accordée à une réponse à faible latence
+  - `intelligencePriority` : Importance accordée à des capacités avancées du modèle
+
+Les clients effectuent la sélection finale du modèle en fonction de ces préférences et des modèles qu’ils ont à leur disposition.
+
+<div id="system-prompt">
+  ### Invite système
+</div>
+
+Un champ optionnel `systemPrompt` permet aux serveurs de demander une invite système spécifique. Le client peut la modifier ou l’ignorer.
+
+<div id="context-inclusion">
+  ### Inclusion du contexte
+</div>
+
+Le paramètre `includeContext` précise quel contexte MCP inclure :
+
+- `"none"` : Aucun contexte supplémentaire
+- `"thisServer"` : Inclure le contexte du serveur demandeur
+- `"allServers"` : Inclure le contexte de tous les serveurs MCP connectés
+
+Le client contrôle le contexte effectivement inclus.
+
+<div id="sampling-parameters">
+  ### Paramètres d’échantillonnage
+</div>
+
+Ajustez l’échantillonnage du LLM avec :
+
+- `temperature` : Contrôle l’aléa (0,0 à 1,0)
+- `maxTokens` : Nombre maximal de jetons à générer
+- `stopSequences` : Tableau de séquences qui interrompent la génération
+- `metadata` : Paramètres supplémentaires propres au fournisseur
+
+<div id="response-format">
+  ## Format de réponse
+</div>
+
+Le client renvoie un résultat de complétion :
+
+```typescript
+{
+  model: string,  // Nom du modèle utilisé
+  stopReason?: "endTurn" | "stopSequence" | "maxTokens" | string,
+  role: "user" | "assistant",
+  content: {
+    type: "text" | "image",
+    text?: string,
+    data?: string,
+    mimeType?: string
+  }
+}
+```
+
+<div id="example-request">
+  ## Exemple de requête
+</div>
+
+Voici un exemple de requête d’échantillonnage émise par un client :
+
+```json
+{
+  "method": "sampling/createMessage",
+  "params": {
+    "messages": [
+      {
+        "role": "user",
+        "content": {
+          "type": "text",
+          "text": "What files are in the current directory?"
+        }
+      }
+    ],
+    "systemPrompt": "You are a helpful file system assistant.",
+    "includeContext": "thisServer",
+    "maxTokens": 100
+  }
+}
+```
+
+<div id="best-practices">
+  ## Bonnes pratiques
+</div>
+
+Lors de la mise en œuvre de l’échantillonnage :
+
+1. Fournissez toujours des invites claires et bien structurées
+2. Traitez adéquatement le contenu texte et image
+3. Définissez des limites de jetons raisonnables
+4. Incluez le contexte pertinent avec `includeContext`
+5. Validez les réponses avant de les utiliser
+6. Gérez les erreurs avec souplesse
+7. Envisagez de limiter le débit des requêtes d’échantillonnage
+8. Documentez le comportement d’échantillonnage attendu
+9. Testez avec divers paramètres de modèle
+10. Surveillez les coûts d’échantillonnage
+
+<div id="human-in-the-loop-controls">
+  ## Contrôles avec humain dans la boucle
+</div>
+
+L’échantillonnage est conçu en tenant compte de la supervision humaine :
+
+<div id="for-prompts">
+  ### Pour les invites
+</div>
+
+- Les clients devraient afficher à l’utilisateur l’invite proposée
+- Les utilisateurs devraient pouvoir modifier ou refuser les invites
+- Les invites système peuvent être filtrées ou modifiées
+- L’inclusion du contexte est contrôlée par le client
+
+<div id="for-completions">
+  ### Pour les complétions
+</div>
+
+- Les clients devraient afficher la complétion aux utilisateurs
+- Les utilisateurs devraient pouvoir modifier ou rejeter les complétions
+- Les clients peuvent filtrer ou modifier les complétions
+- Les utilisateurs contrôlent le choix du modèle utilisé
+
+<div id="security-considerations">
+  ## Considérations de sécurité
+</div>
+
+Lors de la mise en œuvre de l’échantillonnage :
+
+- Valider l’ensemble du contenu des messages
+- Nettoyer les informations sensibles
+- Mettre en place des limites de débit appropriées
+- Surveiller l’utilisation de l’échantillonnage
+- Chiffrer les données en transit
+- Protéger la confidentialité des données des utilisateurs
+- Auditer les requêtes d’échantillonnage
+- Maîtriser l’exposition aux coûts
+- Mettre en place des délais d’attente
+- Gérer les erreurs du modèle de manière robuste
+
+<div id="common-patterns">
+  ## Schémas courants
+</div>
+
+<div id="agentic-workflows">
+  ### Flux de travail agentiques
+</div>
+
+L’échantillonnage permet des schémas agentiques tels que :
+
+- Lecture et analyse des ressources
+- Prise de décisions en fonction du contexte
+- Génération de données structurées
+- Gestion de tâches en plusieurs étapes
+- Offre d’une assistance interactive
+
+<div id="context-management">
+  ### Gestion du contexte
+</div>
+
+Meilleures pratiques pour la gestion du contexte :
+
+- Demander le minimum de contexte nécessaire
+- Structurer le contexte de manière claire
+- Gérer les limites de taille du contexte
+- Mettre à jour le contexte au besoin
+- Nettoyer le contexte périmé
+
+<div id="error-handling">
+  ### Gestion des erreurs
+</div>
+
+Une gestion des erreurs robuste devrait :
+
+- Intercepter les échecs d’échantillonnage
+- Gérer les erreurs de délai d’expiration
+- Gérer les limites de taux
+- Valider les réponses
+- Prévoir des mécanismes de repli
+- Consigner les erreurs de manière appropriée
+
+<div id="limitations">
+  ## Limitations
+</div>
+
+Prenez note des limitations suivantes :
+
+- L’échantillonnage dépend des capacités du client
+- Les utilisateurs contrôlent le comportement d’échantillonnage
+- La taille du contexte est limitée
+- Des limites de taux peuvent s’appliquer
+- Les coûts doivent être pris en compte
+- La disponibilité du modèle varie
+- Les temps de réponse varient
+- Tous les types de contenu ne sont pas pris en charge
