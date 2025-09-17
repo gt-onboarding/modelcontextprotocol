@@ -1,0 +1,76 @@
+---
+title: Mensajes
+type: docs
+weight: 20
+---
+
+<Info>**Revisión del protocolo**: 2024-11-05</Info>
+
+Todos los mensajes en el MCP **DEBEN** seguir la especificación
+[JSON-RPC 2.0](https://www.jsonrpc.org/specification). El protocolo define
+tres tipos de mensajes:
+
+<div id="requests">
+  ## Solicitudes
+</div>
+
+Las solicitudes se envían del cliente al servidor o viceversa.
+
+```typescript
+{
+  jsonrpc: "2.0";
+  id: string | number;
+  method: string;
+  params?: {
+    [key: string]: unknown;
+  };
+}
+```
+
+- Las solicitudes **DEBEN** incluir un ID de tipo cadena o entero.
+- A diferencia de JSON-RPC base, el ID **NO DEBE** ser `null`.
+- El ID de la solicitud **NO DEBE** haberse utilizado previamente por el solicitante dentro de la misma sesión.
+
+<div id="responses">
+  ## Respuestas
+</div>
+
+Las respuestas se envían en respuesta a las solicitudes.
+
+```typescript
+{
+  jsonrpc: "2.0";
+  id: string | number;
+  result?: {
+    [key: string]: unknown;
+  }
+  error?: {
+    code: number;
+    message: string;
+    data?: unknown;
+  }
+}
+```
+
+- Las respuestas **DEBEN** incluir el mismo ID que la solicitud correspondiente.
+- Se **DEBE** establecer un `result` o un `error`. Una respuesta **NO DEBE** establecer ambos.
+- Los códigos de error **DEBEN** ser números enteros.
+
+<div id="notifications">
+  ## Notificaciones
+</div>
+
+Las notificaciones se envían del cliente al servidor o viceversa. No esperan una
+respuesta.
+
+```typescript
+{
+  jsonrpc: "2.0";
+  method: string;
+  params?: {
+    [key: string]: unknown;
+  };
+}
+```
+
+- Las notificaciones **NO DEBEN** incluir un ID.

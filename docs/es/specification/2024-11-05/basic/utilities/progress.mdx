@@ -1,0 +1,94 @@
+---
+title: Progreso
+weight: 30
+---
+
+<Info>**Revisión del protocolo**: 2024-11-05</Info>
+
+El Protocolo de Contexto del Modelo (MCP) admite el seguimiento opcional del progreso de operaciones de larga duración mediante mensajes de notificación. Cualquiera de las partes puede enviar notificaciones de progreso para proporcionar actualizaciones sobre el estado de la operación.
+
+<div id="progress-flow">
+  ## Flujo de progreso
+</div>
+
+Cuando una parte desea _recibir_ actualizaciones de progreso para una solicitud, incluye un
+`progressToken` en los metadatos de la solicitud.
+
+- Los tokens de progreso **DEBEN** ser un valor de cadena o entero
+- Los tokens de progreso pueden ser elegidos por el remitente por cualquier medio, pero **DEBEN** ser únicos
+  entre todas las solicitudes activas.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "some_method",
+  "params": {
+    "_meta": {
+      "progressToken": "abc123"
+    }
+  }
+}
+```
+
+El receptor **PUEDE** entonces enviar notificaciones de progreso que contengan:
+
+- El token de progreso original
+- El valor de progreso actual hasta el momento
+- Un valor “total” opcional
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/progress",
+  "params": {
+    "progressToken": "abc123",
+    "progress": 50,
+    "total": 100
+  }
+}
+```
+
+- El valor de `progress` **DEBE** aumentar con cada notificación, incluso si el total es
+  desconocido.
+- Los valores de `progress` y `total` **PUEDEN** ser de punto flotante.
+
+<div id="behavior-requirements">
+  ## Requisitos de comportamiento
+</div>
+
+1. Las notificaciones de progreso **DEBEN** referirse únicamente a tokens que:
+   - Fueron proporcionados en una solicitud activa
+   - Están asociados con una operación en curso
+
+2. Los receptores de solicitudes de progreso **PUEDEN**:
+   - Optar por no enviar ninguna notificación de progreso
+   - Enviar notificaciones con la frecuencia que consideren adecuada
+   - Omitir el valor total si es desconocido
+
+```mermaid
+sequenceDiagram
+    participant Sender
+    participant Receiver
+
+    Note over Sender,Receiver: Solicitud con token de progreso
+    Sender->>Receiver: Solicitud de método con progressToken
+
+    Note over Sender,Receiver: Actualizaciones de progreso
+    loop Actualizaciones de progreso
+        Receiver-->>Sender: Notificación de progreso (0.2/1.0)
+        Receiver-->>Sender: Notificación de progreso (0.6/1.0)
+        Receiver-->>Sender: Notificación de progreso (1.0/1.0)
+    end
+
+    Note over Sender,Receiver: Operación completada
+    Receiver->>Sender: Respuesta del método
+```
+
+<div id="implementation-notes">
+  ## Notas de implementación
+</div>
+
+- Los emisores y receptores **DEBERÍAN** llevar un seguimiento de los tokens de progreso activos
+- Ambas partes **DEBERÍAN** implementar limitación de velocidad para evitar inundaciones
+- Las notificaciones de progreso **DEBEN** detenerse una vez completadas

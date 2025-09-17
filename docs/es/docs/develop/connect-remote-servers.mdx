@@ -1,0 +1,128 @@
+---
+title: Conectarse a servidores MCP remotos
+description: Aprende a conectar Claude a servidores MCP remotos y ampliar sus capacidades con herramientas y fuentes de datos alojadas en internet
+---
+
+Los servidores MCP remotos amplían las capacidades de las aplicaciones de IA más allá de tu entorno local, proporcionando acceso a herramientas, servicios y fuentes de datos alojadas en internet. Al conectarte a servidores MCP remotos, transformas a los asistentes de IA de herramientas útiles en compañeros informados, capaces de manejar proyectos complejos y de múltiples pasos con acceso en tiempo real a recursos externos.
+
+Muchos clientes ya admiten servidores MCP remotos, lo que habilita una amplia gama de posibilidades de integración. Esta guía muestra cómo conectarte a servidores MCP remotos usando [Claude](https://claude.ai/) como ejemplo, uno de los [muchos clientes que admiten MCP](/es/clients). Aunque nos enfocamos en la implementación de Claude mediante Conectores personalizados, los conceptos se aplican en general a otros clientes compatibles con MCP.
+
+<div id="understanding-remote-mcp-servers">
+  ## Comprender los servidores MCP remotos
+</div>
+
+Los servidores MCP remotos funcionan de manera similar a los servidores MCP locales, pero están alojados en Internet en lugar de en tu máquina local. Exponen Herramientas, Indicaciones y Recursos que Claude puede usar para realizar tareas en tu nombre. Estos servidores pueden integrarse con diversos servicios, como herramientas de gestión de proyectos, sistemas de documentación, repositorios de código y cualquier otro servicio con API.
+
+La principal ventaja de los servidores MCP remotos es su accesibilidad. A diferencia de los servidores locales, que requieren instalación y configuración en cada dispositivo, los servidores remotos están disponibles desde cualquier Cliente MCP con conexión a Internet. Esto los hace ideales para aplicaciones de IA basadas en la web, integraciones que priorizan la facilidad de uso y servicios que requieren procesamiento o autenticación del lado del servidor.
+
+<div id="what-are-custom-connectors">
+  ## ¿Qué son los Conectores personalizados?
+</div>
+
+Los Conectores personalizados actúan como puente entre Claude y los Servidores MCP remotos. Te permiten conectar a Claude directamente con las herramientas y fuentes de datos más relevantes para tus flujos de trabajo, lo que habilita a Claude a operar dentro de tu software favorito y a extraer información del contexto completo de tus herramientas externas.
+
+Con los Conectores personalizados, puedes:
+
+* [Conectar a Claude con Servidores MCP remotos existentes](https://support.anthropic.com/en/articles/11175166-getting-started-with-custom-connectors-using-remote-mcp) proporcionados por desarrolladores de terceros
+* [Crear tus propios Servidores MCP remotos para conectarlos con cualquier herramienta](https://support.anthropic.com/en/articles/11503834-building-custom-connectors-via-remote-mcp-servers)
+
+<div id="connecting-to-a-remote-mcp-server">
+  ## Conectarse a un Servidor MCP remoto
+</div>
+
+El proceso de conectar Claude a un servidor MCP remoto implica agregar un Conector personalizado a través de la [interfaz de Claude](https://claude.ai/). Esto establece una conexión segura entre Claude y el servidor remoto que elijas.
+
+<Steps>
+  <Step title="Ir a la configuración de conectores">
+    Abre Claude en tu navegador y ve a la página de configuración. Puedes acceder haciendo clic en tu ícono de perfil y seleccionando “Settings” en el menú desplegable. Una vez en la configuración, ubica y haz clic en la sección “Connectors” en la barra lateral.
+
+    Esto mostrará tus conectores actualmente configurados y ofrecerá opciones para agregar otros nuevos.
+  </Step>
+
+  <Step title="Agregar un Conector personalizado">
+    En la sección Connectors, desplázate hasta la parte inferior, donde encontrarás el botón “Add custom connector”. Haz clic en este botón para iniciar el proceso de conexión.
+
+    <Frame>
+      <img src="/images/quickstart-remote/1-add-connector.png" alt="Botón Add custom connector en la configuración de Claude" />
+    </Frame>
+
+    Aparecerá un cuadro de diálogo solicitándote ingresar la URL del servidor MCP remoto. Esta URL debe ser proporcionada por el desarrollador o administrador del servidor. Ingresa la URL completa, asegurándote de que incluya el protocolo correcto (https://) y cualquier componente de ruta necesario.
+
+    <Frame>
+      <img src="/images/quickstart-remote/2-connect.png" alt="Cuadro de diálogo para ingresar la URL del servidor MCP remoto" />
+    </Frame>
+
+    Después de ingresar la URL, haz clic en “Add” para continuar con la conexión.
+  </Step>
+
+  <Step title="Completar la autenticación">
+    La mayoría de los Servidores MCP remotos requieren autenticación para garantizar un acceso seguro a sus Recursos. El proceso de autenticación varía según la implementación del servidor, pero comúnmente implica OAuth, claves de API o combinaciones de nombre de usuario y contraseña.
+
+    <Frame>
+      <img src="/images/quickstart-remote/3-auth.png" alt="Pantalla de autenticación para el servidor MCP remoto" />
+    </Frame>
+
+    Sigue las indicaciones de autenticación proporcionadas por el servidor. Esto puede redirigirte a un proveedor de autenticación de terceros o mostrar un formulario dentro de Claude. Una vez completada la autenticación, Claude establecerá una conexión segura con el servidor remoto.
+  </Step>
+
+  <Step title="Acceder a Recursos e Indicaciones">
+    Tras conectarte correctamente, los Recursos e Indicaciones del servidor remoto estarán disponibles en tus conversaciones de Claude. Puedes acceder a ellos haciendo clic en el ícono de clip en el área de entrada de mensajes, lo que abre el menú de adjuntos.
+
+    <Frame>
+      <img src="/images/quickstart-remote/4-select-resources-menu.png" alt="Menú de adjuntos que muestra los recursos disponibles" />
+    </Frame>
+
+    El menú muestra todos los Recursos e Indicaciones disponibles de tus servidores conectados. Selecciona los elementos que deseas incluir en tu conversación. Estos Recursos proporcionan a Claude contexto e información de tus Herramientas externas.
+
+    <Frame>
+      <img src="/images/quickstart-remote/5-select-prompts-resources.png" alt="Selección de Recursos e Indicaciones específicos desde el menú" />
+    </Frame>
+  </Step>
+
+  <Step title="Configurar permisos de Herramientas">
+    Los Servidores MCP remotos a menudo exponen múltiples Herramientas con capacidades variadas. Puedes controlar qué Herramientas puede usar Claude configurando los permisos en la configuración del conector. Esto garantiza que Claude solo realice acciones que hayas autorizado explícitamente.
+
+    <Frame>
+      <img src="/images/quickstart-remote/6-configure-tools.png" alt="Interfaz de configuración de permisos de Herramientas" />
+    </Frame>
+
+    Vuelve a la configuración de Connectors y haz clic en tu servidor conectado. Aquí puedes habilitar o deshabilitar Herramientas específicas, establecer límites de uso y configurar otros parámetros de seguridad según tus necesidades.
+  </Step>
+</Steps>
+
+<div id="best-practices-for-using-remote-mcp-servers">
+  ## Mejores prácticas para usar servidores MCP remotos
+</div>
+
+Al trabajar con servidores MCP remotos, tenga en cuenta estas recomendaciones para garantizar una experiencia segura y eficiente:
+
+**Consideraciones de seguridad**: Verifique siempre la autenticidad de los servidores MCP remotos antes de conectarse. Conéctese solo a servidores de fuentes confiables y revise los permisos solicitados durante la autenticación. Sea cauteloso al conceder acceso a datos o sistemas sensibles.
+
+**Gestión de múltiples conectores**: Puede conectarse a varios servidores MCP remotos simultáneamente. Organice sus conectores por finalidad o por proyecto para mantener la claridad. Revise y elimine periódicamente los conectores que ya no utilice para mantener su espacio de trabajo organizado y seguro.
+
+<div id="next-steps">
+  ## Próximos pasos
+</div>
+
+Ahora que has conectado Claude a un Servidor MCP remoto, puedes explorar sus capacidades en tus conversaciones. Prueba a usar las Herramientas conectadas para automatizar tareas, acceder a datos externos o integrarlas en tus flujos de trabajo existentes.
+
+<CardGroup cols={2}>
+  <Card title="Build your own remote server" icon="cloud" href="https://support.anthropic.com/en/articles/11503834-building-custom-connectors-via-remote-mcp-servers">
+    Crea Servidores MCP remotos personalizados para integrar Herramientas y
+    servicios propietarios
+  </Card>
+
+  <Card title="Explore available servers" icon="grid" href="https://github.com/modelcontextprotocol/servers">
+    Explora nuestra colección de Servidores MCP oficiales y creados por la comunidad
+  </Card>
+
+  <Card title="Connect local servers" icon="computer" href="/es/docs/develop/connect-local-servers">
+    Aprende a conectar Claude Desktop a Servidores MCP locales para obtener acceso directo al sistema
+  </Card>
+
+  <Card title="Understand the architecture" icon="book" href="/es/docs/learn/architecture">
+    Profundiza en el funcionamiento y la arquitectura de MCP
+  </Card>
+</CardGroup>
+
+Los Servidores MCP remotos desbloquean potentes posibilidades para ampliar las capacidades de Claude. A medida que te familiarices con estas integraciones, descubrirás nuevas formas de optimizar tus flujos de trabajo y realizar tareas complejas con mayor eficiencia.

@@ -1,0 +1,204 @@
+---
+title: Raíces
+---
+
+<Info>**Revisión del protocolo**: 2025-03-26</Info>
+
+El Protocolo de Contexto de Modelo (MCP) proporciona una forma estandarizada para que los clientes expongan “raíces” del sistema de archivos a los servidores. Las raíces delimitan el ámbito en el que los servidores pueden operar dentro del sistema de archivos, lo que les permite comprender a qué directorios y archivos tienen acceso. Los servidores pueden solicitar la lista de raíces a los clientes compatibles y recibir notificaciones cuando esa lista cambie.
+
+<div id="user-interaction-model">
+  ## Modelo de interacción del usuario
+</div>
+
+Las Raíces en MCP normalmente se exponen a través de interfaces de configuración del espacio de trabajo o del proyecto.
+
+Por ejemplo, las implementaciones podrían ofrecer un selector de espacio de trabajo/proyecto que permita a los usuarios seleccionar los directorios y archivos a los que el servidor debería tener acceso. Esto puede combinarse con la detección automática del espacio de trabajo a partir de sistemas de control de versiones o de archivos de proyecto.
+
+Sin embargo, las implementaciones son libres de exponer las Raíces mediante cualquier patrón de interfaz que se adapte a sus necesidades—el protocolo en sí no impone ningún modelo específico de interacción con el usuario.
+
+<div id="capabilities">
+  ## Capacidades
+</div>
+
+Los clientes que admitan Raíces **DEBEN** declarar la capacidad `roots` durante la
+[inicialización](/es/specification/2025-03-26/basic/lifecycle#initialization):
+
+```json
+{
+  "capabilities": {
+    "roots": {
+      "listChanged": true
+    }
+  }
+}
+```
+
+`listChanged` indica si el cliente enviará notificaciones cuando cambie la lista de Raíces.
+
+<div id="protocol-messages">
+  ## Mensajes del protocolo
+</div>
+
+<div id="listing-roots">
+  ### Listado de Raíces
+</div>
+
+Para obtener raíces, los servidores envían una solicitud `roots/list`:
+
+**Solicitud:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "roots/list"
+}
+```
+
+**Respuesta:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "roots": [
+      {
+        "uri": "file:///home/user/projects/myproject",
+        "name": "My Project"
+      }
+    ]
+  }
+}
+```
+
+<div id="root-list-changes">
+  ### Cambios en la lista de Raíces
+</div>
+
+Cuando cambien las Raíces, los clientes que admitan `listChanged` **DEBEN** enviar una notificación:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/roots/list_changed"
+}
+```
+
+<div id="message-flow">
+  ## Flujo de mensajes
+</div>
+
+```mermaid
+sequenceDiagram
+    participant Server
+    participant Client
+
+    Note over Server,Client: Descubrimiento
+    Server->>Client: roots/list
+    Client-->>Server: Raíces disponibles
+
+    Note over Server,Client: Cambios
+    Client--)Server: notifications/roots/list_changed
+    Server->>Client: roots/list
+    Client-->>Server: Raíces actualizadas
+```
+
+<div id="data-types">
+  ## Tipos de datos
+</div>
+
+<div id="root">
+  ### Raíz
+</div>
+
+Una definición de raíz incluye:
+
+* `uri`: Identificador único de la raíz. En la especificación actual, **DEBE** ser un URI `file://`.
+* `name`: Nombre opcional, legible por personas, para fines de visualización.
+
+Ejemplos de raíces para diferentes casos de uso:
+
+<div id="project-directory">
+  #### Directorio del proyecto
+</div>
+
+```json
+{
+  "uri": "file:///home/user/projects/myproject",
+  "name": "My Project"
+}
+```
+
+<div id="multiple-repositories">
+  #### Varios repositorios
+</div>
+
+```json
+[
+  {
+    "uri": "file:///home/user/repos/frontend",
+    "name": "Repositorio de frontend"
+  },
+  {
+    "uri": "file:///home/user/repos/backend",
+    "name": "Repositorio de backend"
+  }
+]
+```
+
+<div id="error-handling">
+  ## Manejo de errores
+</div>
+
+Los clientes **DEBERÍAN** devolver errores estándar de JSON-RPC para casos comunes de fallo:
+
+* El cliente no admite Raíces: `-32601` (Method not found)
+* Errores internos: `-32603`
+
+Ejemplo de error:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "error": {
+    "code": -32601,
+    "message": "Roots not supported",
+    "data": {
+      "reason": "Client does not have roots capability"
+    }
+  }
+}
+```
+
+<div id="security-considerations">
+  ## Consideraciones de seguridad
+</div>
+
+1. Los clientes **DEBEN**:
+   * Exponer únicamente las Raíces con los permisos adecuados
+   * Validar todos los URI de la Raíz para prevenir la evasión de rutas
+   * Implementar controles de acceso adecuados
+   * Supervisar la accesibilidad de la Raíz
+
+2. Los servidores **DEBERÍAN**:
+   * Manejar casos en los que las Raíces se vuelvan indisponibles
+   * Respetar los límites de la Raíz durante las operaciones
+   * Validar todas las rutas respecto de las Raíces proporcionadas
+
+<div id="implementation-guidelines">
+  ## Directrices de implementación
+</div>
+
+1. Los clientes **DEBERÍAN**:
+   * Solicitar el consentimiento de los usuarios antes de exponer las Raíces a los servidores
+   * Proporcionar interfaces de usuario claras para la gestión de Raíces
+   * Validar la accesibilidad de las Raíces antes de exponerlas
+   * Supervisar los cambios en las Raíces
+
+2. Los servidores **DEBERÍAN**:
+   * Comprobar la compatibilidad con Raíces antes de su uso
+   * Gestionar los cambios en la lista de Raíces de forma adecuada
+   * Respetar los límites de las Raíces en las operaciones
+   * Cachear la información de las Raíces de manera apropiada

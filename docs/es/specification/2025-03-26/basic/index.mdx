@@ -1,0 +1,130 @@
+---
+title: Descripción general
+---
+
+<Info>**Revisión del Protocolo**: 2025-03-26</Info>
+
+El Protocolo de Contexto de Modelo (MCP) consta de varios componentes clave que funcionan en conjunto:
+
+* **Protocolo base**: Tipos de mensajes fundamentales de JSON-RPC
+* **Gestión del ciclo de vida**: Inicialización de la conexión, negociación de capacidades y control de sesión
+* **Funciones del servidor**: Recursos, Indicaciones y Herramientas expuestas por los servidores
+* **Funciones del cliente**: Muestreo y listas de directorios raíz proporcionadas por los clientes
+* **Utilidades**: Temas transversales como registro y completado de argumentos
+
+Todas las implementaciones **DEBEN** admitir el protocolo base y los componentes de gestión del ciclo de vida.
+Otros componentes **PUEDEN** implementarse según las necesidades específicas de la aplicación.
+
+Estas capas del protocolo establecen una clara separación de responsabilidades, a la vez que permiten interacciones ricas entre clientes y servidores. El diseño modular permite que las implementaciones admitan exactamente las funciones que necesitan.
+
+<div id="messages">
+  ## Mensajes
+</div>
+
+Todos los mensajes entre Clientes MCP y Servidores MCP **DEBEN** seguir la especificación
+de [JSON-RPC 2.0](https://www.jsonrpc.org/specification). El protocolo define
+estos tipos de mensajes:
+
+<div id="requests">
+  ### Solicitudes
+</div>
+
+Las solicitudes se envían del cliente al servidor o viceversa para iniciar una operación.
+
+```typescript
+{
+  jsonrpc: "2.0";
+  id: string | number;
+  method: string;
+  params?: {
+    [key: string]: unknown;
+  };
+}
+```
+
+* Las solicitudes **DEBEN** incluir un ID de tipo cadena o entero.
+* A diferencia del JSON-RPC base, el ID **NO DEBE** ser `null`.
+* El ID de la solicitud **NO DEBE** haber sido utilizado previamente por el solicitante en la misma sesión.
+
+<div id="responses">
+  ### Respuestas
+</div>
+
+Las respuestas se envían a las solicitudes e incluyen el resultado o el error de la operación.
+
+```typescript
+{
+  jsonrpc: "2.0";
+  id: string | number;
+  result?: {
+    [key: string]: unknown;
+  }
+  error?: {
+    code: number;
+    message: string;
+    data?: unknown;
+  }
+}
+```
+
+* Las respuestas **DEBEN** incluir el mismo ID que la solicitud correspondiente.
+* **Las respuestas** se clasifican además como **resultados correctos** o **errores**. Se **DEBE** establecer un `result` o un `error`. Una respuesta **NO DEBE** establecer ambos.
+* Los resultados **PUEDEN** seguir cualquier estructura de objeto JSON, mientras que los errores **DEBEN** incluir, como mínimo, un código de error y un mensaje.
+* Los códigos de error **DEBEN** ser números enteros.
+
+<div id="notifications">
+  ### Notificaciones
+</div>
+
+Las notificaciones se envían del cliente al servidor o viceversa, como mensajes unidireccionales.
+El receptor **NO DEBE** enviar una respuesta.
+
+```typescript
+{
+  jsonrpc: "2.0";
+  method: string;
+  params?: {
+    [key: string]: unknown;
+  };
+}
+```
+
+* Las notificaciones **NO DEBEN** incluir un ID.
+
+<div id="batching">
+  ### Procesamiento por lotes
+</div>
+
+JSON-RPC también define una forma de
+[procesar por lotes múltiples solicitudes y notificaciones](https://www.jsonrpc.org/specification#batch),
+enviándolas en un arreglo. Las implementaciones de MCP **PUEDEN** admitir el envío de lotes de JSON-RPC, pero **DEBEN** admitir la recepción de lotes de JSON-RPC.
+
+<div id="auth">
+  ## Autenticación
+</div>
+
+MCP proporciona un marco de [Autorización](/es/specification/2025-03-26/basic/authorization) para su uso con HTTP.
+Las implementaciones que utilicen un transporte basado en HTTP **DEBERÍAN** ajustarse a esta especificación,
+mientras que las implementaciones que utilicen el transporte STDIO **NO DEBERÍAN** seguir esta especificación,
+sino obtener las credenciales del entorno.
+
+Además, los clientes y los servidores **PUEDEN** negociar sus propias estrategias personalizadas de autenticación y
+autorización.
+
+Para participar en debates y contribuir a la evolución de los mecanismos de autenticación de MCP, únete
+a nosotros en
+[GitHub Discussions](https://github.com/modelcontextprotocol/specification/discussions)
+para ayudar a dar forma al futuro del protocolo.
+
+<div id="schema">
+  ## Esquema
+</div>
+
+La especificación completa del protocolo está definida como un
+[esquema de TypeScript](https://github.com/modelcontextprotocol/specification/blob/main/schema/2025-03-26/schema.ts).
+Este es el origen de verdad para todos los mensajes y estructuras del protocolo.
+
+También hay un
+[JSON Schema](https://github.com/modelcontextprotocol/specification/blob/main/schema/2025-03-26/schema.json),
+que se genera automáticamente a partir del origen de verdad en TypeScript, para usar con
+diversas herramientas automatizadas.
