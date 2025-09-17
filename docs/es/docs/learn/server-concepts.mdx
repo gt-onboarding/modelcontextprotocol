@@ -1,0 +1,312 @@
+---
+title: Comprender los servidores MCP
+sidebarTitle: Servidores
+---
+
+Los servidores MCP son programas que exponen capacidades específicas a las aplicaciones de IA a través de interfaces de protocolo estandarizadas.
+
+Algunos ejemplos comunes incluyen servidores del sistema de archivos para el acceso a documentos, servidores de bases de datos para consultas de datos, servidores de GitHub para la gestión de código, servidores de Slack para la comunicación del equipo y servidores de calendario para la programación.
+
+<div id="core-server-features">
+  ## Funciones básicas del servidor
+</div>
+
+Los servidores proporcionan funcionalidad mediante tres componentes fundamentales:
+
+| Función       | Explicación                                                                                                                                                                                                 | Ejemplos                                                        | Quién lo controla |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | ----------------- |
+| **Herramientas**     | Funciones que tu LLM puede invocar activamente y decide cuándo usarlas según las solicitudes del usuario. Las herramientas pueden escribir en bases de datos, llamar a APIs externas, modificar archivos o activar otra lógica. | Buscar vuelos<br />Enviar mensajes<br />Crear eventos de calendario | Modelo            |
+| **Recursos** | Fuentes de datos pasivas que proporcionan acceso de solo lectura a información para proporcionar contexto, como contenido de archivos, esquemas de bases de datos o documentación de APIs.                               | Recuperar documentos<br />Acceder a bases de conocimiento<br />Leer calendarios | Aplicación        |
+| **Indicaciones**   | Plantillas de instrucciones prediseñadas que indican al modelo trabajar con herramientas y recursos específicos.                                                                                       | Planificar unas vacaciones<br />Resumir mis reuniones<br />Redactar un correo electrónico | Usuario           |
+
+Usaremos un escenario hipotético para demostrar el papel de cada una de estas funciones y mostrar cómo pueden funcionar juntas.
+
+<div id="tools">
+  ### Herramientas
+</div>
+
+Las herramientas permiten que los modelos de IA realicen acciones. Cada herramienta define una operación específica con entradas y salidas tipadas. El modelo solicita la ejecución de la herramienta según el contexto.
+
+<div id="how-tools-work">
+  #### Cómo funcionan las Herramientas
+</div>
+
+Las Herramientas son interfaces definidas por esquemas que los LLM pueden invocar. MCP utiliza JSON Schema para la validación. Cada herramienta realiza una única operación con entradas y salidas claramente definidas. Las Herramientas pueden requerir el consentimiento del usuario antes de la ejecución, lo que ayuda a garantizar que los usuarios mantengan el control sobre las acciones realizadas por un modelo.
+
+**Operaciones del protocolo:**
+
+| Method       | Purpose                         | Returns                                   |
+| ------------ | ------------------------------- | ----------------------------------------- |
+| `tools/list` | Descubrir herramientas disponibles | Matriz de definiciones de herramientas con esquemas |
+| `tools/call` | Ejecutar una herramienta específica | Resultado de la ejecución de la herramienta |
+
+**Ejemplo de definición de herramienta:**
+
+```typescript
+{
+  name: "searchFlights",
+  description: "Buscar vuelos disponibles",
+  inputSchema: {
+    type: "object",
+    properties: {
+      origin: { type: "string", description: "Ciudad de origen" },
+      destination: { type: "string", description: "Ciudad de destino" },
+      date: { type: "string", format: "date", description: "Fecha de viaje" }
+    },
+    required: ["origin", "destination", "date"]
+  }
+}
+```
+
+<div id="example-travel-booking">
+  #### Ejemplo: Reserva de viajes
+</div>
+
+Las Herramientas permiten que las aplicaciones de IA realicen acciones en nombre de los usuarios. En un escenario de planificación de viajes, la aplicación de IA podría usar varias herramientas para ayudar a reservar unas vacaciones:
+
+**Búsqueda de vuelos**
+
+```
+searchFlights(origin: "NYC", destination: "Barcelona", date: "2024-06-15")
+```
+
+Consulta varias aerolíneas y devuelve opciones de vuelo estructuradas.
+
+**Bloqueo de calendario**
+
+```
+createCalendarEvent(title: "Barcelona Trip", startDate: "2024-06-15", endDate: "2024-06-22")
+```
+
+Marca las fechas del viaje en el calendario del usuario.
+
+**Notificación por correo electrónico**
+
+```
+sendEmail(to: "team@work.com", subject: "Out of Office", body: "...")
+```
+
+Envía un mensaje automático de “fuera de la oficina” a los compañeros.
+
+<div id="user-interaction-model">
+  #### Modelo de interacción con el usuario
+</div>
+
+Las Herramientas están controladas por el modelo, lo que significa que los modelos de IA pueden descubrirlas e invocarlas automáticamente. Sin embargo, el MCP enfatiza la supervisión humana a través de varios mecanismos.
+
+Por motivos de confianza y seguridad, las aplicaciones pueden implementar el control por parte del usuario mediante varios mecanismos, como:
+
+- Mostrar las herramientas disponibles en la interfaz, permitiendo a los usuarios definir si una herramienta debe estar disponible en interacciones específicas
+- Diálogos de aprobación para ejecuciones de herramientas individuales
+- Configuración de permisos para preaprobar ciertas operaciones seguras
+- Registros de actividad que muestran todas las ejecuciones de herramientas junto con sus resultados
+
+<div id="resources">
+  ### Recursos
+</div>
+
+Los recursos brindan acceso estructurado a información que la aplicación de IA puede recuperar y suministrar a los modelos como contexto.
+
+<div id="how-resources-work">
+  #### Cómo funcionan los Recursos
+</div>
+
+Los Recursos exponen datos de archivos, API, bases de datos u otras fuentes que una IA necesita para comprender el contexto. Las aplicaciones pueden acceder a esta información directamente y decidir cómo usarla, ya sea seleccionando partes relevantes, buscando con embeddings o enviándola completa al modelo.
+
+Cada recurso tiene un URI único (como `file:///path/to/document.md`) y declara su tipo MIME para el manejo adecuado del contenido. Admiten dos patrones de descubrimiento:
+
+- **Recursos directos** - URI fijos que apuntan a datos específicos. Ejemplo: `calendar://events/2024` - devuelve la disponibilidad del calendario para 2024
+- **Plantillas de Recursos** - URI dinámicos con parámetros para consultas flexibles. Ejemplo:
+  - `travel://activities/{city}/{category}` - devuelve actividades por ciudad y categoría
+  - `travel://activities/barcelona/museums` - devuelve todos los museos en Barcelona
+
+Las Plantillas de Recursos incluyen metadatos como título, descripción y tipo MIME esperado, lo que las hace detectables y autodocumentadas.
+
+**Operaciones del protocolo:**
+
+| Método                     | Propósito                           | Devuelve                                   |
+| -------------------------- | ----------------------------------- | ------------------------------------------ |
+| `resources/list`           | Listar recursos directos disponibles | Matriz de descriptores de recursos         |
+| `resources/templates/list` | Descubrir plantillas de recursos     | Matriz de definiciones de plantillas       |
+| `resources/read`           | Recuperar contenido del recurso      | Datos del recurso con metadatos            |
+| `resources/subscribe`      | Supervisar cambios del recurso       | Confirmación de suscripción                |
+
+<div id="example-getting-travel-planning-context">
+  #### Ejemplo: obtención de contexto para la planificación de viajes
+</div>
+
+Continuando con el ejemplo de planificación de viajes, los Recursos proporcionan a la aplicación de IA acceso a información relevante:
+
+- **Datos del calendario** (`calendar://events/2024`) - Verifica la disponibilidad del usuario
+- **Documentos de viaje** (`file:///Documents/Travel/passport.pdf`) - Accede a documentos importantes
+- **Itinerarios anteriores** (`trips://history/barcelona-2023`) - Consulta viajes y preferencias pasadas
+
+La aplicación de IA obtiene estos Recursos y decide cómo procesarlos, ya sea seleccionando un subconjunto de datos mediante embeddings o búsqueda por palabras clave, o pasando datos sin procesar directamente al modelo.
+
+En este caso, proporciona al modelo datos del calendario, información meteorológica y preferencias de viaje, lo que le permite verificar disponibilidad, consultar patrones meteorológicos y tomar como referencia preferencias de viajes anteriores.
+
+**Ejemplos de plantillas de Recursos:**
+
+```json
+{
+  "uriTemplate": "weather://forecast/{city}/{date}",
+  "name": "weather-forecast",
+  "title": "Weather Forecast",
+  "description": "Get weather forecast for any city and date",
+  "mimeType": "application/json"
+}
+
+{
+  "uriTemplate": "travel://flights/{origin}/{destination}",
+  "name": "flight-search",
+  "title": "Flight Search",
+  "description": "Search available flights between cities",
+  "mimeType": "application/json"
+}
+```
+
+Estas plantillas permiten consultas flexibles. Para los datos meteorológicos, los usuarios pueden acceder a pronósticos para cualquier combinación de ciudad y fecha. Para los vuelos, pueden buscar rutas entre cualesquiera dos aeropuertos. Cuando un usuario ha introducido "NYC" como el aeropuerto de `origin` y comienza a escribir "Bar" como el aeropuerto de `destination`, el sistema puede sugerir "Barcelona (BCN)" o "Barbados (BGI)".
+
+<div id="parameter-completion">
+  #### Autocompletado de parámetros
+</div>
+
+Los recursos dinámicos admiten el autocompletado de parámetros. Por ejemplo:
+
+- Al escribir "Par" como entrada para `weather://forecast/{city}`, se podrían sugerir "Paris" o "Park City".
+- Al escribir "JFK" para `flights://search/{airport}`, se podría sugerir "JFK - John F. Kennedy International".
+
+El sistema ayuda a descubrir valores válidos sin exigir conocer el formato exacto.
+
+<div id="user-interaction-model">
+  #### Modelo de interacción del usuario
+</div>
+
+Los Recursos están dirigidos por la aplicación, lo que les da flexibilidad en cómo obtienen, procesan y presentan el contexto disponible. Algunos patrones de interacción comunes incluyen:
+
+- Vistas en árbol o en lista para explorar Recursos en estructuras similares a carpetas
+- Interfaces de búsqueda y filtrado para encontrar Recursos específicos
+- Inclusión automática de contexto o sugerencias inteligentes basadas en heurísticas o selección por IA
+- Interfaces de selección manual o por lotes para incluir uno o varios Recursos
+
+Las aplicaciones son libres de implementar el descubrimiento de Recursos mediante cualquier patrón de interfaz que se adapte a sus necesidades. El protocolo no impone patrones de UI específicos, lo que permite selectores de Recursos con vista previa, sugerencias inteligentes basadas en el contexto conversacional actual, selección por lotes para incluir múltiples Recursos o integración con exploradores de archivos y de datos existentes.
+
+<div id="prompts">
+  ### Indicaciones
+</div>
+
+Las indicaciones proporcionan plantillas reutilizables. Permiten a los autores del Servidor MCP ofrecer indicaciones parametrizadas para un dominio o mostrar cómo sacar el máximo partido al Servidor MCP.
+
+<div id="how-prompts-work">
+  #### Cómo funcionan las Indicaciones
+</div>
+
+Las Indicaciones son plantillas estructuradas que definen las entradas esperadas y los patrones de interacción. Están controladas por el usuario: requieren invocación explícita en lugar de activarse automáticamente. Las Indicaciones pueden ser conscientes del contexto, haciendo referencia a los Recursos y Herramientas disponibles para crear flujos de trabajo completos. Al igual que los Recursos, las Indicaciones admiten el rellenado de parámetros para ayudar a los usuarios a descubrir valores de argumentos válidos.
+
+**Operaciones del protocolo:**
+
+| Método         | Propósito                           | Devuelve                                 |
+| -------------- | ----------------------------------- | ---------------------------------------- |
+| `prompts/list` | Descubrir Indicaciones disponibles  | Arreglo de descriptores de Indicaciones  |
+| `prompts/get`  | Obtener detalles de la Indicación   | Definición completa de la Indicación con argumentos |
+
+<div id="example-streamlined-workflows">
+  #### Ejemplo: Flujos de trabajo optimizados
+</div>
+
+Las Indicaciones proporcionan plantillas estructuradas para tareas comunes. En el contexto de la planificación de viajes:
+
+Indicaciones "Plan a vacation":
+
+```json
+{
+  "name": "plan-vacation",
+  "title": "Plan a vacation",
+  "description": "Guide through vacation planning process",
+  "arguments": [
+    { "name": "destination", "type": "string", "required": true },
+    { "name": "duration", "type": "number", "description": "days" },
+    { "name": "budget", "type": "number", "required": false },
+    { "name": "interests", "type": "array", "items": { "type": "string" } }
+  ]
+}
+```
+
+En lugar de una entrada en lenguaje natural no estructurada, el sistema de Indicaciones permite:
+
+1. Seleccionar la plantilla "Plan a vacation"
+2. Proporcionar una entrada estructurada: Barcelona, 7 días, $3000, ["beaches", "architecture", "food"]
+3. Ejecutar un flujo de trabajo coherente basado en la plantilla
+
+<div id="user-interaction-model">
+  #### Modelo de interacción con el usuario
+</div>
+
+Las Indicaciones están controladas por el usuario y requieren una invocación explícita. El protocolo ofrece a los implementadores la libertad de diseñar interfaces que resulten naturales dentro de su aplicación. Los principios clave incluyen:
+
+- Descubrimiento sencillo de las Indicaciones disponibles
+- Descripciones claras de lo que hace cada Indicaciones
+- Entrada natural de argumentos con validación
+- Visualización transparente de la plantilla subyacente de la Indicaciones
+
+Las aplicaciones suelen exponer Indicaciones mediante varios patrones de la IU, como:
+
+- Comandos con barra (escribir “/” para ver Indicaciones disponibles como /plan-vacation)
+- Paletas de comandos para acceso con búsqueda
+- Botones dedicados de la IU para Indicaciones de uso frecuente
+- Menús contextuales que sugieren Indicaciones relevantes
+
+<div id="bringing-servers-together">
+  ## Integración de servidores
+</div>
+
+El verdadero poder del Protocolo de Contexto del Modelo (MCP) se manifiesta cuando varios servidores trabajan en conjunto y combinan sus capacidades especializadas a través de una interfaz unificada.
+
+<div id="example-multi-server-travel-planning">
+  ### Ejemplo: planificación de viajes con varios servidores
+</div>
+
+Considera una aplicación de planificación de viajes con IA, personalizada, con tres servidores conectados:
+
+- **Servidor de viajes** - Gestiona vuelos, hoteles e itinerarios
+- **Servidor meteorológico** - Proporciona datos climáticos y pronósticos
+- **Servidor de calendario/correo electrónico** - Administra agendas y comunicaciones
+
+<div id="the-complete-flow">
+  #### El flujo completo
+</div>
+
+1. **El usuario invoca una indicación con parámetros:**
+
+   ```json
+   {
+     "prompt": "plan-vacation",
+     "arguments": {
+       "destination": "Barcelona",
+       "departure_date": "2024-06-15",
+       "return_date": "2024-06-22",
+       "budget": 3000,
+       "travelers": 2
+     }
+   }
+   ```
+
+2. **El usuario selecciona Recursos para incluir:**
+   - `calendar://my-calendar/June-2024` (del Servidor de Calendario)
+   - `travel://preferences/europe` (del Servidor de Viajes)
+   - `travel://past-trips/Spain-2023` (del Servidor de Viajes)
+
+3. **La IA procesa la solicitud usando Herramientas:**
+
+   La IA primero lee todos los Recursos seleccionados para recopilar contexto: identifica las fechas disponibles del calendario, aprende las aerolíneas y tipos de hotel preferidos a partir de las preferencias de viaje, y descubre lugares que ya han gustado en viajes anteriores.
+
+   Con este contexto, la IA ejecuta una serie de Herramientas:
+   - `searchFlights()` - Consulta aerolíneas para vuelos de NYC a Barcelona
+   - `checkWeather()` - Obtiene pronósticos del clima para las fechas del viaje
+
+   Luego, la IA usa esta información para crear la reserva y los pasos siguientes, solicitando la aprobación del usuario cuando sea necesario:
+   - `bookHotel()` - Encuentra hoteles dentro del presupuesto especificado
+   - `createCalendarEvent()` - Agrega el viaje al calendario del usuario
+   - `sendEmail()` - Envía la confirmación con los detalles del viaje
+
+**El resultado:** A través de múltiples Servidores MCP, el usuario investigó y reservó un viaje a Barcelona adaptado a su agenda. La indicación "Plan a Vacation" guió a la IA para combinar Recursos (disponibilidad del calendario e historial de viajes) con Herramientas (búsqueda de vuelos, reserva de hoteles, actualización de calendarios) en diferentes servidores, recopilando contexto y ejecutando la reserva. Una tarea que podría haber tomado horas se completó en minutos usando MCP.

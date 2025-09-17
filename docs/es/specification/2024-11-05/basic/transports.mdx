@@ -1,0 +1,98 @@
+---
+title: Transportes
+type: docs
+weight: 40
+---
+
+<Info>**Revisión del protocolo**: 2024-11-05</Info>
+
+El MCP define actualmente dos mecanismos de transporte estándar para la comunicación cliente-servidor:
+
+1. [stdio](#stdio), comunicación mediante entrada y salida estándar
+2. [HTTP con Server-Sent Events](#http-with-sse) (SSE)
+
+Los clientes **DEBERÍAN** admitir stdio siempre que sea posible.
+
+También es posible que clientes y servidores implementen
+[transportes personalizados](#custom-transports) de forma modular.
+
+<div id="stdio">
+  ## stdio
+</div>
+
+En el transporte **stdio**:
+
+- El cliente lanza el Servidor MCP como un subproceso.
+- El servidor recibe mensajes JSON-RPC en su entrada estándar (`stdin`) y escribe
+  respuestas en su salida estándar (`stdout`).
+- Los mensajes están delimitados por saltos de línea y **NO DEBEN** contener saltos de línea incrustados.
+- El servidor **PUEDE** escribir cadenas UTF-8 en su error estándar (`stderr`) con fines de registro. Los clientes **PUEDEN** capturar, reenviar o ignorar estos registros.
+- El servidor **NO DEBE** escribir nada en su `stdout` que no sea un mensaje MCP válido.
+- El cliente **NO DEBE** escribir nada en el `stdin` del servidor que no sea un
+  mensaje MCP válido.
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Server Process
+
+    Client->>+Server Process: Launch subprocess
+    loop Message Exchange
+        Client->>Server Process: Write to stdin
+        Server Process->>Client: Write to stdout
+        Server Process--)Client: Optional logs on stderr
+    end
+    Client->>Server Process: Close stdin, terminate subprocess
+    deactivate Server Process
+```
+
+<div id="http-with-sse">
+  ## HTTP con SSE
+</div>
+
+En el transporte **SSE**, el servidor opera como un proceso independiente capaz de manejar múltiples conexiones de clientes.
+
+<div id="security-warning">
+  #### Advertencia de seguridad
+</div>
+
+Al implementar HTTP con transporte SSE:
+
+1. Los servidores **DEBEN** validar la cabecera `Origin` en todas las conexiones entrantes para prevenir ataques de DNS rebinding
+2. Al ejecutarse en local, los servidores **DEBERÍAN** vincularse solo a localhost (127.0.0.1) en lugar de a todas las interfaces de red (0.0.0.0)
+3. Los servidores **DEBERÍAN** implementar una autenticación adecuada para todas las conexiones
+
+Sin estas protecciones, los atacantes podrían usar DNS rebinding para interactuar con servidores MCP locales desde sitios web remotos.
+
+El servidor **DEBE** proporcionar dos endpoints:
+
+1. Un endpoint SSE, para que los clientes establezcan una conexión y reciban mensajes del
+   servidor
+2. Un endpoint HTTP POST normal para que los clientes envíen mensajes al servidor
+
+Cuando un cliente se conecta, el servidor **DEBE** enviar un evento `endpoint` que contenga un URI para que el cliente lo use para enviar mensajes. Todos los mensajes posteriores del cliente **DEBEN** enviarse como solicitudes HTTP POST a este endpoint.
+
+Los mensajes del servidor se envían como eventos `message` de SSE, con el contenido del mensaje codificado como
+JSON en los datos del evento.
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Server
+
+    Client->>Server: Open SSE connection
+    Server->>Client: endpoint event
+    loop Message Exchange
+        Client->>Server: HTTP POST messages
+        Server->>Client: SSE message events
+    end
+    Client->>Server: Close SSE connection
+```
+
+<div id="custom-transports">
+  ## Transportes personalizados
+</div>
+
+Los clientes y servidores **PUEDEN** implementar mecanismos de transporte personalizados adicionales para ajustarse a sus necesidades específicas. El protocolo es independiente del transporte y puede implementarse sobre cualquier canal de comunicación que admita el intercambio bidireccional de mensajes.
+
+Quienes opten por admitir transportes personalizados **DEBEN** asegurarse de preservar el formato de mensajes JSON-RPC y los requisitos del ciclo de vida definidos por el Protocolo de Contexto de Modelo (MCP). Los transportes personalizados **DEBERÍAN** documentar sus patrones específicos de establecimiento de conexión e intercambio de mensajes para facilitar la interoperabilidad.

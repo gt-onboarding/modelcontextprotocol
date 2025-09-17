@@ -1,0 +1,287 @@
+---
+title: "Recursos"
+description: "Expón datos y contenido de tus servidores a los LLM"
+---
+
+Los Recursos son una primitiva fundamental en el Protocolo de Contexto de Modelo (MCP) que permite a los servidores exponer datos y contenido que pueden ser leídos por los Clientes y utilizados como contexto para interacciones con LLM.
+
+<Note>
+  Los Recursos están diseñados para ser **controlados por la aplicación**, lo que significa que la aplicación cliente puede decidir cómo y cuándo deben usarse.
+  Los distintos Clientes MCP pueden gestionar los recursos de manera diferente. Por ejemplo:
+
+  * Claude Desktop actualmente requiere que los usuarios seleccionen explícitamente los recursos antes de poder usarlos
+  * Otros clientes podrían seleccionar recursos automáticamente basándose en heurísticas
+  * Algunas implementaciones incluso pueden permitir que el propio modelo de IA determine qué recursos usar
+
+  Los autores de Servidores deben estar preparados para manejar cualquiera de estos patrones de interacción al implementar la compatibilidad con recursos. Para exponer datos a los modelos automáticamente, los autores de servidores deben usar una primitiva **controlada por el modelo** como [Herramientas](es/./tools).
+</Note>
+
+<div id="overview">
+  ## Descripción general
+</div>
+
+Los Recursos representan cualquier tipo de datos que un Servidor MCP desea poner a disposición de los clientes. Esto puede incluir:
+
+* Contenido de archivos
+* Registros de bases de datos
+* Respuestas de API
+* Datos de sistemas en tiempo real
+* Capturas de pantalla e imágenes
+* Archivos de registro
+* Y más
+
+Cada recurso se identifica mediante un URI único y puede contener datos de texto o binarios.
+
+<div id="resource-uris">
+  ## URI de recursos
+</div>
+
+Los recursos se identifican con URI que siguen este formato:
+
+```
+[protocol]://[host]/[path]
+```
+
+Por ejemplo:
+
+* `file:///home/user/documents/report.pdf`
+* `postgres://database/customers/schema`
+* `screen://localhost/display1`
+
+El protocolo y la estructura de la ruta los define la implementación del Servidor MCP. Los servidores pueden definir sus propios esquemas de URI personalizados.
+
+<div id="resource-types">
+  ## Tipos de Recursos
+</div>
+
+Los Recursos pueden contener dos tipos de contenido:
+
+<div id="text-resources">
+  ### Recursos de texto
+</div>
+
+Los recursos de texto contienen datos codificados en UTF-8. Son adecuados para:
+
+* Código fuente
+* Archivos de configuración
+* Archivos de registro
+* Datos JSON/XML
+* Texto plano
+
+<div id="binary-resources">
+  ### Recursos binarios
+</div>
+
+Los recursos binarios contienen datos binarios sin procesar codificados en base64. Son adecuados para:
+
+* Imágenes
+* PDF
+* Archivos de audio
+* Archivos de vídeo
+* Otros formatos no textuales
+
+<div id="resource-discovery">
+  ## Descubrimiento de Recursos
+</div>
+
+Los clientes pueden descubrir los recursos disponibles de dos maneras principales:
+
+<div id="direct-resources">
+  ### Recursos directos
+</div>
+
+Los servidores exponen una lista de recursos mediante la solicitud `resources/list`. Cada recurso incluye:
+
+```typescript
+{
+  uri: string;           // Identificador único del recurso
+  name: string;          // Nombre en lenguaje natural
+  description?: string;  // Descripción opcional
+  mimeType?: string;     // Tipo MIME opcional
+  size?: number;         // Tamaño opcional en bytes
+}
+```
+
+<div id="resource-templates">
+  ### Plantillas de recursos
+</div>
+
+Para recursos dinámicos, los servidores pueden exponer [plantillas de URI](https://datatracker.ietf.org/doc/html/rfc6570) que los clientes pueden usar para construir URI de recursos válidos:
+
+```typescript
+{
+  uriTemplate: string;   // Plantilla de URI según RFC 6570
+  name: string;          // Nombre legible para personas para este tipo
+  description?: string;  // Descripción opcional
+  mimeType?: string;     // Tipo MIME opcional para todos los recursos coincidentes
+}
+```
+
+<div id="reading-resources">
+  ## Lectura de recursos
+</div>
+
+Para leer un recurso, los clientes realizan una solicitud `resources/read` con el URI del recurso.
+
+El servidor responde con una lista de contenidos del recurso:
+
+```typescript
+{
+  contents: [
+    {
+      uri: string;        // El URI del recurso
+      mimeType?: string;  // Tipo MIME opcional
+
+      // Uno de:
+      text?: string;      // Para recursos de texto
+      blob?: string;      // Para recursos binarios (codificado en base64)
+    }
+  ]
+}
+```
+
+<Tip>
+  Los servidores pueden devolver varios recursos en respuesta a una sola solicitud `resources/read`. Esto puede utilizarse, por ejemplo, para devolver una lista de archivos dentro de un directorio cuando se lee dicho directorio.
+</Tip>
+
+<div id="resource-updates">
+  ## Actualizaciones de Recursos
+</div>
+
+MCP admite actualizaciones en tiempo real de los Recursos mediante dos mecanismos:
+
+<div id="list-changes">
+  ### Cambios en la lista
+</div>
+
+Los servidores pueden notificar a los clientes cuando su lista de Recursos disponibles cambie mediante la notificación `notifications/resources/list_changed`.
+
+<div id="content-changes">
+  ### Cambios de contenido
+</div>
+
+Los clientes pueden suscribirse a actualizaciones de recursos específicos:
+
+1. El cliente envía `resources/subscribe` con el URI del recurso
+2. El servidor envía `notifications/resources/updated` cuando el recurso cambia
+3. El cliente puede obtener el contenido más reciente con `resources/read`
+4. El cliente puede cancelar la suscripción con `resources/unsubscribe`
+
+<div id="example-implementation">
+  ## Implementación de ejemplo
+</div>
+
+Aquí tienes un ejemplo sencillo de cómo implementar compatibilidad con Recursos en un Servidor MCP:
+
+<CodeGroup>
+  ```typescript TypeScript
+  const server = new Server(
+    {
+      name: "example-server",
+      version: "1.0.0",
+    },
+    {
+      capabilities: {
+        resources: {},
+      },
+    },
+  );
+
+  // Listar los recursos disponibles
+  server.setRequestHandler(ListResourcesRequestSchema, async () => {
+    return {
+      resources: [
+        {
+          uri: "file:///logs/app.log",
+          name: "Application Logs",
+          mimeType: "text/plain",
+        },
+      ],
+    };
+  });
+
+  // Leer el contenido de un recurso
+  server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+    const uri = request.params.uri;
+
+    if (uri === "file:///logs/app.log") {
+      const logContents = await readLogFile();
+      return {
+        contents: [
+          {
+            uri,
+            mimeType: "text/plain",
+            text: logContents,
+          },
+        ],
+      };
+    }
+
+    throw new Error("Resource not found");
+  });
+  ```
+
+  ```python Python
+  app = Server("example-server")
+
+  @app.list_resources()
+  async def list_resources() -> list[types.Resource]:
+      return [
+          types.Resource(
+              uri="file:///logs/app.log",
+              name="Application Logs",
+              mimeType="text/plain"
+          )
+      ]
+
+  @app.read_resource()
+  async def read_resource(uri: AnyUrl) -> str:
+      if str(uri) == "file:///logs/app.log":
+          log_contents = await read_log_file()
+          return log_contents
+
+      raise ValueError("Resource not found")
+
+  # Iniciar el servidor
+  async with stdio_server() as streams:
+      await app.run(
+          streams[0],
+          streams[1],
+          app.create_initialization_options()
+      )
+  ```
+</CodeGroup>
+
+<div id="best-practices">
+  ## Mejores prácticas
+</div>
+
+Al implementar compatibilidad con Recursos:
+
+1. Usa nombres y URI de Recursos claros y descriptivos
+2. Incluye descripciones útiles para guiar la comprensión del LLM
+3. Establece tipos MIME adecuados cuando se conozcan
+4. Implementa plantillas de Recursos para contenido dinámico
+5. Usa suscripciones para Recursos que cambian con frecuencia
+6. Maneja los errores de forma elegante con mensajes claros
+7. Considera la paginación para listas de Recursos grandes
+8. Almacena en caché el contenido de los Recursos cuando sea apropiado
+9. Valida las URI antes de procesarlas
+10. Documenta tus esquemas de URI personalizados
+
+<div id="security-considerations">
+  ## Consideraciones de seguridad
+</div>
+
+Al exponer recursos:
+
+* Valide todos los URI de recursos
+* Implemente controles de acceso adecuados
+* Saneé las rutas de archivos para prevenir el traversal de directorios
+* Sea cauto con el manejo de datos binarios
+* Considere la limitación de velocidad/tasa para lecturas de recursos
+* Audite el acceso a los recursos
+* Cifre los datos sensibles en tránsito
+* Valide los tipos MIME
+* Implemente tiempos de espera para lecturas de larga duración
+* Gestione la limpieza de recursos adecuadamente

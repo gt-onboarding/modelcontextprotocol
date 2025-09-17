@@ -1,0 +1,706 @@
+---
+title: Cliente MCP para Java
+description: Aprenda a implementar y configurar un cliente del Protocolo de Contexto de Modelo (MCP)
+---
+
+<div id="sdk-contents">
+  ## Contenido del SDK
+</div>
+
+[Descripción general de Java MCP](/es/sdk/java/mcp-overview)
+
+[Cliente MCP de Java](/es/sdk/java/mcp-client)
+
+[Servidor MCP de Java](/es/sdk/java/mcp-server)
+
+<div id="client-features">
+  ## Funciones del cliente
+</div>
+
+El Cliente MCP es un componente clave en la arquitectura del Protocolo de Contexto de Modelo (MCP), responsable de establecer y gestionar conexiones con Servidores MCP. Implementa el lado del cliente del protocolo y se encarga de:
+
+* Negociación de la versión del protocolo para garantizar la compatibilidad con los servidores
+* Negociación de capacidades para determinar las funciones disponibles
+* Transporte de mensajes y comunicación JSON-RPC 2.0
+* Descubrimiento y ejecución de Herramientas
+* Acceso y gestión de Recursos
+* Interacciones con el sistema de Indicaciones
+* Funciones opcionales como gestión de Raíces y compatibilidad con Muestreo
+
+<Tip>
+  El módulo central `io.modelcontextprotocol.sdk:mcp` proporciona implementaciones de transporte de cliente por STDIO, HTTP transmitible y SSE sin requerir frameworks web externos.
+
+  Las implementaciones de transporte específicas de Spring están disponibles como una dependencia **opcional** `io.modelcontextprotocol.sdk:mcp-spring-webflux` para usuarios de [Spring Framework](https://docs.spring.io/spring-ai/reference/api/mcp/mcp-client-boot-starter-docs.html).
+</Tip>
+
+<Tip>
+  Este [inicio rápido](/es/quickstart/client), basado en Spring AI MCP, te mostrará
+  cómo crear un cliente de IA que se conecte a Servidores MCP.
+</Tip>
+
+El cliente ofrece API tanto sincrónicas como asincrónicas para brindar flexibilidad en distintos contextos de aplicación.
+
+<Tabs>
+  <Tab title="API síncrona">
+    ```java
+    // Crear un cliente síncrono con configuración personalizada
+    McpSyncClient client = McpClient.sync(transport)
+        .requestTimeout(Duration.ofSeconds(10))
+        .capabilities(ClientCapabilities.builder()
+            .roots(true)      // Habilitar la capacidad de Raíces
+            .sampling()       // Habilitar la capacidad de Muestreo
+            .elicitation()    // Habilitar la capacidad de Elicitación
+            .build())
+        .sampling(request -> CreateMessageResult.builder()...build())
+        .elicitation(elicitRequest -> ElicitResult.builder()...build())
+        .toolsChangeConsumer((List<McpSchema.Tool> tools) -> ...)
+        .resourcesChangeConsumer((List<McpSchema.Resource> resources) -> ...)
+        .promptsChangeConsumer((List<McpSchema.Prompt> prompts) -> ...)
+        .loggingConsumer((LoggingMessageNotification logging) -> ...)
+        .progressConsumer((ProgressNotification progress) -> ...)
+        .build();
+
+    // Inicializar la conexión
+    client.initialize();
+
+    // Listar las Herramientas disponibles
+    ListToolsResult tools = client.listTools();
+
+    // Invocar una Herramienta
+    CallToolResult result = client.callTool(
+        new CallToolRequest("calculator",
+            Map.of("operation", "add", "a", 2, "b", 3))
+    );
+
+    // Listar y leer Recursos
+    ListResourcesResult resources = client.listResources();
+    ReadResourceResult resource = client.readResource(
+        new ReadResourceRequest("resource://uri")
+    );
+
+    // Listar y usar Indicaciones
+    ListPromptsResult prompts = client.listPrompts();
+    GetPromptResult prompt = client.getPrompt(
+        new GetPromptRequest("greeting", Map.of("name", "Spring"))
+    );
+
+    // Agregar/quitar Raíces
+    client.addRoot(new Root("file:///path", "description"));
+    client.removeRoot("file:///path");
+
+    // Cerrar el cliente
+    client.closeGracefully();
+    ```
+  </Tab>
+
+  <Tab title="API asíncrona">
+    ```java
+    // Crear un cliente asíncrono con configuración personalizada
+    McpAsyncClient client = McpClient.async(transport)
+        .requestTimeout(Duration.ofSeconds(10))
+        .capabilities(ClientCapabilities.builder()
+            .roots(true)      // Habilitar la capacidad de Raíces
+            .sampling()       // Habilitar la capacidad de Muestreo
+            .elicitation()    // Habilitar la capacidad de Elicitación
+            .build())
+        .sampling(request -> Mono.just(new CreateMessageResult(response)))
+        .elicitation(elicitRequest -> Mono.just(ElicitResult.builder()...build()))
+        .toolsChangeConsumer(tools -> Mono.fromRunnable(() -> logger.info("Herramientas actualizadas: {}", tools)))
+        .resourcesChangeConsumer(resources -> Mono.fromRunnable(() -> logger.info("Recursos actualizados: {}", resources)))
+        .promptsChangeConsumer(prompts -> Mono.fromRunnable(() -> logger.info("Indicaciones actualizadas: {}", prompts)))
+        .loggingConsumer(notification -> Mono.fromRunnable(() -> logger.info("Registro: {}", notification.data())))
+        .progressConsumer(progress -> Mono.fromRunnable(() -> logger.info("Actualización de progreso: {}", progress.data())))
+        .build();
+
+    // Inicializar la conexión y usar las funcionalidades
+    client.initialize()
+        .flatMap(initResult -> client.listTools())
+        .flatMap(tools -> {
+            return client.callTool(new CallToolRequest(
+                "calculator",
+                Map.of("operation", "add", "a", 2, "b", 3)
+            ));
+        })
+        .flatMap(result -> {
+            return client.listResources()
+                .flatMap(resources ->
+                    client.readResource(new ReadResourceRequest("resource://uri"))
+                );
+        })
+        .flatMap(resource -> {
+            return client.listPrompts()
+                .flatMap(prompts ->
+                    client.getPrompt(new GetPromptRequest(
+                        "greeting",
+                        Map.of("name", "Spring")
+                    ))
+                );
+        })
+        .flatMap(prompt -> {
+            return client.addRoot(new Root("file:///path", "description"))
+                .then(client.removeRoot("file:///path"));
+        })
+        .doFinally(signalType -> {
+            client.closeGracefully().subscribe();
+        })
+        .subscribe();
+    ```
+  </Tab>
+</Tabs>
+
+<div id="client-transport">
+  ## Transporte del cliente
+</div>
+
+La capa de transporte gestiona la comunicación entre Clientes MCP y Servidores MCP, ofreciendo distintas implementaciones para diversos casos de uso. El transporte del cliente se encarga de la serialización de mensajes, el establecimiento de conexiones y los patrones de comunicación específicos del protocolo.
+
+<Tabs>
+  <Tab title="STDIO">
+    Crea un transporte para comunicación dentro del mismo proceso
+
+    ```java
+    ServerParameters params = ServerParameters.builder("npx")
+        .args("-y", "@modelcontextprotocol/server-everything", "dir")
+        .build();
+    McpTransport transport = new StdioClientTransport(params);
+    ```
+  </Tab>
+
+  <Tab title="HttpClient">
+    <Tabs>
+      <Tab title="Streamable-HTTP (HttpClient)">
+        Transporte de cliente HTTP transmitible, agnóstico del framework (solo usa APIs del JDK)
+
+        ```java
+        McpTransport transport = HttpClientStreamableHttpTransport
+                                    .builder("http://your-mcp-server")
+                                    .build();
+        ```
+      </Tab>
+
+      <Tab title="SSE (HttpClient)">
+        Transporte de cliente SSE, agnóstico del framework (solo usa APIs del JDK)
+
+        ```java
+        McpTransport transport = HttpClientSseClientTransport
+                                    .builder("http://your-mcp-server")
+                                    .build();
+        ```
+      </Tab>
+    </Tabs>
+
+    **HttpClient: Personalización de las solicitudes HTTP**
+
+    Para personalizar el generador de solicitudes HTTP base usado en cada solicitud, proporciona un `HttpRequestBuilder` personalizado.
+    Esto está disponible tanto en los transportes HTTP transmitible como en SSE.
+    Al usar un `HttpRequest.Builder` personalizado, cada solicitud HTTP emitida por el transporte
+    usará la configuración fija definida en el generador.
+    Por ejemplo, esto es útil para enviar en un encabezado un token de seguridad que nunca expire.
+    Para agregar un encabezado `X-Custom-Header` a cada solicitud, usa:
+
+    ```java
+    var requestBuilder = HttpRequest
+        .newBuilder()
+        .header("X-Custom-Header", "some header value");
+
+    HttpClientStreamableHttpTransport
+        .builder("https://mcp.example.com")
+        .requestBuilder(requestBuilder)
+        .build();
+    ```
+
+    Para modificar dinámicamente la solicitud HTTP antes de emitirla, implementa `McpSyncHttpClientRequestCustomizer` o `McpAsyncHttpClientRequestCustomizer`.
+    Elige el personalizador de solicitudes que coincida con el tipo de Cliente MCP, síncrono o asíncrono.
+    Ten en cuenta que los thread-locals pueden no estar disponibles en los personalizadores; la información relacionada con el contexto
+    debe accederse a través de `McpTransportContext` (consulta [adding context information](#adding-context-information)).
+    Implementaciones de ejemplo:
+
+    ```java
+    // Sync
+    class MyRequestCustomizer implements McpSyncHttpClientRequestCustomizer {
+        @Override
+        public void customize(HttpRequest.Builder builder, String method,
+            URI endpoint, String body, McpTransportContext context) {
+            // ... custom logic ...
+            var token = obtainAccessToken(context);
+            builder.header("Authorization", "Bearer " + token);
+        }
+    }
+
+    // Async
+    class MyAsyncRequestCustomizer implements McpAsyncHttpClientRequestCustomizer {
+        @Override
+        public Publisher<HttpRequest.Builder> customize(HttpRequest.Builder builder,
+            String method, URI endpoint, String body, McpTransportContext context) {
+            // ... custom logic ...
+            Mono<String> token = obtainAccessToken(context);
+            return token.map(t ->
+                builder.copy()
+                    .header("Authorization", "Bearer " + t)
+            );
+        }
+    }
+    ```
+
+    Los transportes, tanto HTTP transmitible como SSE, se pueden configurar para usar un único personalizador.
+
+    ```java
+    HttpClientStreamableHttpTransport
+        .builder("https://mcp.example.com")
+        .httpRequestCustomizer(new MyRequestCustomizer()) // sync
+        .asyncHttpRequestCustomizer(new MyAsyncRequestCustomizer()) // OR async
+        .build();
+    ```
+
+    Para componer varios personalizadores, usa `DelegatingMcpSyncHttpClientRequestCustomizer` o `DelegatingMcpAsyncHttpClientRequestCustomizer`.
+  </Tab>
+
+  <Tab title="WebClient">
+    <p>Transporte de cliente basado en WebClient. Requiere la dependencia `mcp-spring-webflux`.</p>
+
+    <Tabs>
+      <Tab title="HTTP transmitible (WebClient)">
+        ```java
+        WebClient.Builder webClientBuilder = WebClient.builder()
+                                    .baseUrl("http://your-mcp-server");
+
+        McpTransport transport = WebClientStreamableHttpTransport
+                                    .builder(webClientBuilder)
+                                    .build();
+        ```
+      </Tab>
+
+      <Tab title="SSE (WebClient)">
+        ```java
+        WebClient.Builder webClientBuilder = WebClient.builder()
+                                    .baseUrl("http://your-mcp-server");
+
+        McpTransport transport = WebFluxSseClientTransport(webClientBuilder)
+                                    .builder(webClientBuilder)
+                                    .build();
+        ```
+      </Tab>
+    </Tabs>
+
+    **WebClient: personalización de solicitudes HTTP**
+
+    Para personalizar las solicitudes HTTP salientes, proporciona un `WebClient.Builder` personalizado.
+    Cuando se usa un builder personalizado, cada solicitud enviada por el transporte se personalizará.
+    Por ejemplo, esto es útil para incluir en un encabezado un token de seguridad que no expire.
+    Para agregar un encabezado `X-Custom-Header` a cada solicitud, usa:
+
+    ```java
+    var webClientBuilder = WebClient.builder()
+        .defaultHeader("X-Custom-Header", "some header value");
+
+    McpTransport transport = WebClientStreamableHttpTransport
+                                .builder(webClientBuilder)
+                                .build();
+    ```
+
+    Para modificar dinámicamente las solicitudes HTTP, el builder cuenta con una API específica: `ExchangeFilterFunction`.
+    En esa función, la nueva solicitud puede calcularse en tiempo de ejecución y se puede
+    obtener información adicional del [contexto de Reactor](https://projectreactor.io/docs/core/release/reference/advancedFeatures/context.html).
+    Es común almacenar información de contexto en un `McpTransportContext` dentro del contexto de Reactor,
+    típicamente en McpSyncClient, pero se puede usar cualquier clave de contexto. Por ejemplo:
+
+    ```java
+    WebClient.builder()
+        .filter((request, next) -> {
+            return Mono.deferContextual(ctx -> {
+                var transportContext = ctx.get(McpTransportContext.KEY);
+                var otherInfo = ctx.get("your-context-key");
+                Mono<String> token = obtainAccessToken(transportContext, otherInfo);
+                return token.map(t -> {
+                    var newRequest = ClientRequest.from(request)
+                        .header("Authorization", "Bearer " + t)
+                        .build();
+                    // Asegúrate de llamar a next.exchange para ejecutar la solicitud HTTP
+                    return next.exchange(newRequest);
+                });
+            });
+        });
+    ```
+
+    Para saber cómo poblar la información de contexto, consulta [agregar información de contexto](#adding-context-information).
+  </Tab>
+</Tabs>
+
+<div id="client-capabilities">
+  ## Capacidades del cliente
+</div>
+
+El cliente se puede configurar con varias capacidades:
+
+```java
+var capabilities = ClientCapabilities.builder()
+    .roots(true)      // Habilitar compatibilidad con Raíces del sistema de archivos con notificaciones de cambios en la lista
+    .sampling()       // Habilitar compatibilidad de Muestreo para LLM
+    .elicitation()    // Habilitar la capacidad de Elicitación
+    .build();
+```
+
+<div id="roots-support">
+  ### Compatibilidad con Raíces
+</div>
+
+Las Raíces definen los límites dentro de los cuales los servidores pueden operar en el sistema de archivos:
+
+```java
+// Add a root dynamically
+client.addRoot(new Root("file:///path", "description"));
+
+// Remove a root
+client.removeRoot("file:///path");
+
+// Notify server of roots changes
+client.rootsListChangedNotification();
+```
+
+La capacidad de Raíces permite a los servidores:
+
+* Solicitar la lista de raíces del sistema de archivos accesibles
+* Recibir notificaciones cuando la lista de raíces cambie
+* Entender a qué directorios y archivos tienen acceso
+
+<div id="sampling-support">
+  ### Compatibilidad con Muestreo
+</div>
+
+El muestreo permite que los servidores soliciten interacciones con LLM (“completions” o “generations”) a través del cliente:
+
+```java
+// Configure sampling handler
+Function<CreateMessageRequest, CreateMessageResult> samplingHandler = request -> {
+    // Sampling implementation that interfaces with LLM
+    return new CreateMessageResult(response);
+};
+
+// Create client with sampling support
+var client = McpClient.sync(transport)
+    .capabilities(ClientCapabilities.builder()
+        .sampling()
+        .build())
+    .sampling(samplingHandler)
+    .build();
+```
+
+Esta capacidad permite:
+
+* Que los servidores aprovechen capacidades de IA sin requerir claves de API
+* Que los clientes mantengan el control sobre el acceso y los permisos del modelo
+* Compatibilidad con interacciones de texto y de imagen
+* Inclusión opcional del contexto del Servidor MCP en las indicaciones
+
+<div id="elicitation-support">
+  ### Compatibilidad con Elicitación
+</div>
+
+La Elicitación permite que los servidores soliciten información específica o aclaraciones al cliente:
+
+```java
+// Configurar el controlador de elicitación
+Function<ElicitRequest, ElicitResult> elicitationHandler = request -> {
+    // Implementación de elicitación que interactúa con el LLM
+    return ElicitResult.builder()...build();
+};
+
+// Crear cliente con compatibilidad de elicitación
+var client = McpClient.sync(transport)
+    .capabilities(ClientCapabilities.builder()
+        .elicitation() // habilitar la capacidad de elicitación
+        .build())
+    .elicitation(elicitationHandler) // registrar el controlador de elicitación
+    .build();
+```
+
+<div id="logging-support">
+  ### Compatibilidad con el registro
+</div>
+
+El cliente puede registrar un consumidor de registros para recibir mensajes del servidor y establecer el nivel mínimo de registro para filtrar mensajes:
+
+```java
+var mcpClient = McpClient.sync(transport)
+        .loggingConsumer((LoggingMessageNotification notification) -> {
+            System.out.println("Received log message: " + notification.data());
+        })
+        .build();
+
+mcpClient.initialize();
+
+mcpClient.setLoggingLevel(McpSchema.LoggingLevel.INFO);
+
+// Llamar a la herramienta que puede enviar notificaciones de registro
+CallToolResult result = mcpClient.callTool(new McpSchema.CallToolRequest("logging-test", Map.of()));
+```
+
+Los clientes pueden controlar el nivel mínimo de registro que reciben mediante la solicitud `mcpClient.setLoggingLevel(level)`. Los mensajes por debajo del nivel establecido se filtrarán.
+Niveles de registro admitidos (en orden de gravedad ascendente): DEBUG (0), INFO (1), NOTICE (2), WARNING (3), ERROR (4), CRITICAL (5), ALERT (6), EMERGENCY (7)
+
+<div id="progress-support">
+  ### Compatibilidad con el progreso
+</div>
+
+El Cliente MCP puede registrar un consumidor de progreso para recibir actualizaciones de progreso del Servidor MCP:
+
+```java
+var mcpClient = McpClient.sync(transport)
+        .progressConsumer((ProgressNotification progress) -> {
+            System.out.println("Actualización de progreso recibida: " + progress.data());
+        })
+        .build();
+
+mcpClient.initialize();
+
+// Llama a la herramienta que puede enviar notificaciones de progreso
+CallToolResult result = mcpClient.callTool(new McpSchema.CallToolRequest("progress-test", Map.of()));
+```
+
+<div id="change-notifications">
+  ### Notificaciones de cambios
+</div>
+
+El cliente puede registrar un consumidor de cambios para recibir notificaciones del servidor cuando se actualicen las Herramientas, los Recursos o las Indicaciones:
+
+```java
+
+var spec = McpClient.sync(transport);
+
+// Adds a consumer to be notified when the available tools change, such as tools
+// being added or removed.
+spec.toolsChangeConsumer((List<McpSchema.Tool> tools) -> {
+    // Manejar cambios en las herramientas
+});
+
+// Adds a consumer to be notified when the available resources change, such as resources
+// being added or removed.
+spec.resourcesChangeConsumer((List<McpSchema.Resource> resources) -> {
+    // Manejar cambios en los recursos
+});
+
+// Adds a consumer to be notified when the available prompts change, such as prompts
+// being added or removed.
+spec.promptsChangeConsumer((List<McpSchema.Prompt> prompts) -> {
+    // Manejar cambios en las indicaciones
+
+});
+```
+
+<div id="using-mcp-clients">
+  ## Uso de Clientes MCP
+</div>
+
+<div id="tool-execution">
+  ### Ejecución de herramientas
+</div>
+
+Las herramientas son funciones del lado del servidor que los clientes pueden descubrir y ejecutar. El Cliente MCP proporciona métodos para listar las herramientas disponibles y ejecutarlas con parámetros específicos. Cada herramienta tiene un nombre único y acepta un mapa de parámetros.
+
+<Tabs>
+  <Tab title="Sync API">
+    ```java
+    // Listar las herramientas disponibles y sus nombres
+    var tools = client.listTools();
+    tools.forEach(tool -> System.out.println(tool.getName()));
+
+    // Ejecutar una herramienta con parámetros
+    var result = client.callTool("calculator", Map.of(
+        "operation", "add",
+        "a", 1,
+        "b", 2
+    ));
+    ```
+  </Tab>
+
+  <Tab title="Async API">
+    ```java
+    // Listar las herramientas disponibles de forma asíncrona
+    client.listTools()
+        .doOnNext(tools -> tools.forEach(tool ->
+            System.out.println(tool.getName())))
+        .subscribe();
+
+    // Ejecutar una herramienta de forma asíncrona
+    client.callTool("calculator", Map.of(
+            "operation", "add",
+            "a", 1,
+            "b", 2
+        ))
+        .subscribe();
+    ```
+  </Tab>
+</Tabs>
+
+<div id="resource-access">
+  ### Acceso a Recursos
+</div>
+
+Los Recursos representan fuentes de datos del lado del servidor a las que los clientes pueden acceder mediante plantillas de URI. El Cliente MCP ofrece métodos para descubrir los recursos disponibles y obtener su contenido a través de una interfaz estandarizada.
+
+<Tabs>
+  <Tab title="API sincrónica">
+    ```java
+    // Enumerar los recursos disponibles y sus nombres
+    var resources = client.listResources();
+    resources.forEach(resource -> System.out.println(resource.getName()));
+
+    // Obtener el contenido de un recurso usando una plantilla de URI
+    var content = client.getResource("file", Map.of(
+        "path", "/path/to/file.txt"
+    ));
+    ```
+  </Tab>
+
+  <Tab title="API asíncrona">
+    ```java
+    // Enumerar los recursos disponibles de forma asíncrona
+    client.listResources()
+        .doOnNext(resources -> resources.forEach(resource ->
+            System.out.println(resource.getName())))
+        .subscribe();
+
+    // Obtener el contenido de un recurso de forma asíncrona
+    client.getResource("file", Map.of(
+            "path", "/path/to/file.txt"
+        ))
+        .subscribe();
+    ```
+  </Tab>
+</Tabs>
+
+<div id="prompt-system">
+  ### Sistema de indicaciones
+</div>
+
+El sistema de indicaciones permite interactuar con plantillas de indicaciones del lado del servidor. Estas plantillas se pueden descubrir y ejecutar con parámetros personalizados, lo que habilita la generación dinámica de texto basada en patrones predefinidos.
+
+<Tabs>
+  <Tab title="API síncrona">
+    ```java
+    // Listar las plantillas de indicaciones disponibles
+    var prompts = client.listPrompts();
+    prompts.forEach(prompt -> System.out.println(prompt.getName()));
+
+    // Ejecutar una plantilla de indicación con parámetros
+    var response = client.executePrompt("echo", Map.of(
+        "text", "¡Hola, mundo!"
+    ));
+    ```
+  </Tab>
+
+  <Tab title="API asíncrona">
+    ```java
+    // Listar las plantillas de indicaciones disponibles de forma asíncrona
+    client.listPrompts()
+        .doOnNext(prompts -> prompts.forEach(prompt ->
+            System.out.println(prompt.getName())))
+        .subscribe();
+
+    // Ejecutar una plantilla de indicación de forma asíncrona
+    client.executePrompt("echo", Map.of(
+            "text", "¡Hola, mundo!"
+        ))
+        .subscribe();
+    ```
+  </Tab>
+</Tabs>
+
+<div id="using-completion">
+  ### Uso de Completion
+</div>
+
+Como parte de las [capacidades de Completion](/es/specification/2025-03-26/server/utilities/completion), MCP proporciona una forma estandarizada para que los servidores ofrezcan sugerencias de autocompletado de argumentos para Indicaciones y URI de Recursos.
+
+Consulta las [capacidades de Completion del servidor](/es/sdk/java/mcp-server#completion-specification) para aprender cómo habilitar y configurar las completaciones en el lado del servidor.
+
+En el lado del cliente, el Cliente MCP proporciona métodos para solicitar completaciones automáticas:
+
+<Tabs>
+  <Tab title="Sync API">
+    ```java
+
+    CompleteRequest request = new CompleteRequest(
+            new PromptReference("code_review"),
+            new CompleteRequest.CompleteArgument("language", "py"));
+
+    CompleteResult result = syncMcpClient.completeCompletion(request);
+
+    ```
+  </Tab>
+
+  <Tab title="Async API">
+    ```java
+
+    CompleteRequest request = new CompleteRequest(
+            new PromptReference("code_review"),
+            new CompleteRequest.CompleteArgument("language", "py"));
+
+    Mono<CompleteResult> result = mcpClient.completeCompletion(request);
+
+    ```
+  </Tab>
+</Tabs>
+
+<div id="adding-context-information">
+  ### Añadir información de contexto
+</div>
+
+Las solicitudes HTTP enviadas mediante el transporte SSE o HTTP transmitible pueden personalizarse con APIs específicas (consulta [client transport](#client-transport)). Estos personalizadores pueden necesitar información adicional específica del contexto que debe inyectarse a nivel del cliente.
+
+<Tabs>
+  <Tab title="Sync API">
+    El `McpSyncClient` se utiliza en un entorno bloqueante y puede apoyarse en thread-locals para compartir información.
+    Por ejemplo, algunos frameworks almacenan la solicitud del servidor actual o los tokens de seguridad en un thread-local.
+    Para poner este tipo de información a disposición de los transportes subyacentes, usa `SyncSpec#transportContextProvider`:
+
+    ```java
+    McpClient.sync(transport)
+        .transportContextProvider(() -> {
+            var data = obtainDataFromThreadLocals();
+            return McpTransportContext.create(
+                    Map.of("some-data", data)
+            );
+        })
+        .build();
+    ```
+
+    Este `McpTransportContext` estará disponible en `McpSyncHttpClientRequestCustomizer` basado en HttpClient y en `ExchangeFilterFunction` basado en WebClient.
+  </Tab>
+
+  <Tab title="Async API">
+    El `McpAsyncClient` se utiliza en un entorno reactivo.
+    La información se propaga a través de la cadena reactiva usando el [contexto de Reactor](https://projectreactor.io/docs/core/release/reference/advancedFeatures/context.html).
+    Para insertar datos en el contexto de Reactor, usa `contextWrite` al invocar operaciones del cliente:
+
+    ```java
+    var client = McpClient.async(transport)
+        // ...
+        .build();
+
+    Mono<McpSchema.ListToolsResult> toolList = client
+        .listTools()
+        .contextWrite(ctx -> {
+            var transportContext = McpTransportContext.create(
+                Map.of("some-key", "some value")
+            );
+            return ctx.put(McpTransportContext.KEY, transportContext)
+                .put("reactor-context-key", "some reactor value");
+        });
+    ```
+
+    Con esto, el `McpTransportContext` estará disponible en `McpAsyncHttpClientRequestCustomizer` basado en HttpClient.
+    Todo el contexto de Reactor también está disponible tanto en `McpAsyncHttpClientRequestCustomizer` como en el `ExchangeFilterFunction` de WebClient, mediante `Mono.deferContextual`:
+
+    ```java
+    WebClient.builder()
+        .filter((request, next) -> {
+            return Mono.deferContextual(ctx -> {
+                var transportContext = ctx.get(McpTransportContext.KEY);
+                var someReactorValue = ctx.get("reactor-context-key");
+                // ... use context values ...
+            });
+        });
+    ```
+  </Tab>
+</Tabs>

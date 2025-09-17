@@ -1,0 +1,93 @@
+---
+title: Cancelación
+---
+
+<div id="enable-section-numbers" />
+
+<Info>**Revisión del protocolo**: 2025-06-18</Info>
+
+El Protocolo de Contexto del Modelo (MCP) permite cancelar opcionalmente solicitudes en curso
+mediante mensajes de notificación. Cualquiera de las partes puede enviar una notificación de cancelación para
+indicar que una solicitud previamente emitida debe darse por terminada.
+
+<div id="cancellation-flow">
+  ## Flujo de cancelación
+</div>
+
+Cuando una de las partes quiere cancelar una solicitud en curso, envía la notificación `notifications/cancelled`
+que contiene:
+
+- El ID de la solicitud que se desea cancelar
+- Un motivo opcional en forma de cadena que se puede registrar o mostrar
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/cancelled",
+  "params": {
+    "requestId": "123",
+    "reason": "User requested cancellation"
+  }
+}
+```
+
+<div id="behavior-requirements">
+  ## Requisitos de comportamiento
+</div>
+
+1. Las notificaciones de cancelación **DEBEN** referirse únicamente a solicitudes que:
+   - Hayan sido emitidas previamente en la misma dirección
+   - Se considere que aún están en curso
+2. La solicitud `initialize` **NO DEBE** ser cancelada por los clientes
+3. Los receptores de notificaciones de cancelación **DEBERÍAN**:
+   - Detener el procesamiento de la solicitud cancelada
+   - Liberar los recursos asociados
+   - No enviar una respuesta a la solicitud cancelada
+4. Los receptores **PUEDEN** ignorar las notificaciones de cancelación si:
+   - La solicitud referenciada es desconocida
+   - El procesamiento ya se ha completado
+   - La solicitud no puede cancelarse
+5. El remitente de la notificación de cancelación **DEBERÍA** ignorar cualquier respuesta a la
+   solicitud que llegue posteriormente
+
+<div id="timing-considerations">
+  ## Consideraciones de temporización
+</div>
+
+Debido a la latencia de la red, las notificaciones de cancelación pueden llegar después de que se haya completado el procesamiento de la solicitud e incluso después de que ya se haya enviado una respuesta.
+
+Ambas partes **DEBEN** manejar estas condiciones de carrera de forma segura y robusta:
+
+```mermaid
+sequenceDiagram
+   participant Client
+   participant Server
+
+   Client->>Server: Request (ID: 123)
+   Note over Server: Processing starts
+   Client--)Server: notifications/cancelled (ID: 123)
+   alt
+      Note over Server: Processing may have<br/>completed before<br/>cancellation arrives
+   else If not completed
+      Note over Server: Stop processing
+   end
+```
+
+<div id="implementation-notes">
+  ## Notas de implementación
+</div>
+
+- Ambas partes **DEBERÍAN** registrar los motivos de cancelación para fines de depuración
+- Las interfaces de usuario de la aplicación **DEBERÍAN** indicar cuando se solicite la cancelación
+
+<div id="error-handling">
+  ## Manejo de errores
+</div>
+
+Las notificaciones de cancelación no válidas **DEBERÍAN** ignorarse:
+
+- IDs de solicitud desconocidos
+- Solicitudes ya completadas
+- Notificaciones malformadas
+
+Esto mantiene la naturaleza de “fire and forget” de las notificaciones, al tiempo que permite condiciones de carrera en la comunicación asíncrona.

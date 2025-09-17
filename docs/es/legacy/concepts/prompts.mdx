@@ -1,0 +1,454 @@
+---
+title: "Indicaciones"
+description: "Cree plantillas de indicaciones y flujos de trabajo reutilizables"
+---
+
+Las Indicaciones permiten que los servidores definan plantillas de indicaciones y flujos de trabajo reutilizables que los clientes pueden presentar fácilmente a los usuarios y a los LLM. Ofrecen una forma potente de estandarizar y compartir interacciones comunes con LLM.
+
+<Note>
+
+Las Indicaciones están diseñadas para ser **controladas por el usuario**, lo que significa que se exponen desde los servidores a los clientes con la intención de que el usuario pueda seleccionarlas explícitamente para su uso.
+
+</Note>
+
+<div id="overview">
+  ## Descripción general
+</div>
+
+Las Indicaciones en MCP son plantillas predefinidas que pueden:
+
+- Aceptar argumentos dinámicos
+- Incluir contexto de Recursos
+- Encadenar múltiples interacciones
+- Guiar flujos de trabajo específicos
+- Mostrarse como elementos de la interfaz (como comandos de barra)
+
+<div id="prompt-structure">
+  ## Estructura de la indicación
+</div>
+
+Cada indicación se define con:
+
+```typescript
+{
+  name: string;              // Identificador único de la indicación
+  description?: string;      // Descripción en lenguaje natural
+  arguments?: [              // Lista opcional de argumentos
+    {
+      name: string;          // Identificador del argumento
+      description?: string;  // Descripción del argumento
+      required?: boolean;    // Si el argumento es obligatorio
+    }
+  ]
+}
+```
+
+<div id="discovering-prompts">
+  ## Descubrir indicaciones
+</div>
+
+Los clientes pueden descubrir las indicaciones disponibles enviando una solicitud `prompts/list`:
+
+```typescript
+// Request
+{
+  method: "prompts/list";
+}
+
+// Response
+{
+  prompts: [
+    {
+      name: "analyze-code",
+      description: "Analyze code for potential improvements",
+      arguments: [
+        {
+          name: "language",
+          description: "Programming language",
+          required: true,
+        },
+      ],
+    },
+  ];
+}
+```
+
+<div id="using-prompts">
+  ## Uso de indicaciones
+</div>
+
+Para usar una indicación, los clientes realizan una solicitud `prompts/get`:
+
+````typescript
+// Request
+{
+  method: "prompts/get",
+  params: {
+    name: "analyze-code",
+    arguments: {
+      language: "python"
+    }
+  }
+}
+
+// Response
+{
+  description: "Analizar código Python para posibles mejoras",
+  messages: [
+    {
+      role: "user",
+      content: {
+        type: "text",
+        text: "Por favor, analiza el siguiente código de Python en busca de posibles mejoras:\n\n```python\ndef calculate_sum(numbers):\n    total = 0\n    for num in numbers:\n        total = total + num\n    return total\n\nresult = calculate_sum([1, 2, 3, 4, 5])\nprint(result)\n```"
+      }
+    }
+  ]
+}
+````
+
+<div id="dynamic-prompts">
+  ## Indicaciones dinámicas
+</div>
+
+Las indicaciones pueden ser dinámicas e incluir:
+
+<div id="embedded-resource-context">
+  ### Contexto de recursos incrustados
+</div>
+
+```json
+{
+  "name": "analyze-project",
+  "description": "Analizar registros del proyecto y código",
+  "arguments": [
+    {
+      "name": "timeframe",
+      "description": "Periodo de tiempo para analizar los registros",
+      "required": true
+    },
+    {
+      "name": "fileUri",
+      "description": "URI del archivo de código a revisar",
+      "required": true
+    }
+  ]
+}
+```
+
+Al manejar la solicitud `prompts/get`:
+
+```json
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": {
+        "type": "text",
+        "text": "Analiza estos registros del sistema y el archivo de código para detectar cualquier problema:"
+      }
+    },
+    {
+      "role": "user",
+      "content": {
+        "type": "resource",
+        "resource": {
+          "uri": "logs://recent?timeframe=1h",
+          "text": "[2024-03-14 15:32:11] ERROR: Connection timeout in network.py:127\n[2024-03-14 15:32:15] WARN: Retrying connection (attempt 2/3)\n[2024-03-14 15:32:20] ERROR: Max retries exceeded",
+          "mimeType": "text/plain"
+        }
+      }
+    },
+    {
+      "role": "user",
+      "content": {
+        "type": "resource",
+        "resource": {
+          "uri": "file:///path/to/code.py",
+          "text": "def connect_to_service(timeout=30):\n    retries = 3\n    for attempt in range(retries):\n        try:\n            return establish_connection(timeout)\n        except TimeoutError:\n            if attempt == retries - 1:\n                raise\n            time.sleep(5)\n\ndef establish_connection(timeout):\n    # Connection implementation\n    pass",
+          "mimeType": "text/x-python"
+        }
+      }
+    }
+  ]
+}
+```
+
+<div id="multi-step-workflows">
+  ### Flujos de trabajo de varios pasos
+</div>
+
+```typescript
+const debugWorkflow = {
+  name: "debug-error",
+  async getMessages(error: string) {
+    return [
+      {
+        role: "user",
+        content: {
+          type: "text",
+          text: `Este es un error que estoy viendo: ${error}`,
+        },
+      },
+      {
+        role: "assistant",
+        content: {
+          type: "text",
+          text: "Te ayudaré a analizar este error. ¿Qué has intentado hasta ahora?",
+        },
+      },
+      {
+        role: "user",
+        content: {
+          type: "text",
+          text: "He intentado reiniciar el servicio, pero el error persiste.",
+        },
+      },
+    ];
+  },
+};
+```
+
+<div id="example-implementation">
+  ## Implementación de ejemplo
+</div>
+
+Aquí tienes un ejemplo completo de cómo implementar Indicaciones en un Servidor MCP:
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Server } from "@modelcontextprotocol/sdk/server";
+import {
+  ListPromptsRequestSchema,
+  GetPromptRequestSchema,
+} from "@modelcontextprotocol/sdk/types";
+
+const PROMPTS = {
+  "git-commit": {
+    name: "git-commit",
+    description: "Generate a Git commit message",
+    arguments: [
+      {
+        name: "changes",
+        description: "Git diff or description of changes",
+        required: true,
+      },
+    ],
+  },
+  "explain-code": {
+    name: "explain-code",
+    description: "Explain how code works",
+    arguments: [
+      {
+        name: "code",
+        description: "Code to explain",
+        required: true,
+      },
+      {
+        name: "language",
+        description: "Programming language",
+        required: false,
+      },
+    ],
+  },
+};
+
+const server = new Server(
+  {
+    name: "example-prompts-server",
+    version: "1.0.0",
+  },
+  {
+    capabilities: {
+      prompts: {},
+    },
+  },
+);
+
+// Listar indicaciones disponibles
+server.setRequestHandler(ListPromptsRequestSchema, async () => {
+  return {
+    prompts: Object.values(PROMPTS),
+  };
+});
+
+// Obtener una indicación específica
+server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+  const prompt = PROMPTS[request.params.name];
+  if (!prompt) {
+    throw new Error(`Prompt not found: ${request.params.name}`);
+  }
+
+  if (request.params.name === "git-commit") {
+    return {
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: `Generate a concise but descriptive commit message for these changes:\n\n${request.params.arguments?.changes}`,
+          },
+        },
+      ],
+    };
+  }
+
+  if (request.params.name === "explain-code") {
+    const language = request.params.arguments?.language || "Unknown";
+    return {
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: `Explain how this ${language} code works:\n\n${request.params.arguments?.code}`,
+          },
+        },
+      ],
+    };
+  }
+
+  throw new Error("Prompt implementation not found");
+});
+```
+
+```python Python
+from mcp.server import Server
+import mcp.types as types
+
+# Definir indicaciones disponibles
+PROMPTS = {
+    "git-commit": types.Prompt(
+        name="git-commit",
+        description="Generate a Git commit message",
+        arguments=[
+            types.PromptArgument(
+                name="changes",
+                description="Git diff or description of changes",
+                required=True
+            )
+        ],
+    ),
+    "explain-code": types.Prompt(
+        name="explain-code",
+        description="Explain how code works",
+        arguments=[
+            types.PromptArgument(
+                name="code",
+                description="Code to explain",
+                required=True
+            ),
+            types.PromptArgument(
+                name="language",
+                description="Programming language",
+                required=False
+            )
+        ],
+    )
+}
+
+# Inicializar el servidor
+app = Server("example-prompts-server")
+
+@app.list_prompts()
+async def list_prompts() -> list[types.Prompt]:
+    return list(PROMPTS.values())
+
+@app.get_prompt()
+async def get_prompt(
+    name: str, arguments: dict[str, str] | None = None
+) -> types.GetPromptResult:
+    if name not in PROMPTS:
+        raise ValueError(f"Prompt not found: {name}")
+
+    if name == "git-commit":
+        changes = arguments.get("changes") if arguments else ""
+        return types.GetPromptResult(
+            messages=[
+                types.PromptMessage(
+                    role="user",
+                    content=types.TextContent(
+                        type="text",
+                        text=f"Generate a concise but descriptive commit message "
+                        f"for these changes:\n\n{changes}"
+                    )
+                )
+            ]
+        )
+
+    if name == "explain-code":
+        code = arguments.get("code") if arguments else ""
+        language = arguments.get("language", "Unknown") if arguments else "Unknown"
+        return types.GetPromptResult(
+            messages=[
+                types.PromptMessage(
+                    role="user",
+                    content=types.TextContent(
+                        type="text",
+                        text=f"Explain how this {language} code works:\n\n{code}"
+                    )
+                )
+            ]
+        )
+
+    raise ValueError("Prompt implementation not found")
+```
+
+</CodeGroup>
+
+<div id="best-practices">
+  ## Mejores prácticas
+</div>
+
+Al implementar Indicaciones:
+
+1. Usa nombres de Indicaciones claros y descriptivos
+2. Proporciona descripciones detalladas para las Indicaciones y sus argumentos
+3. Valida todos los argumentos obligatorios
+4. Gestiona adecuadamente la ausencia de argumentos
+5. Considera el versionado de las plantillas de Indicaciones
+6. Almacena en caché el contenido dinámico cuando sea apropiado
+7. Implementa el manejo de errores
+8. Documenta los formatos de argumentos esperados
+9. Considera la componibilidad de las Indicaciones
+10. Prueba las Indicaciones con diversos tipos de entrada
+
+<div id="ui-integration">
+  ## Integración de la interfaz de usuario
+</div>
+
+Las Indicaciones pueden mostrarse en las interfaces de los clientes como:
+
+- Comandos de barra diagonal
+- Acciones rápidas
+- Elementos del menú contextual
+- Entradas de la paleta de comandos
+- Flujos de trabajo guiados
+- Formularios interactivos
+
+<div id="updates-and-changes">
+  ## Actualizaciones y cambios
+</div>
+
+Los servidores pueden notificar a los clientes sobre cambios en las Indicaciones:
+
+1. Capacidad del servidor: `prompts.listChanged`
+2. Notificación: `notifications/prompts/list_changed`
+3. El cliente vuelve a recuperar la lista de Indicaciones
+
+<div id="security-considerations">
+  ## Consideraciones de seguridad
+</div>
+
+Al implementar indicaciones:
+
+- Valida todos los argumentos
+- Depura/sanea la entrada del usuario
+- Considera la limitación de tasa
+- Implementa controles de acceso
+- Audita el uso de las indicaciones
+- Gestiona adecuadamente los datos sensibles
+- Valida el contenido generado
+- Implementa tiempos de espera
+- Considera los riesgos de inyección de indicaciones
+- Documenta los requisitos de seguridad

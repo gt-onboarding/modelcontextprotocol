@@ -1,0 +1,387 @@
+---
+title: "Arquitectura básica"
+description: "Entiende cómo el MCP conecta clientes, servidores y LLM"
+---
+
+El Protocolo de Contexto de Modelo (MCP) se basa en una arquitectura flexible y extensible que permite una comunicación sin fricciones entre aplicaciones de LLM e integraciones. Este documento cubre los componentes y conceptos arquitectónicos fundamentales.
+
+<div id="overview">
+  ## Descripción general
+</div>
+
+MCP sigue una arquitectura cliente-servidor donde:
+
+* Los **hosts** son aplicaciones de LLM (como Claude Desktop o IDE) que inician las conexiones
+* Los **clientes** mantienen conexiones 1:1 con servidores dentro de la aplicación host
+* Los **servidores** proporcionan contexto, Herramientas e Indicaciones a los clientes
+
+```mermaid
+flowchart LR
+    subgraph "Host"
+        client1[MCP Client]
+        client2[MCP Client]
+    end
+    subgraph "Server Process"
+        server1[MCP Server]
+    end
+    subgraph "Server Process"
+        server2[MCP Server]
+    end
+
+    client1 <-->|Transport Layer| server1
+    client2 <-->|Transport Layer| server2
+```
+
+<div id="core-components">
+  ## Componentes fundamentales
+</div>
+
+<div id="protocol-layer">
+  ### Capa de protocolo
+</div>
+
+La capa de protocolo se encarga del encuadre de mensajes, del enlace solicitud/respuesta y de los patrones de comunicación de alto nivel.
+
+<CodeGroup>
+  ```typescript TypeScript
+  class Protocol<Request, Notification, Result> {
+    // Gestionar solicitudes entrantes
+    setRequestHandler<T>(
+      schema: T,
+      handler: (request: T, extra: RequestHandlerExtra) => Promise<Result>,
+    ): void;
+
+    // Gestionar notificaciones entrantes
+    setNotificationHandler<T>(
+      schema: T,
+      handler: (notification: T) => Promise<void>,
+    ): void;
+
+    // Enviar solicitudes y esperar respuestas
+    request<T>(request: Request, schema: T, options?: RequestOptions): Promise<T>;
+
+    // Enviar notificaciones unidireccionales
+    notification(notification: Notification): Promise<void>;
+  }
+  ```
+
+  ```python Python
+  class Session(BaseSession[RequestT, NotificationT, ResultT]):
+      async def send_request(
+          self,
+          request: RequestT,
+          result_type: type[Result]
+      ) -> Result:
+          """Enviar una solicitud y esperar la respuesta. Lanza McpError si la respuesta contiene un error."""
+          # Implementación del manejo de solicitudes
+
+      async def send_notification(
+          self,
+          notification: NotificationT
+      ) -> None:
+          """Enviar una notificación unidireccional que no espera respuesta."""
+          # Implementación del manejo de notificaciones
+
+      async def _received_request(
+          self,
+          responder: RequestResponder[ReceiveRequestT, ResultT]
+      ) -> None:
+          """Gestionar una solicitud entrante desde el otro lado."""
+          # Implementación del manejo de solicitudes
+
+      async def _received_notification(
+          self,
+          notification: ReceiveNotificationT
+      ) -> None:
+          """Gestionar una notificación entrante desde el otro lado."""
+          # Implementación del manejo de notificaciones
+  ```
+</CodeGroup>
+
+Las clases clave incluyen:
+
+* `Protocol`
+* `Client`
+* `Server`
+
+<div id="transport-layer">
+  ### Capa de transporte
+</div>
+
+La capa de transporte gestiona la comunicación efectiva entre clientes y servidores. MCP admite varios mecanismos de transporte:
+
+1. **Transporte Stdio**
+   * Utiliza la entrada/salida estándar para la comunicación
+   * Ideal para procesos locales
+
+2. **Transporte HTTP Transmisible**
+   * Utiliza HTTP con Server-Sent Events opcionales para transmisión
+   * HTTP POST para mensajes de cliente a servidor
+
+Todos los transportes utilizan [JSON-RPC](https://www.jsonrpc.org/) 2.0 para intercambiar mensajes. Consulta la [especificación](/es/specification/) para obtener información detallada sobre el formato de mensajes del Protocolo de Contexto de Modelo (MCP).
+
+<div id="message-types">
+  ### Tipos de mensajes
+</div>
+
+MCP cuenta con estos tipos principales de mensajes:
+
+1. **Solicitudes** esperan una respuesta de la otra parte:
+
+   ```typescript
+   interface Request {
+     method: string;
+     params?: { ... };
+   }
+   ```
+
+2. **Resultados** son respuestas satisfactorias a solicitudes:
+
+   ```typescript
+   interface Result {
+     [key: string]: unknown;
+   }
+   ```
+
+3. **Errores** indican que una solicitud ha fallado:
+
+   ```typescript
+   interface Error {
+     code: number;
+     message: string;
+     data?: unknown;
+   }
+   ```
+
+4. **Notificaciones** son mensajes unidireccionales que no esperan respuesta:
+   ```typescript
+   interface Notification {
+     method: string;
+     params?: { ... };
+   }
+   ```
+
+<div id="connection-lifecycle">
+  ## Ciclo de vida de la conexión
+</div>
+
+<div id="1-initialization">
+  ### 1. Inicialización
+</div>
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Server
+
+    Client->>Server: initialize request
+    Server->>Client: initialize response
+    Client->>Server: initialized notification
+
+    Note over Client,Server: Conexión lista para usar
+```
+
+1. El cliente envía la solicitud `initialize` con la versión del protocolo y las capacidades
+2. El servidor responde con su versión del protocolo y sus capacidades
+3. El cliente envía la notificación `initialized` como acuse de recibo
+4. Comienza el intercambio normal de mensajes
+
+<div id="2-message-exchange">
+  ### 2. Intercambio de mensajes
+</div>
+
+Tras la inicialización, se admiten los siguientes patrones:
+
+* **Solicitud-respuesta**: El cliente o el servidor envía solicitudes y la otra parte responde
+* **Notificaciones**: Cualquiera de las partes envía mensajes unidireccionales
+
+<div id="3-termination">
+  ### 3. Terminación
+</div>
+
+Cualquiera de las partes puede finalizar la conexión:
+
+* Cierre ordenado mediante `close()`
+* Desconexión del transporte
+* Condiciones de error
+
+<div id="error-handling">
+  ## Manejo de errores
+</div>
+
+MCP define estos códigos de error estándar:
+
+```typescript
+enum ErrorCode {
+  // Códigos de error estándar de JSON-RPC
+  ParseError = -32700,
+  InvalidRequest = -32600,
+  MethodNotFound = -32601,
+  InvalidParams = -32602,
+  InternalError = -32603,
+}
+```
+
+Los SDK y las aplicaciones pueden definir sus propios códigos de error por encima de -32000.
+
+Los errores se propagan mediante:
+
+* Respuestas de error a las solicitudes
+* Eventos de error en los transportes
+* Manejadores de errores a nivel de protocolo
+
+<div id="implementation-example">
+  ## Ejemplo de implementación
+</div>
+
+Aquí tienes un ejemplo básico de cómo implementar un Servidor MCP:
+
+<CodeGroup>
+  ```typescript TypeScript
+  import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+  import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+
+  const server = new Server(
+    {
+      name: "example-server",
+      version: "1.0.0",
+    },
+    {
+      capabilities: {
+        resources: {},
+      },
+    },
+  );
+
+  // Manejar solicitudes
+  server.setRequestHandler(ListResourcesRequestSchema, async () => {
+    return {
+      resources: [
+        {
+          uri: "example://resource",
+          name: "Example Resource",
+        },
+      ],
+    };
+  });
+
+  // Conectar transporte
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+  ```
+
+  ```python Python
+  import asyncio
+  import mcp.types as types
+  from mcp.server import Server
+  from mcp.server.stdio import stdio_server
+
+  app = Server("example-server")
+
+  @app.list_resources()
+  async def list_resources() -> list[types.Resource]:
+      return [
+          types.Resource(
+              uri="example://resource",
+              name="Example Resource"
+          )
+      ]
+
+  async def main():
+      async with stdio_server() as streams:
+          await app.run(
+              streams[0],
+              streams[1],
+              app.create_initialization_options()
+          )
+
+  if __name__ == "__main__":
+      asyncio.run(main())
+  ```
+</CodeGroup>
+
+<div id="best-practices">
+  ## Buenas prácticas
+</div>
+
+<div id="transport-selection">
+  ### Selección de transporte
+</div>
+
+1. **Comunicación local**
+   * Usa el transporte stdio para procesos locales
+   * Eficiente para la comunicación en la misma máquina
+   * Gestión de procesos sencilla
+
+2. **Comunicación remota**
+   * Usa HTTP Transmisible para escenarios que requieren compatibilidad con HTTP
+   * Considera las implicaciones de seguridad, incluidas la autenticación y la autorización
+
+<div id="message-handling">
+  ### Manejo de mensajes
+</div>
+
+1. **Procesamiento de solicitudes**
+   * Validar exhaustivamente las entradas
+   * Usar esquemas con tipos seguros
+   * Gestionar los errores con elegancia
+   * Implementar límites de tiempo
+
+2. **Reporte de progreso**
+   * Usar tokens de progreso para operaciones prolongadas
+   * Reportar el progreso de forma incremental
+   * Incluir el progreso total cuando se conozca
+
+3. **Gestión de errores**
+   * Usar códigos de error apropiados
+   * Incluir mensajes de error útiles
+   * Liberar recursos en caso de errores
+
+<div id="security-considerations">
+  ## Consideraciones de seguridad
+</div>
+
+1. **Seguridad del transporte**
+   * Usar TLS para conexiones remotas
+   * Validar el origen de las conexiones
+   * Implementar autenticación cuando sea necesario
+
+2. **Validación de mensajes**
+   * Validar todos los mensajes entrantes
+   * Depurar/sanitizar las entradas
+   * Verificar los límites de tamaño de los mensajes
+   * Verificar el formato JSON-RPC
+
+3. **Protección de recursos**
+   * Implementar controles de acceso
+   * Validar las rutas de los recursos
+   * Supervisar el uso de los recursos
+   * Limitar la tasa de solicitudes
+
+4. **Manejo de errores**
+   * No exponer información sensible
+   * Registrar errores relevantes para la seguridad
+   * Implementar una limpieza adecuada
+   * Manejar escenarios de DoS
+
+<div id="debugging-and-monitoring">
+  ## Depuración y monitoreo
+</div>
+
+1. **Registro**
+   * Registrar eventos del protocolo
+   * Rastrear el flujo de mensajes
+   * Supervisar el rendimiento
+   * Registrar errores
+
+2. **Diagnóstico**
+   * Implementar comprobaciones de estado
+   * Supervisar el estado de la conexión
+   * Rastrear el uso de recursos
+   * Perfilar el rendimiento
+
+3. **Pruebas**
+   * Probar distintos transportes
+   * Verificar el manejo de errores
+   * Comprobar casos límite
+   * Realizar pruebas de carga a los servidores

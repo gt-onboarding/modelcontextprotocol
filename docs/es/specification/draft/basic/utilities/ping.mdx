@@ -1,0 +1,78 @@
+---
+title: Ping
+---
+
+<div id="enable-section-numbers" />
+
+<Info>**Revisión del protocolo**: borrador</Info>
+
+El Protocolo de Contexto del Modelo (MCP) incluye un mecanismo de ping opcional que permite a cualquiera de las partes verificar que su contraparte siga respondiendo y que la conexión siga activa.
+
+<div id="overview">
+  ## Descripción general
+</div>
+
+La funcionalidad de ping se implementa mediante un patrón sencillo de solicitud y respuesta. Tanto el cliente como el servidor pueden iniciar un ping enviando una solicitud de `ping`.
+
+<div id="message-format">
+  ## Formato del mensaje
+</div>
+
+Una solicitud de ping es una solicitud estándar de JSON-RPC sin parámetros:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "123",
+  "method": "ping"
+}
+```
+
+<div id="behavior-requirements">
+  ## Requisitos de comportamiento
+</div>
+
+1. El receptor **DEBE** responder de inmediato con una respuesta vacía:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "123",
+  "result": {}
+}
+```
+
+2. Si no se recibe una respuesta dentro de un tiempo de espera razonable, el remitente **PUEDE**:
+   - Considerar la conexión inactiva
+   - Finalizar la conexión
+   - Intentar procedimientos de reconexión
+
+<div id="usage-patterns">
+  ## Patrones de uso
+</div>
+
+```mermaid
+sequenceDiagram
+    participant Sender
+    participant Receiver
+
+    Sender->>Receiver: solicitud de ping
+    Receiver->>Sender: respuesta vacía
+```
+
+<div id="implementation-considerations">
+  ## Consideraciones de implementación
+</div>
+
+- Las implementaciones **DEBERÍAN** enviar pings periódicamente para comprobar la salud de la conexión
+- La frecuencia de los pings **DEBERÍA** ser configurable
+- Los tiempos de espera **DEBERÍAN** adecuarse al entorno de red
+- Se **DEBERÍA** evitar un ping excesivo para reducir la sobrecarga de red
+
+<div id="error-handling">
+  ## Manejo de errores
+</div>
+
+- Los tiempos de espera **DEBERÍAN** tratarse como errores de conexión
+- Varios pings fallidos **PUEDEN** provocar el restablecimiento de la conexión
+- Las implementaciones **DEBERÍAN** registrar los fallos de ping para fines de diagnóstico

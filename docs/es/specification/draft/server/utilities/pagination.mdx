@@ -1,0 +1,107 @@
+---
+title: Paginación
+---
+
+<div id="enable-section-numbers" />
+
+<Info>**Revisión del protocolo**: borrador</Info>
+
+El Protocolo de Contexto del Modelo (MCP) admite la paginación de operaciones de listado que pueden devolver conjuntos de resultados grandes. La paginación permite que los servidores entreguen resultados en lotes más pequeños en lugar de todo de una vez.
+
+La paginación es especialmente importante al conectarse a servicios externos por internet, pero también resulta útil en integraciones locales para evitar problemas de rendimiento con conjuntos de datos voluminosos.
+
+<div id="pagination-model">
+  ## Modelo de paginación
+</div>
+
+La paginación en MCP utiliza un enfoque opaco basado en cursores, en lugar de páginas numeradas.
+
+- El **cursor** es un token de texto opaco que representa una posición en el conjunto de resultados
+- El **tamaño de página** lo determina el servidor, y los clientes **NO DEBEN** asumir un tamaño de página fijo
+
+<div id="response-format">
+  ## Formato de respuesta
+</div>
+
+La paginación comienza cuando el servidor envía una **respuesta** que incluye:
+
+- La página actual de resultados
+- Un campo opcional `nextCursor` si hay más resultados
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "123",
+  "result": {
+    "resources": [...],
+    "nextCursor": "eyJwYWdlIjogM30="
+  }
+}
+```
+
+<div id="request-format">
+  ## Formato de la solicitud
+</div>
+
+Tras recibir un cursor, el cliente puede _continuar_ con la paginación enviando una solicitud
+que incluya ese cursor:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "resources/list",
+  "params": {
+    "cursor": "eyJwYWdlIjogMn0="
+  }
+}
+```
+
+<div id="pagination-flow">
+  ## Flujo de paginación
+</div>
+
+```mermaid
+sequenceDiagram
+    participant Cliente
+    participant Servidor
+
+    Cliente->>Servidor: Solicitud de listado (sin cursor)
+    loop Bucle de paginación
+      Servidor-->>Cliente: Página de resultados + nextCursor
+      Cliente->>Servidor: Solicitud de listado (con cursor)
+    end
+```
+
+<div id="operations-supporting-pagination">
+  ## Operaciones que admiten paginación
+</div>
+
+Las siguientes operaciones de MCP admiten paginación:
+
+- `resources/list` - Lista los recursos disponibles
+- `resources/templates/list` - Lista las plantillas de recursos
+- `prompts/list` - Lista las indicaciones disponibles
+- `tools/list` - Lista las herramientas disponibles
+
+<div id="implementation-guidelines">
+  ## Directrices de implementación
+</div>
+
+1. Los servidores **DEBERÍAN**:
+   - Proporcionar cursores estables
+   - Manejar cursores no válidos de forma adecuada
+
+2. Los clientes **DEBERÍAN**:
+   - Considerar la ausencia de `nextCursor` como el final de los resultados
+   - Admitir flujos paginados y no paginados
+
+3. Los clientes **DEBEN** tratar los cursores como tokens opacos:
+   - No hacer suposiciones sobre el formato del cursor
+   - No intentar interpretar ni modificar los cursores
+   - No conservar los cursores entre sesiones
+
+<div id="error-handling">
+  ## Manejo de errores
+</div>
+
+Los cursores no válidos **DEBERÍAN** dar como resultado un error con el código -32602 (Parámetros no válidos).
