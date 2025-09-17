@@ -1,0 +1,125 @@
+---
+title: 概要
+---
+
+<Info>**プロトコル改訂**: 2025-03-26</Info>
+
+Model Context Protocol（MCP）は、連携して機能する複数の主要コンポーネントから構成されます。
+
+* **ベースプロトコル**: 中核となる JSON-RPC メッセージ型
+* **ライフサイクル管理**: 接続の初期化、機能ネゴシエーション、セッション制御
+* **サーバー機能**: サーバーが公開するリソース、プロンプト、ツール
+* **クライアント機能**: クライアントが提供するサンプリングとルーツ一覧
+* **ユーティリティ**: ログ記録や引数補完などの横断的関心事
+
+すべての実装は、ベースプロトコルとライフサイクル管理コンポーネントを**必ず**サポートする必要があります。その他のコンポーネントは、アプリケーションの特定のニーズに応じて**任意**に実装できます。
+
+これらのプロトコル層は、関心の分離を明確にしつつ、クライアントとサーバー間の豊かな相互作用を可能にします。モジュール式の設計により、実装は必要な機能だけを的確にサポートできます。
+
+<div id="messages">
+  ## メッセージ
+</div>
+
+MCPクライアントとサーバー間のすべてのメッセージは、[JSON-RPC 2.0](https://www.jsonrpc.org/specification) の仕様に準拠している必要があります。プロトコルでは、次の種類のメッセージを定義しています。
+
+<div id="requests">
+  ### リクエスト
+</div>
+
+リクエストは、クライアントからサーバーへ、またはその逆に送信され、処理を開始します。
+
+```typescript
+{
+  jsonrpc: "2.0";
+  id: string | number;
+  method: string;
+  params?: {
+    [key: string]: unknown;
+  };
+}
+```
+
+* リクエストには文字列または整数のIDを含めることが**必須です**。
+* ベースのJSON-RPCとは異なり、IDを`null`にしては**いけません**。
+* 同一セッション内で、リクエスト発行者が以前に使用したことのあるリクエストIDを再利用しては**いけません**。
+
+<div id="responses">
+  ### レスポンス
+</div>
+
+レスポンスはリクエストへの返信として送信され、操作の結果またはエラーを含みます。
+
+```typescript
+{
+  jsonrpc: "2.0";
+  id: string | number;
+  result?: {
+    [key: string]: unknown;
+  }
+  error?: {
+    code: number;
+    message: string;
+    data?: unknown;
+  }
+}
+```
+
+* レスポンスは、対応するリクエストと同じIDを含めることが**必須**です。
+* **レスポンス**はさらに、**成功結果**または**エラー**のいずれかに分類されます。`result`または`error`のいずれかを**必ず**設定しなければなりません。両方を設定しては**なりません**。
+* 結果は任意のJSONオブジェクト構造を取っても**かまいません**が、エラーは少なくともエラーコードとメッセージを含めることが**必須**です。
+* エラーコードは整数であることが**必須**です。
+
+<div id="notifications">
+  ### 通知
+</div>
+
+通知はクライアントからサーバーへ、またはその逆に、一方向のメッセージとして送信されます。
+受信側は応答を送ってはなりません（MUST NOT）。
+
+```typescript
+{
+  jsonrpc: "2.0";
+  method: string;
+  params?: {
+    [key: string]: unknown;
+  };
+}
+```
+
+* 通知にIDを含めてはなりません（MUST NOT）。
+
+<div id="batching">
+  ### バッチ処理
+</div>
+
+JSON-RPC では、配列で送信することで
+[複数のリクエストや通知をバッチ化](https://www.jsonrpc.org/specification#batch)
+する手段も定義されています。MCP 実装は JSON-RPC のバッチ送信をサポートしてもよい（MAY）が、JSON-RPC のバッチ受信は必ずサポートしなければなりません（MUST）。
+
+<div id="auth">
+  ## 認可
+</div>
+
+MCPはHTTPで使用するための[Authorization](/ja/specification/2025-03-26/basic/authorization)フレームワークを提供します。
+HTTPベースのトランスポートを使用する実装は、この仕様に**準拠すべきです（SHOULD）**。
+一方、STDIOトランスポートを使用する実装は、この仕様に**従うべきではありません（SHOULD NOT）**。
+その場合は、認証情報は環境から取得してください。
+
+また、クライアントとサーバーは、独自のカスタム認証・認可戦略を
+相互に取り決めることも**可能です（MAY）**。
+
+MCPの認証メカニズムの進化に向けた議論や貢献については、ぜひ
+[GitHub Discussions](https://github.com/modelcontextprotocol/specification/discussions)
+に参加して、プロトコルの将来づくりにご協力ください！
+
+<div id="schema">
+  ## スキーマ
+</div>
+
+このプロトコルの完全な仕様は、
+[TypeScript スキーマ](https://github.com/modelcontextprotocol/specification/blob/main/schema/2025-03-26/schema.ts)
+として定義されています。これは、すべてのプロトコルメッセージと構造に関する唯一の正確な参照元（ソース・オブ・トゥルース）です。
+
+また、
+[JSON Schema](https://github.com/modelcontextprotocol/specification/blob/main/schema/2025-03-26/schema.json)
+もあり、TypeScript のソース・オブ・トゥルースから自動生成され、各種の自動化ツールで利用できます。

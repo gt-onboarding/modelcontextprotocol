@@ -1,0 +1,107 @@
+---
+title: ページネーション
+---
+
+<div id="enable-section-numbers" />
+
+<Info>**プロトコル改訂**: draft</Info>
+
+Model Context Protocol（MCP）は、大きな結果セットを返しうる一覧操作に対してページネーションをサポートします。ページネーションにより、サーバーは結果を一度にすべて返すのではなく、より小さな単位に分割して返せます。
+
+ページネーションは、インターネット経由で外部サービスに接続する場合に特に重要ですが、大規模なデータセットによるパフォーマンス問題を避けるため、ローカル統合でも有用です。
+
+<div id="pagination-model">
+  ## ページネーションモデル
+</div>
+
+MCP のページネーションは、ページ番号ではなく不透明なカーソル方式を用います。
+
+- **カーソル**は、結果セット内の位置を示す不透明な文字列トークンです
+- **ページサイズ**はサーバーが決定し、クライアントは固定のページサイズを前提としては**いけません**
+
+<div id="response-format">
+  ## レスポンス形式
+</div>
+
+ページネーションは、サーバーが次を含む**レスポンス**を送信した時点で開始されます：
+
+- 現在の結果ページ
+- 追加の結果がある場合に含まれる省略可能な `nextCursor` フィールド
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "123",
+  "result": {
+    "resources": [...],
+    "nextCursor": "eyJwYWdlIjogM30="
+  }
+}
+```
+
+<div id="request-format">
+  ## リクエスト形式
+</div>
+
+カーソルを受け取った後、クライアントはそのカーソルを含むリクエストを送信することで、ページングを_継続_できます。
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "resources/list",
+  "params": {
+    "cursor": "eyJwYWdlIjogMn0="
+  }
+}
+```
+
+<div id="pagination-flow">
+  ## ページネーションのフロー
+</div>
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Server
+
+    Client->>Server: 一覧リクエスト（カーソルなし）
+    loop ページネーションループ
+      Server-->>Client: 結果ページ + nextCursor
+      Client->>Server: 一覧リクエスト（カーソルあり）
+    end
+```
+
+<div id="operations-supporting-pagination">
+  ## ページネーション対応の操作
+</div>
+
+次の MCP の操作はページネーションに対応しています:
+
+- `resources/list` - 利用可能なリソースの一覧
+- `resources/templates/list` - リソーステンプレートの一覧
+- `prompts/list` - 利用可能なプロンプトの一覧
+- `tools/list` - 利用可能なツールの一覧
+
+<div id="implementation-guidelines">
+  ## 実装ガイドライン
+</div>
+
+1. サーバーは**推奨**:
+   - 安定したカーソルを提供すること
+   - 無効なカーソルを丁寧に処理すること
+
+2. クライアントは**推奨**:
+   - `nextCursor` が存在しない場合は結果の終端として扱うこと
+   - ページネーションあり/なしの両方のフローをサポートすること
+
+3. クライアントは、カーソルを不透明なトークンとして扱うことを**必須**とする:
+   - カーソルの形式について仮定しないこと
+   - カーソルを解析したり変更しようとしないこと
+   - セッションをまたいでカーソルを保存しないこと
+
+<div id="error-handling">
+  ## エラー処理
+</div>
+
+無効なカーソルは、コード -32602（Invalid params）のエラーとすべきです（SHOULD）。
+---MDX_CONTENTEND---

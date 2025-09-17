@@ -1,0 +1,127 @@
+---
+title: リモートMCPサーバーに接続する
+description: ClaudeをリモートのMCPサーバーに接続し、インターネット上のツールやデータソースで機能を拡張する方法を学ぶ
+---
+
+リモートのMCPサーバーは、ローカル環境の枠を超えてAIアプリケーションの機能を拡張し、インターネット上のツール、サービス、データソースへのアクセスを提供します。リモートのMCPサーバーに接続することで、AIアシスタントを単なる便利なツールから、外部のリソースにリアルタイムでアクセスしつつ、複雑で多段階のプロジェクトを遂行できる有能なチームメイトへと進化させられます。
+
+現在、多くのクライアントがリモートのMCPサーバーをサポートしており、幅広い統合が可能になっています。本ガイドでは、[Claude](https://claude.ai/) を例に、[MCPをサポートする多数のクライアント](/ja/clients)のひとつとして、リモートのMCPサーバーへの接続方法を紹介します。ここではカスタムコネクタ（Claude）による実装に焦点を当てますが、ここで扱う概念は他のMCP互換クライアントにも広く適用できます。
+
+<div id="understanding-remote-mcp-servers">
+  ## リモートMCPサーバーの理解
+</div>
+
+リモートのMCPサーバーは、ローカルのMCPサーバーと同様に動作しますが、ローカルマシンではなくインターネット上でホストされます。これらは、Claudeがユーザーに代わってタスクを実行する際に利用できるツール、プロンプト、リソースを提供します。これらのサーバーは、プロジェクト管理ツール、ドキュメントシステム、コードリポジトリ、その他のAPI対応サービスなど、さまざまなサービスと統合できます。
+
+リモートMCPサーバーの主な利点は、アクセス性の高さです。各デバイスにインストールや設定が必要なローカルサーバーと異なり、リモートサーバーはインターネット接続のある任意のMCPクライアントから利用できます。これにより、WebベースのAIアプリケーション、使いやすさを重視した統合、サーバー側の処理や認証を必要とするサービスに最適です。
+
+<div id="what-are-custom-connectors">
+  ## カスタムコネクタ（Claude）とは？
+</div>
+
+カスタムコネクタ（Claude）は、Claude とリモートの MCPサーバー をつなぐ橋渡しをします。これにより、ワークフローで重要なツールやデータソースに Claude を直接接続でき、あなたが使い慣れたソフトウェアの中で Claude が動作し、外部ツールの文脈全体を踏まえた洞察を引き出せるようになります。
+
+カスタムコネクタ（Claude）を使うと、次のことが可能です:
+
+* サードパーティ開発者が提供する [既存のリモート MCPサーバー に Claude を接続する](https://support.anthropic.com/en/articles/11175166-getting-started-with-custom-connectors-using-remote-mcp)
+* [任意のツールと連携するためのリモート MCPサーバー を構築する](https://support.anthropic.com/en/articles/11503834-building-custom-connectors-via-remote-mcp-servers)
+
+<div id="connecting-to-a-remote-mcp-server">
+  ## リモートMCPサーバーへの接続
+</div>
+
+ClaudeをリモートのMCPサーバーに接続するには、[Claudeのインターフェース](https://claude.ai/)でカスタムコネクタを追加します。これにより、Claudeと選択したリモートサーバー間に安全な接続が確立されます。
+
+<Steps>
+  <Step title="コネクタ設定に移動">
+    ブラウザでClaudeを開き、設定ページに移動します。プロフィールアイコンをクリックし、ドロップダウンメニューから「Settings」を選択します。設定画面で、サイドバーの「Connectors」セクションを見つけてクリックします。
+
+    ここでは、現在構成済みのコネクタが表示され、新規追加のオプションも利用できます。
+  </Step>
+
+  <Step title="カスタムコネクタを追加">
+    Connectorsセクションで下までスクロールすると、「Add custom connector」ボタンがあります。このボタンをクリックして接続の設定を開始します。
+
+    <Frame>
+      <img src="/images/quickstart-remote/1-add-connector.png" alt="Claudeの設定にある「Add custom connector」ボタン" />
+    </Frame>
+
+    リモートのMCPサーバーURLの入力を促すダイアログが表示されます。このURLはサーバーの開発者または管理者から提供されます。適切なプロトコル（https://）や必要なパス要素を含む完全なURLを入力してください。
+
+    <Frame>
+      <img src="/images/quickstart-remote/2-connect.png" alt="リモートMCPサーバーURLを入力するダイアログ" />
+    </Frame>
+
+    URLを入力したら、「Add」をクリックして接続を進めます。
+  </Step>
+
+  <Step title="認証を完了する">
+    多くのリモートMCPサーバーでは、リソースへの安全なアクセスを確保するために認証が必要です。認証方式はサーバー実装により異なりますが、一般的にはOAuth、APIキー、またはユーザー名とパスワードの組み合わせが用いられます。
+
+    <Frame>
+      <img src="/images/quickstart-remote/3-auth.png" alt="リモートMCPサーバーの認証画面" />
+    </Frame>
+
+    サーバーが提示する認証手順に従ってください。サードパーティの認証プロバイダーにリダイレクトされる場合や、Claude内にフォームが表示される場合があります。認証が完了すると、Claudeはリモートサーバーへの安全な接続を確立します。
+  </Step>
+
+  <Step title="リソースとプロンプトにアクセスする">
+    接続に成功すると、リモートサーバーのリソースとプロンプトがClaudeの会話内で利用可能になります。メッセージ入力欄のクリップアイコンをクリックすると添付メニューが開き、そこからアクセスできます。
+
+    <Frame>
+      <img src="/images/quickstart-remote/4-select-resources-menu.png" alt="利用可能なリソースを表示する添付メニュー" />
+    </Frame>
+
+    メニューには、接続済みサーバーから利用可能なすべてのリソースとプロンプトが表示されます。会話に含めたい項目を選択してください。これらのリソースは、外部のツールから得られるコンテキストや情報をClaudeに提供します。
+
+    <Frame>
+      <img src="/images/quickstart-remote/5-select-prompts-resources.png" alt="メニューから特定のリソースとプロンプトを選択する" />
+    </Frame>
+  </Step>
+
+  <Step title="ツールの権限を設定する">
+    リモートMCPサーバーは、さまざまな機能を持つ複数のツールを公開していることがよくあります。コネクタ設定で権限を設定することで、Claudeが使用できるツールを制御できます。これにより、明示的に許可した操作のみをClaudeが実行するようにできます。
+
+    <Frame>
+      <img src="/images/quickstart-remote/6-configure-tools.png" alt="ツール権限の設定インターフェース" />
+    </Frame>
+
+    Connectorsの設定に戻り、接続済みのサーバーをクリックします。ここで、特定のツールの有効・無効、使用制限の設定、その他のセキュリティパラメータの構成をニーズに合わせて行えます。
+  </Step>
+</Steps>
+
+<div id="best-practices-for-using-remote-mcp-servers">
+  ## リモートMCPサーバーを使用するためのベストプラクティス
+</div>
+
+リモートのMCPサーバーを扱う際は、セキュアで効率的に利用するために次の推奨事項を検討してください。
+
+**セキュリティ上の注意点**: 接続前にリモートのMCPサーバーが正当なものであるか必ず検証してください。信頼できるソースのサーバーのみに接続し、認証時に要求される権限を確認しましょう。機密データやシステムへのアクセス許可は慎重に付与してください。
+
+**複数コネクタの管理**: 複数のリモートMCPサーバーに同時接続できます。目的やプロジェクトごとにコネクタを整理して可読性・管理性を保ちましょう。ワークスペースを整理し安全に保つため、使用しなくなったコネクタは定期的に見直して削除してください。
+
+<div id="next-steps">
+  ## 次のステップ
+</div>
+
+ClaudeをリモートのMCPサーバーに接続できたので、会話の中でその機能を活用できます。接続済みのツールを使って、タスクの自動化、外部データへのアクセス、既存のワークフローへの統合を試してみてください。
+
+<CardGroup cols={2}>
+  <Card title="独自のリモートサーバーを構築する" icon="cloud" href="https://support.anthropic.com/en/articles/11503834-building-custom-connectors-via-remote-mcp-servers">
+    独自のツールやサービスと統合するためのカスタムのリモートMCPサーバーを作成する
+  </Card>
+
+  <Card title="利用可能なサーバーを探す" icon="grid" href="https://github.com/modelcontextprotocol/servers">
+    公式およびコミュニティ制作のMCPサーバーコレクションを閲覧する
+  </Card>
+
+  <Card title="ローカルサーバーに接続する" icon="computer" href="/ja/docs/develop/connect-local-servers">
+    システムへ直接アクセスするために、Claude DesktopをローカルのMCPサーバーに接続する方法を学ぶ
+  </Card>
+
+  <Card title="アーキテクチャを理解する" icon="book" href="/ja/docs/learn/architecture">
+    MCPの仕組みとアーキテクチャをさらに深く理解する
+  </Card>
+</CardGroup>
+
+リモートMCPサーバーは、Claudeの機能拡張に強力な可能性をもたらします。これらの統合に慣れるにつれ、ワークフローを効率化し、複雑なタスクをより高効率に達成する新たな方法を見つけられるでしょう。

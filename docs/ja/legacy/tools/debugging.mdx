@@ -1,0 +1,326 @@
+---
+title: デバッグ
+description: Model Context Protocol（MCP）統合のデバッグに関する総合ガイド
+---
+
+MCPサーバーの開発やアプリケーションへの統合において、効果的なデバッグは不可欠です。本ガイドでは、MCPエコシステムで利用可能なデバッグ向けのツールと手法を紹介します。
+
+<Info>
+  このガイドはmacOS向けです。ほかのプラットフォーム向けのガイドは近日公開予定です。
+</Info>
+
+<div id="debugging-tools-overview">
+  ## デバッグ用ツールの概要
+</div>
+
+MCP は複数のレイヤーでのデバッグに役立つツールを提供しています：
+
+1. **MCP Inspector**
+   * 対話型のデバッグインターフェース
+   * サーバーの直接テスト
+   * 詳細は [Inspector ガイド](/ja/legacy/tools/inspector) を参照
+
+2. **Claude Desktop Developer Tools**
+   * 統合テスト
+   * ログ収集
+   * Chrome DevTools との連携
+
+3. **サーバーのロギング**
+   * カスタムロギングの実装
+   * エラー追跡
+   * パフォーマンス監視
+
+<div id="debugging-in-claude-desktop">
+  ## Claude Desktopでのデバッグ
+</div>
+
+<div id="checking-server-status">
+  ### サーバーステータスの確認
+</div>
+
+Claude.app のインターフェースでは、基本的なサーバーステータスを確認できます：
+
+1. <img src="/images/claude-desktop-mcp-plug-icon.svg" style={{display: 'inline', margin: 0, height: '1.3em'}} /> アイコンをクリックすると、以下が表示されます：
+   * 接続中のサーバー
+   * 利用可能なプロンプトとリソース
+
+2. 「Search and tools」 <img src="/images/claude-desktop-mcp-slider.svg" style={{display: 'inline', margin: 0, height: '1.3em'}} /> アイコンをクリックすると、以下が表示されます：
+   * モデルで利用可能なツール
+
+<div id="viewing-logs">
+  ### ログの表示
+</div>
+
+Claude Desktop で詳細な MCP のログを確認できます:
+
+```bash
+# リアルタイムでログを追跡
+tail -n 20 -F ~/Library/Logs/Claude/mcp*.log
+```
+
+ログには次の内容が記録されます:
+
+* サーバー接続イベント
+* 設定に関する問題
+* 実行時エラー
+* メッセージのやり取り
+
+<div id="using-chrome-devtools">
+  ### Chrome DevTools を使う
+</div>
+
+クライアント側のエラーを調査するために、Claude Desktop 内で Chrome の開発者ツールにアクセスします：
+
+1. `allowDevTools` を true に設定した `developer_settings.json` ファイルを作成します：
+
+```bash
+echo '{"allowDevTools": true}' > ~/Library/Application\ Support/Claude/developer_settings.json
+```
+
+2. DevTools を開く：`Command-Option-Shift-i`
+
+注意：DevTools のウィンドウが 2 つ表示されます。
+
+* メインコンテンツウィンドウ
+* アプリのタイトルバーウィンドウ
+
+Console パネルでクライアント側のエラーを確認します。
+
+Network パネルで次を確認します：
+
+* メッセージペイロード
+* 接続タイミング
+
+<div id="common-issues">
+  ## よくある課題
+</div>
+
+<div id="working-directory">
+  ### 作業ディレクトリ
+</div>
+
+Claude Desktop で MCPサーバー を使用する場合:
+
+* `claude_desktop_config.json` から起動されたサーバーの作業ディレクトリは未定義の場合があります（macOS では `/` になることがあります）。これは Claude Desktop が任意の場所から起動されうるためです
+* 安定して動作させるため、設定ファイルや `.env` ファイルでは常に絶対パスを使用してください
+* コマンドラインでサーバーを直接テストする場合、作業ディレクトリはそのコマンドを実行した場所になります
+
+たとえば `claude_desktop_config.json` では、次のようにします:
+
+```json
+{
+  "command": "npx",
+  "args": [
+    "-y",
+    "@modelcontextprotocol/server-filesystem",
+    "/Users/username/data"
+  ]
+}
+```
+
+`./data` のような相対パスではなく、絶対パスを使用してください
+
+<div id="environment-variables">
+  ### 環境変数
+</div>
+
+MCPサーバーは、自動的に継承される環境変数のうち一部（`USER`、`HOME`、`PATH` など）しか引き継ぎません。
+
+デフォルトの変数を上書きする、または独自の変数を指定するには、`claude_desktop_config.json` に `env` キーを記述します:
+
+```json
+{
+  "myserver": {
+    "command": "mcp-server-myapp",
+    "env": {
+      "MYAPP_API_KEY": "some_key"
+    }
+  }
+}
+```
+
+<div id="server-initialization">
+  ### サーバーの初期化
+</div>
+
+よくある初期化時の問題:
+
+1. **パスの問題**
+   * サーバー実行ファイルのパスが誤っている
+   * 必要なファイルが見つからない
+   * 権限の問題
+   * `command` には絶対パスを使用してみる
+
+2. **設定エラー**
+   * JSON 構文が不正
+   * 必須フィールドの不足
+   * 型の不一致
+
+3. **環境の問題**
+   * 環境変数の不足
+   * 変数の値が不正
+   * 権限による制限
+
+<div id="connection-problems">
+  ### 接続に関する問題
+</div>
+
+サーバーが接続できない場合は、次を確認してください:
+
+1. Claude Desktopのログを確認する
+2. サーバープロセスが動作しているか確認する
+3. [Inspector](/ja/legacy/tools/inspector) で単体実行してテストする
+4. プロトコルの互換性を確認する
+
+<div id="implementing-logging">
+  ## ログの実装
+</div>
+
+<div id="server-side-logging">
+  ### サーバー側のロギング
+</div>
+
+ローカルの stdio [トランスポート](/ja/legacy/concepts/transports)を使用するサーバーを構築する場合、stderr（標準エラー）に出力されたすべてのメッセージは、ホストアプリケーション（例：Claude Desktop）によって自動的に取得されます。
+
+<Warning>
+  ローカルの MCPサーバーは stdout（標準出力）にメッセージを出力しないでください。プロトコルの動作に支障をきたします。
+</Warning>
+
+すべての[トランスポート](/ja/legacy/concepts/transports)で、ログメッセージ通知を送信することでクライアント側にログを提供することもできます:
+
+<CodeGroup>
+  ```python Python
+  server.request_context.session.send_log_message(
+    level="info",
+    data="Server started successfully",
+  )
+  ```
+
+  ```typescript TypeScript
+  server.sendLoggingMessage({
+    level: "info",
+    data: "Server started successfully",
+  });
+  ```
+</CodeGroup>
+
+ログに記録すべき主なイベント:
+
+* 初期化手順
+* リソースアクセス
+* ツール実行
+* エラー状況
+* パフォーマンス指標
+
+<div id="client-side-logging">
+  ### クライアント側のロギング
+</div>
+
+クライアントアプリケーションでは：
+
+1. デバッグログを有効にする
+2. ネットワークトラフィックを監視する
+3. メッセージ交換を追跡する
+4. エラー状態を記録する
+
+<div id="debugging-workflow">
+  ## デバッグワークフロー
+</div>
+
+<div id="development-cycle">
+  ### 開発サイクル
+</div>
+
+1. 初期開発
+   * 基本的なテストには[Inspector](/ja/legacy/tools/inspector)を使用する
+   * コア機能を実装する
+   * ログ出力ポイントを追加する
+
+2. 統合テスト
+   * Claude Desktopでテストする
+   * ログを監視する
+   * エラーハンドリングを確認する
+
+<div id="testing-changes">
+  ### 変更のテスト
+</div>
+
+変更を効率的にテストするには：
+
+* **設定の変更**：Claude Desktop を再起動する
+* **サーバーコードの変更**：Command-R で再読み込みする
+* **迅速な反復**：開発中は [Inspector](/ja/legacy/tools/inspector) を使用する
+
+<div id="best-practices">
+  ## ベストプラクティス
+</div>
+
+<div id="logging-strategy">
+  ### ロギング戦略
+</div>
+
+1. **構造化ロギング**
+   * 一貫したフォーマットを使用する
+   * コンテキストを含める
+   * タイムスタンプを付与する
+   * リクエストIDを追跡する
+
+2. **エラーハンドリング**
+   * スタックトレースを記録する
+   * エラーの発生状況や文脈を含める
+   * エラーパターンを追跡する
+   * 復旧状況を監視する
+
+3. **パフォーマンス計測**
+   * 処理時間を記録する
+   * リソース使用量を監視する
+   * メッセージサイズを追跡する
+   * レイテンシを測定する
+
+<div id="security-considerations">
+  ### セキュリティに関する考慮事項
+</div>
+
+デバッグ時:
+
+1. **機密データ**
+   * ログのサニタイズ
+   * 資格情報の保護
+   * 個人情報のマスキング
+
+2. **アクセス制御**
+   * 権限の検証
+   * 認証の確認
+   * アクセスパターンの監視
+
+<div id="getting-help">
+  ## ヘルプの取得
+</div>
+
+問題が発生した場合:
+
+1. **はじめに行うこと**
+   * サーバーログの確認
+   * [Inspector](/ja/legacy/tools/inspector) でのテスト
+   * 設定の見直し
+   * 実行環境の確認
+
+2. **サポートチャネル**
+   * GitHub Issues
+   * GitHub Discussions
+
+3. **提供する情報**
+   * ログの抜粋
+   * 設定ファイル
+   * 再現手順
+   * 実行環境の詳細
+
+<div id="next-steps">
+  ## 次のステップ
+</div>
+
+<CardGroup cols={2}>
+  <Card title="MCP Inspector" icon="magnifying-glass" href="/ja/legacy/tools/inspector">
+    MCP Inspectorの使い方を学ぶ
+  </Card>
+</CardGroup>

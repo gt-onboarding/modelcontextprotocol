@@ -1,0 +1,122 @@
+---
+title: コントリビューター向けコミュニケーション
+description: Model Context Protocol コミュニティにおけるコミュニケーション戦略とフレームワーク
+---
+
+このドキュメントでは、Model Context Protocol（MCP）プロジェクトにおける効果的なコミュニケーションと協働の進め方を説明します。
+
+<div id="communication-channels">
+  ## コミュニケーションチャネル
+</div>
+
+概要:
+
+* **[Discord][discord-join]**: リアルタイムまたは臨時のディスカッションに。
+* **[GitHub Discussions](https://github.com/modelcontextprotocol/modelcontextprotocol/discussions)**: 構造化された長文ディスカッションに。
+* **[GitHub Issues](https://github.com/modelcontextprotocol/modelcontextprotocol/issues)**: 実行可能なタスク、バグ報告、機能要望に。
+* **セキュリティ関連の問題について**: [SECURITY.md](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/main/SECURITY.md) の手順に従ってください。
+
+すべてのコミュニケーションは [Code of Conduct](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/main/CODE_OF_CONDUCT.md) に準拠します。すべての参加者は、あらゆるチャネルにおいて、敬意を持ち、プロフェッショナルかつ包括的なやり取りを心がけてください。
+
+<div id="discord">
+  ### Discord
+</div>
+
+リアルタイムでのコントリビューター同士の議論やコラボレーションのための場です。サーバーは**MCPのコントリビューター**向けに設計されており、一般的なMCPサポートの場を目的としたものではありません。
+
+Discordサーバーには、公開チャンネルと非公開チャンネルの両方があります。
+
+[こちらからDiscordサーバーに参加できます][discord-join].
+
+<div id="public-channels-default">
+  #### パブリックチャンネル（デフォルト）
+</div>
+
+* **目的**: オープンなコミュニティ交流、協調的な開発、透明性の高いプロジェクト運営。
+* 主なユースケース:
+  * **SDKやツールの公開開発**: アイデア出しからリリース計画まで、すべての開発はパブリックチャンネル（例: `#typescript-sdk-dev`, `#inspector-dev`）で行います。
+  * **ワーキンググループ／関心グループでの議論**（`#client-implementors`, `#agents-wg` など）
+    * **ワーキンググループ**: 具体的な目標やプロジェクト（SDK、inspector、registry、server-identity、load-balancing など）に取り組むグループ。
+    * **関心グループ**: 幅広いトピックが挙がるゆるやかな集まり。単発のアクションにつながるものもあれば、ワーキンググループへ発展する場合もあります。
+  * **コミュニティのオンボーディング**および貢献に関するガイダンス。
+  * **コミュニティからのフィードバック**および協働でのブレインストーミング。
+  * 公開の**オフィスアワー**や**メンテナーの対応可能時間**。
+* 避けるべきこと:
+  * MCPユーザーサポート: 参加者は公式ドキュメントを参照し、質問やサポートは新規の GitHub Discussions で開始してください。
+  * サービスや製品のマーケティング: このDiscordでのやり取りはベンダー中立であることが求められ、ブランド構築や販売目的には使用しないでください。ブランドや製品への言及は、仕様に焦点を当てた会話の文脈での例示や応答として必要な場合を除き、控えてください。
+
+<div id="private-channels-exceptions">
+  #### プライベートチャンネル（例外）
+</div>
+
+* **目的**: 公開では扱えない機密性の高い調整やセンシティブな事項を扱うため。アクセスは指名されたメンテナーに限定します。
+* **プライベート利用の厳格な基準**:
+  * **セキュリティインシデント**（CVE、プロトコルの脆弱性）。
+  * **人に関する事項**（メンテナー関連の議論、行動規範ポリシー）。
+  * 一部のチャンネルは**読み取り専用**に設定します。これは、たとえばメンテナーによる意思決定に有用です。
+  * 限られたメンバーによる、**即時**または**集中的な対応**が必要な調整。
+* **透明性**:
+  * コミュニティに影響する**すべての技術的およびガバナンス上の決定**は GitHub Discussions および/または Issues に**必ず記録**し、`notes` のラベルを付けます。
+  * **個々のコントリビューターに関する一部の事項**は、適切な場合（例：個人的事情、懲戒、その他センシティブな個別事項）には非公開のままとすることがあります。
+  * プライベートチャンネルは、日常的な開発の場ではなく、**一時的な「インシデントルーム」**として使用します。
+
+Discord 上での重要な議論が意思決定や提案につながる場合は、永続的で検索可能な記録とするために、GitHub Discussion または GitHub Issue に移行する必要があります。提案は、その後、必要に応じて関連する作業項目（GitHub Issues）を伴う正式な PR に昇格されます。
+
+<div id="github-discussions">
+  ### GitHub Discussions
+</div>
+
+プロジェクトの方向性、機能、改善、コミュニティに関するテーマについて、体系的かつ長文で議論・検討するための場です。
+
+使用するタイミング:
+
+* プロジェクトのロードマップ策定やマイルストーンに関する議論
+* アナウンスやリリースに関するお知らせ・連絡
+* コミュニティの投票や合意形成プロセス
+* 背景や理由を明確にした機能リクエスト
+  * 特定のリポジトリで GitHub Discussions が有効化されていない場合は、代わりに GitHub Issue を作成してください。
+
+<div id="github-issues">
+  ### GitHub Issues
+</div>
+
+バグ報告、機能の追跡、実行可能な開発タスクのための場所。
+
+使用する場面:
+
+* SEP の提案を提出（[SEP ガイドライン](ja/./sep-guidelines)に従う）
+* 再現手順付きのバグ報告
+* 範囲が明確なドキュメント改善
+* CI/CD の問題やインフラストラクチャの課題
+* リリースタスクおよびマイルストーンの追跡
+
+<div id="security-issues">
+  ### セキュリティに関する問題
+</div>
+
+**セキュリティ上の問題を公開の場に投稿しないでください。** 代わりに次の手順に従ってください:
+
+1. 非公開のセキュリティ報告プロセスを利用してください。プロトコルレベルのセキュリティ問題については、[modelcontextprotocol の GitHub リポジトリの SECURITY.md](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/main/SECURITY.md) に記載の手順に従ってください。
+2. リードおよび/または[コアメンテナー](ja/./governance#current-core-maintainers)に直接ご連絡ください。
+3. 責任ある開示のガイドラインに従ってください。
+
+<div id="decision-records">
+  ## 決定記録
+</div>
+
+すべてのMCPに関する決定は、公開チャネルで文書化・記録されます。
+
+* **技術的な決定**: [GitHub Issues](https://github.com/modelcontextprotocol/modelcontextprotocol/issues) と SEP。
+* **仕様変更**: [Model Context Protocol のウェブサイト](https://modelcontextprotocol.io/specification/draft/changelog)。
+* **プロセス変更**: [コミュニティドキュメント](https://modelcontextprotocol.io/community/governance)。
+* **ガバナンスに関する決定と更新**: [GitHub Issues](https://github.com/modelcontextprotocol/modelcontextprotocol/issues) と SEP。
+
+決定を記録する際は、可能な限り多くの文脈情報を残します。
+
+* 意思決定者
+* 背景と動機
+* 検討した選択肢
+* 選択したアプローチの根拠
+* 実装手順
+
+[discord-join]: https://discord.gg/6CSzBmMkjX

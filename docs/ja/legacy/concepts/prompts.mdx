@@ -1,0 +1,453 @@
+---
+title: "プロンプト"
+description: "再利用可能なプロンプトテンプレートとワークフローを作成する"
+---
+
+プロンプトは、サーバーが再利用可能なプロンプトテンプレートやワークフローを定義し、クライアントがユーザーやLLMに容易に提示できるようにします。これにより、一般的なLLMとのやり取りを標準化して共有する強力な手段を提供します。
+
+<Note>
+
+プロンプトは**ユーザーが主導して操作する**ことを前提に設計されており、サーバーからクライアントに公開され、ユーザーが明示的に選択して利用できるようになっています。
+
+</Note>
+
+<div id="overview">
+  ## 概要
+</div>
+
+MCPにおけるプロンプトは、あらかじめ定義されたテンプレートで、次のことができます:
+
+- 動的な引数を受け取る
+- リソースのコンテキストを取り込む
+- 複数のやり取りを連鎖させる
+- 特定のワークフローを案内する
+- UI要素（スラッシュコマンドのようなもの）として表示される
+
+<div id="prompt-structure">
+  ## プロンプトの構造
+</div>
+
+各プロンプトは次のように定義されます：
+
+```typescript
+{
+  name: string;              // プロンプトの一意の識別子
+  description?: string;      // 人間が読める説明
+  arguments?: [              // 任意の引数リスト
+    {
+      name: string;          // 引数の識別子
+      description?: string;  // 引数の説明
+      required?: boolean;    // この引数が必須かどうか
+    }
+  ]
+}
+```
+
+<div id="discovering-prompts">
+  ## プロンプトの検出
+</div>
+
+クライアントは `prompts/list` リクエストを送信することで、利用可能なプロンプトを取得できます:
+
+```typescript
+// Request
+{
+  method: "prompts/list";
+}
+
+// Response
+{
+  prompts: [
+    {
+      name: "analyze-code",
+      description: "潜在的な改善点のためにコードを分析する",
+      arguments: [
+        {
+          name: "language",
+          description: "プログラミング言語",
+          required: true,
+        },
+      ],
+    },
+  ];
+}
+```
+
+<div id="using-prompts">
+  ## プロンプトの使用
+</div>
+
+プロンプトを利用するには、クライアントは `prompts/get` リクエストを送信します:
+
+````typescript
+// Request
+{
+  method: "prompts/get",
+  params: {
+    name: "analyze-code",
+    arguments: {
+      language: "python"
+    }
+  }
+}
+
+// Response
+{
+  description: "Pythonコードを解析して改善点を特定する",
+  messages: [
+    {
+      role: "user",
+      content: {
+        type: "text",
+        text: "次のPythonコードを解析し、考えられる改善点を挙げてください。\n\n```python\ndef calculate_sum(numbers):\n    total = 0\n    for num in numbers:\n        total = total + num\n    return total\n\nresult = calculate_sum([1, 2, 3, 4, 5])\nprint(result)\n```"
+      }
+    }
+  ]
+}
+````
+
+<div id="dynamic-prompts">
+  ## 動的なプロンプト
+</div>
+
+プロンプトは動的にでき、次のものを含められます:
+
+<div id="embedded-resource-context">
+  ### 埋め込みリソースのコンテキスト
+</div>
+
+```json
+{
+  "name": "analyze-project",
+  "description": "プロジェクトのログとコードを分析する",
+  "arguments": [
+    {
+      "name": "timeframe",
+      "description": "ログを分析する期間",
+      "required": true
+    },
+    {
+      "name": "fileUri",
+      "description": "レビューするコードファイルのURI",
+      "required": true
+    }
+  ]
+}
+```
+
+`prompts/get` リクエストを処理する際:
+
+```json
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": {
+        "type": "text",
+        "text": "これらのシステムログとコードファイルに問題がないか分析してください。"
+      }
+    },
+    {
+      "role": "user",
+      "content": {
+        "type": "resource",
+        "resource": {
+          "uri": "logs://recent?timeframe=1h",
+          "text": "[2024-03-14 15:32:11] ERROR: Connection timeout in network.py:127\n[2024-03-14 15:32:15] WARN: Retrying connection (attempt 2/3)\n[2024-03-14 15:32:20] ERROR: Max retries exceeded",
+          "mimeType": "text/plain"
+        }
+      }
+    },
+    {
+      "role": "user",
+      "content": {
+        "type": "resource",
+        "resource": {
+          "uri": "file:///path/to/code.py",
+          "text": "def connect_to_service(timeout=30):\n    retries = 3\n    for attempt in range(retries):\n        try:\n            return establish_connection(timeout)\n        except TimeoutError:\n            if attempt == retries - 1:\n                raise\n            time.sleep(5)\n\ndef establish_connection(timeout):\n    # Connection implementation\n    pass",
+          "mimeType": "text/x-python"
+        }
+      }
+    }
+  ]
+}
+```
+
+<div id="multi-step-workflows">
+  ### マルチステップのワークフロー
+</div>
+
+```typescript
+const debugWorkflow = {
+  name: "debug-error",
+  async getMessages(error: string) {
+    return [
+      {
+        role: "user",
+        content: {
+          type: "text",
+          text: `発生しているエラーはこちらです: ${error}`,
+        },
+      },
+      {
+        role: "assistant",
+        content: {
+          type: "text",
+          text: "このエラーの分析を手伝います。これまでに何を試しましたか？",
+        },
+      },
+      {
+        role: "user",
+        content: {
+          type: "text",
+          text: "サービスを再起動しましたが、エラーは解消しませんでした。",
+        },
+      },
+    ];
+  },
+};
+```
+
+<div id="example-implementation">
+  ## 実装例
+</div>
+
+MCPサーバーでプロンプトを実装する完全な例を示します。
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Server } from "@modelcontextprotocol/sdk/server";
+import {
+  ListPromptsRequestSchema,
+  GetPromptRequestSchema,
+} from "@modelcontextprotocol/sdk/types";
+
+const PROMPTS = {
+  "git-commit": {
+    name: "git-commit",
+    description: "Git のコミットメッセージを生成",
+    arguments: [
+      {
+        name: "changes",
+        description: "Git の diff または変更内容の説明",
+        required: true,
+      },
+    ],
+  },
+  "explain-code": {
+    name: "explain-code",
+    description: "コードの動作を説明",
+    arguments: [
+      {
+        name: "code",
+        description: "説明対象のコード",
+        required: true,
+      },
+      {
+        name: "language",
+        description: "プログラミング言語",
+        required: false,
+      },
+    ],
+  },
+};
+
+const server = new Server(
+  {
+    name: "example-prompts-server",
+    version: "1.0.0",
+  },
+  {
+    capabilities: {
+      prompts: {},
+    },
+  },
+);
+
+// 利用可能なプロンプトを一覧取得
+server.setRequestHandler(ListPromptsRequestSchema, async () => {
+  return {
+    prompts: Object.values(PROMPTS),
+  };
+});
+
+// 指定したプロンプトを取得
+server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+  const prompt = PROMPTS[request.params.name];
+  if (!prompt) {
+    throw new Error(`プロンプトが見つかりません: ${request.params.name}`);
+  }
+
+  if (request.params.name === "git-commit") {
+    return {
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: `次の変更に対して、簡潔でありながら内容がわかるコミットメッセージを生成してください:\n\n${request.params.arguments?.changes}`,
+          },
+        },
+      ],
+    };
+  }
+
+  if (request.params.name === "explain-code") {
+    const language = request.params.arguments?.language || "Unknown";
+    return {
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: `この ${language} のコードがどのように動作するか説明してください:\n\n${request.params.arguments?.code}`,
+          },
+        },
+      ],
+    };
+  }
+
+  throw new Error("プロンプトの実装が見つかりません");
+});
+```
+
+```python Python
+from mcp.server import Server
+import mcp.types as types
+
+# 利用可能なプロンプトを定義
+PROMPTS = {
+    "git-commit": types.Prompt(
+        name="git-commit",
+        description="Git のコミットメッセージを生成",
+        arguments=[
+            types.PromptArgument(
+                name="changes",
+                description="Git の diff または変更内容の説明",
+                required=True
+            )
+        ],
+    ),
+    "explain-code": types.Prompt(
+        name="explain-code",
+        description="コードの動作を説明",
+        arguments=[
+            types.PromptArgument(
+                name="code",
+                description="説明対象のコード",
+                required=True
+            ),
+            types.PromptArgument(
+                name="language",
+                description="プログラミング言語",
+                required=False
+            )
+        ],
+    )
+}
+
+# サーバーを初期化
+app = Server("example-prompts-server")
+
+@app.list_prompts()
+async def list_prompts() -> list[types.Prompt]:
+    return list(PROMPTS.values())
+
+@app.get_prompt()
+async def get_prompt(
+    name: str, arguments: dict[str, str] | None = None
+) -> types.GetPromptResult:
+    if name not in PROMPTS:
+        raise ValueError(f"プロンプトが見つかりません: {name}")
+
+    if name == "git-commit":
+        changes = arguments.get("changes") if arguments else ""
+        return types.GetPromptResult(
+            messages=[
+                types.PromptMessage(
+                    role="user",
+                    content=types.TextContent(
+                        type="text",
+                        text=f"次の変更に対して、簡潔でありながら内容がわかるコミットメッセージを生成してください:\n\n{changes}"
+                    )
+                )
+            ]
+        )
+
+    if name == "explain-code":
+        code = arguments.get("code") if arguments else ""
+        language = arguments.get("language", "Unknown") if arguments else "Unknown"
+        return types.GetPromptResult(
+            messages=[
+                types.PromptMessage(
+                    role="user",
+                    content=types.TextContent(
+                        type="text",
+                        text=f"この {language} のコードがどのように動作するか説明してください:\n\n{code}"
+                    )
+                )
+            ]
+        )
+
+    raise ValueError("プロンプトの実装が見つかりません")
+```
+
+</CodeGroup>
+
+<div id="best-practices">
+  ## ベストプラクティス
+</div>
+
+プロンプトを実装する際は、次を行ってください:
+
+1. 明確で分かりやすいプロンプト名を付ける
+2. プロンプトと引数の詳細な説明を記載する
+3. すべての必須引数を検証する
+4. 欠落している引数を丁寧に扱う
+5. プロンプトテンプレートのバージョン管理を検討する
+6. 適切に動的コンテンツをキャッシュする
+7. エラーハンドリングを実装する
+8. 期待される引数のフォーマットを文書化する
+9. プロンプトの再利用・組み合わせ可能性を検討する
+10. さまざまな入力でプロンプトをテストする
+
+<div id="ui-integration">
+  ## UI統合
+</div>
+
+プロンプトはクライアントのUIで次の形で表示できます:
+
+- スラッシュコマンド
+- クイックアクション
+- コンテキストメニュー項目
+- コマンドパレットのエントリー
+- ガイド付きワークフロー
+- インタラクティブフォーム
+
+<div id="updates-and-changes">
+  ## 更新と変更
+</div>
+
+サーバーはプロンプトの変更をクライアントに通知できます:
+
+1. サーバー機能: `prompts.listChanged`
+2. 通知: `notifications/prompts/list_changed`
+3. クライアントがプロンプト一覧を再取得します
+
+<div id="security-considerations">
+  ## セキュリティに関する考慮事項
+</div>
+
+プロンプトを実装する際は、次の点に留意してください:
+
+- すべての引数を検証する
+- ユーザー入力をサニタイズする
+- レート制限を検討する
+- アクセス制御を実装する
+- プロンプトの利用状況を監査する
+- 機微なデータを適切に取り扱う
+- 生成コンテンツを検証する
+- タイムアウトを実装する
+- プロンプトインジェクションのリスクを考慮する
+- セキュリティ要件をドキュメント化する

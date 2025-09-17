@@ -1,0 +1,558 @@
+---
+title: スキーマリファレンス
+---
+
+<div id="schema-reference" />
+
+<div id="common-types">
+  ## 共通型
+</div>
+
+<div id="annotations">
+  ### `Annotations`
+</div>
+
+<div id="audiocontent">
+  ### `AudioContent`
+</div>
+
+<div class="tsd-comment tsd-typography"><p>音声の MIME タイプ。プロバイダによって対応する音声形式は異なる場合があります。</p> </div>
+
+<div id="blobresourcecontents">
+  ### `BlobResourceContents`
+</div>
+
+ResourceContents.uri から継承
+
+<div id="booleanschema">
+  ### `BooleanSchema`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">BooleanSchema</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#">default</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">description</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">title</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">type</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">&quot;boolean&quot;</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div>
+
+<div id="clientcapabilities">
+  ### `ClientCapabilities`
+</div>
+
+<div class="tsd-comment tsd-typography"><p>クライアントがLLMへのサンプリングをサポートしている場合に存在する。</p> </div>
+
+<div id="contentblock">
+  ### `ContentBlock`
+</div>
+
+<div class="tsd-signature"><span class="tsd-kind-type-alias">ContentBlock</span><span class="tsd-signature-symbol">:</span><br />  <span class="tsd-signature-symbol">|</span> <a href="#textcontent" class="tsd-signature-type tsd-kind-interface">TextContent</a><br />  <span class="tsd-signature-symbol">|</span> <a href="#imagecontent" class="tsd-signature-type tsd-kind-interface">ImageContent</a><br />  <span class="tsd-signature-symbol">|</span> <a href="#audiocontent" class="tsd-signature-type tsd-kind-interface">AudioContent</a><br />  <span class="tsd-signature-symbol">|</span> <a href="#resourcelink" class="tsd-signature-type tsd-kind-interface">ResourceLink</a><br />  <span class="tsd-signature-symbol">|</span> <a href="#embeddedresource" class="tsd-signature-type tsd-kind-interface">EmbeddedResource</a></div>
+
+<div id="cursor">
+  ### `Cursor`
+</div>
+
+<div class="tsd-signature"><span class="tsd-kind-type-alias">Cursor</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div><div class="tsd-comment tsd-typography"><p>ページネーションのカーソルを表す不透明なトークン。</p> </div><div class="tsd-comment tsd-typography" />
+
+<div id="embeddedresource">
+  ### `EmbeddedResource`
+</div>
+
+<div class="tsd-comment tsd-typography"><p>プロンプトやツール呼び出し結果に埋め込まれるリソースの内容。</p> <p>埋め込みリソースをどのように表示し活用するかは、利用者の利益を最大化する観点で、クライアントの判断に委ねられますof the LLM and/or the user.</p> </div><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="embeddedresource-_meta"><code class="tsd-tag">任意</code><span>&#95;<wbr />meta</span><a href="#embeddedresource-_meta" aria-label="パーマリンク" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="ja/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">&#95;meta</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p><a href="/ja/specification/2025-06-18/basic/index#meta">一般フィールド: <code>&#95;meta</code></a> に、<code>&#95;meta</code> の使用に関する注意事項があります。</p> </div><div class="tsd-comment tsd-typography" /></section><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="embeddedresource-annotations"><code class="tsd-tag">任意</code><span>annotations</span><a href="#embeddedresource-annotations" aria-label="パーマリンク" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="ja/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">annotations</span><span class="tsd-signature-symbol">?:</span> <a href="#annotations" class="tsd-signature-type tsd-kind-interface">Annotations</a></div><div class="tsd-comment tsd-typography"><p>クライアント向けの任意のアノテーション。</p> </div><div class="tsd-comment tsd-typography" /></section>
+
+<div id="emptyresult">
+  ### `EmptyResult`
+</div>
+
+<div class="tsd-signature"><span class="tsd-kind-type-alias">EmptyResult</span><span class="tsd-signature-symbol">:</span> <a href="#result" class="tsd-signature-type tsd-kind-interface">Result</a></div><div class="tsd-comment tsd-typography"><p>成功を示すが、データを含まない応答。</p> </div><div class="tsd-comment tsd-typography" />
+
+<div id="enumschema">
+  ### `EnumSchema`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">EnumSchema</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#">description</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">enum</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">enumNames</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">title</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">type</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">&quot;string&quot;</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div>
+
+<div id="imagecontent">
+  ### `ImageContent`
+</div>
+
+<div class="tsd-comment tsd-typography"><p>画像の MIME タイプ。プロバイダーにより対応する画像タイプは異なる場合があります。</p> </div>
+
+<div id="implementation">
+  ### `Implementation`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">Implementation</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#implementation-name">name</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#implementation-title">title</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">version</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>MCP の実装の名称とバージョンを記述し、UI 表示用の任意のタイトルを指定できます。</p> </div><section class="tsd-panel tsd-member tsd-is-inherited"><div data-typedoc-h="3" class="tsd-anchor-link" id="implementation-name"><span>name</span><a href="#implementation-name" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="ja/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">name</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div><div class="tsd-comment tsd-typography"><p>本来はプログラムや論理的な用途を想定していますが、過去の仕様やフォールバック時には表示名として使われます（title がない場合）。</p> </div><div class="tsd-comment tsd-typography" /><aside class="tsd-sources"><p>BaseMetadata.name から継承</p></aside></section><section class="tsd-panel tsd-member tsd-is-inherited"><div data-typedoc-h="3" class="tsd-anchor-link" id="implementation-title"><code class="tsd-tag">Optional</code><span>title</span><a href="#implementation-title" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="ja/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">title</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span></div><div class="tsd-comment tsd-typography"><p>UI やエンドユーザー向けの文脈を想定し、人間が読みやすく理解しやすいよう最適化されています。
+ドメイン固有の用語に不慣れな人でも理解できるよう配慮されています。</p> <p>指定がない場合は、表示に name を用いるべきです（ただし Tool の場合は、
+<code>annotations.title</code> が存在するなら <code>name</code> より優先します）。</p> </div><div class="tsd-comment tsd-typography" /><aside class="tsd-sources"><p>BaseMetadata.title から継承</p></aside></section>
+
+<div id="jsonrpcerror">
+  ### `JSONRPCError`
+</div>
+
+<div class="tsd-comment tsd-typography"><p>エラーの簡潔な説明。メッセージは短い一文にとどめるべきです。</p> </div>
+
+<div id="jsonrpcnotification">
+  ### `JSONRPCNotification`
+</div>
+
+<aside class="tsd-sources"><p>Notification.params からの継承</p></aside>
+
+<div id="jsonrpcrequest">
+  ### `JSONRPCRequest`
+</div>
+
+<aside class="tsd-sources"><p>Request.params からの継承</p></aside>
+
+<div id="jsonrpcresponse">
+  ### `JSONRPCResponse`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">JSONRPCResponse</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#">id</a><span class="tsd-signature-symbol">:</span> <a href="#requestid" class="tsd-signature-type tsd-kind-type-alias">RequestId</a><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">jsonrpc</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">&quot;2.0&quot;</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">result</a><span class="tsd-signature-symbol">:</span> <a href="#result" class="tsd-signature-type tsd-kind-interface">Result</a><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>リクエストに対する成功（エラーなし）のレスポンス。</p> </div>
+
+<div id="logginglevel">
+  ### `LoggingLevel`
+</div>
+
+<div class="tsd-signature"><span class="tsd-kind-type-alias">LoggingLevel</span><span class="tsd-signature-symbol">:</span><br />  <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">&quot;debug&quot;</span><br />  <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">&quot;info&quot;</span><br />  <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">&quot;notice&quot;</span><br />  <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">&quot;warning&quot;</span><br />  <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">&quot;error&quot;</span><br />  <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">&quot;critical&quot;</span><br />  <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">&quot;alert&quot;</span><br />  <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">&quot;emergency&quot;</span></div><div class="tsd-comment tsd-typography"><p>ログメッセージの重要度。</p> <p>これらは、RFC 5424 で規定されている syslog メッセージの重要度に対応します：<a href="https://datatracker.ietf.org/doc/html/rfc5424#section-6.2.1">https://datatracker.ietf.org/doc/html/rfc5424#section-6.2.1</a></p> </div><div class="tsd-comment tsd-typography" />
+
+<div id="modelhint">
+  ### `ModelHint`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">ModelHint</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#modelhint-name">name</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>モデル選択に用いるヒント。</p> <p>ここで宣言されていないキーは、現時点の仕様では未定義であり、解釈はクライアントに委ねられます。</p> </div><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="modelhint-name"><code class="tsd-tag">Optional</code><span>name</span><a href="#modelhint-name" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="ja/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">name</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span></div><div class="tsd-comment tsd-typography"><p>モデル名に関するヒント。</p> <p>クライアントはこれをモデル名の部分文字列として扱うべきです（SHOULD）。例:</p> <ul> <li><code>claude-3-5-sonnet</code> は <code>claude-3-5-sonnet-20241022</code> にマッチすべきです</li> <li><code>sonnet</code> は <code>claude-3-5-sonnet-20241022</code>、<code>claude-3-sonnet-20240229</code> などにマッチすべきです</li> <li><code>claude</code> はあらゆる Claude モデルにマッチすべきです</li> </ul> <p>また、同様の用途を満たす限り、クライアントはその文字列を別プロバイダーのモデル名や別のモデルファミリーにマッピングしても構いません（MAY）。例:</p> <ul> <li><code>gemini-1.5-flash</code> は <code>claude-3-haiku-20240307</code> にマッチし得ます</li> </ul> </div><div class="tsd-comment tsd-typography" /></section>
+
+<div id="modelpreferences">
+  ### `ModelPreferences`
+</div>
+
+<div id="numberschema">
+  ### `NumberSchema`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">NumberSchema</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#">description</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">maximum</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">minimum</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">title</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">type</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">&quot;number&quot;</span> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">&quot;integer&quot;</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div>
+
+<div id="primitiveschemadefinition">
+  ### `PrimitiveSchemaDefinition`
+</div>
+
+<div class="tsd-signature"><span class="tsd-kind-type-alias">PrimitiveSchemaDefinition</span><span class="tsd-signature-symbol">:</span><br />  <span class="tsd-signature-symbol">|</span> <a href="#stringschema" class="tsd-signature-type tsd-kind-interface">StringSchema</a><br />  <span class="tsd-signature-symbol">|</span> <a href="#numberschema" class="tsd-signature-type tsd-kind-interface">NumberSchema</a><br />  <span class="tsd-signature-symbol">|</span> <a href="#booleanschema" class="tsd-signature-type tsd-kind-interface">BooleanSchema</a><br />  <span class="tsd-signature-symbol">|</span> <a href="#enumschema" class="tsd-signature-type tsd-kind-interface">EnumSchema</a></div><div class="tsd-comment tsd-typography"><p>ネストされたオブジェクトや配列を含まず、プリミティブ型のみを許可する制限付きのスキーマ定義です。</p> </div><div class="tsd-comment tsd-typography" />
+
+<div id="progresstoken">
+  ### `ProgressToken`
+</div>
+
+<div class="tsd-signature"><span class="tsd-kind-type-alias">ProgressToken</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">number</span></div><div class="tsd-comment tsd-typography"><p>進捗トークン。進捗通知を元のリクエストに結び付けるために使用します。</p> </div><div class="tsd-comment tsd-typography" />
+
+<div id="prompt">
+  ### `プロンプト`
+</div>
+
+<div id="promptargument">
+  ### `PromptArgument`
+</div>
+
+<div id="promptmessage">
+  ### `PromptMessage`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">PromptMessage</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#">content</a><span class="tsd-signature-symbol">:</span> <a href="#contentblock" class="tsd-signature-type tsd-kind-type-alias">ContentBlock</a><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">role</a><span class="tsd-signature-symbol">:</span> <a href="#role" class="tsd-signature-type tsd-kind-type-alias">Role</a><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>プロンプトの一部として返されるメッセージを表します。</p> <p>これは <code>SamplingMessage</code> に似ていますが、MCPサーバーのリソースを埋め込むこともサポートします。</p> </div>
+
+<div id="promptreference">
+  ### `PromptReference`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">PromptReference</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#promptreference-name">name</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#promptreference-title">title</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">type</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">&quot;ref/prompt&quot;</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>プロンプトを識別します。</p> </div><section class="tsd-panel tsd-member tsd-is-inherited"><div data-typedoc-h="3" class="tsd-anchor-link" id="promptreference-name"><span>name</span><a href="#promptreference-name" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="ja/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">name</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div><div class="tsd-comment tsd-typography"><p>本来はプログラムやロジックでの使用を想定していますが、過去の仕様やフォールバックでは表示名として使われることがあります（title がない場合）。</p> </div><div class="tsd-comment tsd-typography" /><aside class="tsd-sources"><p>BaseMetadata.name から継承</p></aside></section><section class="tsd-panel tsd-member tsd-is-inherited"><div data-typedoc-h="3" class="tsd-anchor-link" id="promptreference-title"><code class="tsd-tag">Optional</code><span>title</span><a href="#promptreference-title" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="ja/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">title</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span></div><div class="tsd-comment tsd-typography"><p>UI やエンドユーザー向けの文脈を想定しており、人間が読みやすく理解しやすいよう最適化されています。
+ドメイン固有の用語に不慣れな人でも容易に理解できる表現です。</p> <p>指定されない場合は、表示に name を用いるべきです（ただし Tool の場合は、
+<code>annotations.title</code> が存在するなら <code>name</code> よりも優先します）。</p> </div><div class="tsd-comment tsd-typography" /><aside class="tsd-sources"><p>BaseMetadata.title から継承</p></aside></section>
+
+<div id="requestid">
+  ### `RequestId`
+</div>
+
+<div class="tsd-signature"><span class="tsd-kind-type-alias">RequestId</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">number</span></div><div class="tsd-comment tsd-typography"><p>JSON-RPC におけるリクエストを一意に識別するID。</p> </div><div class="tsd-comment tsd-typography" />
+
+<div id="resource">
+  ### `リソース`
+</div>
+
+<div id="resourcecontents">
+  ### `ResourceContents`
+</div>
+
+このリソースのURI。
+
+<div id="resourcelink">
+  ### `ResourceLink`
+</div>
+
+<div id="resourcetemplate">
+  ### `ResourceTemplate`
+</div>
+
+<div id="resourcetemplatereference">
+  ### `ResourceTemplateReference`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">ResourceTemplateReference</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#">type</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">&quot;ref/resource&quot;</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#resourcetemplatereference-uri">uri</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>リソースまたはリソーステンプレート定義への参照です。</p> </div><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="resourcetemplatereference-uri"><span>uri</span><a href="#resourcetemplatereference-uri" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="ja/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">uri</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div><div class="tsd-comment tsd-typography"><p>リソースのURIまたはURIテンプレートです。</p> </div><div class="tsd-comment tsd-typography" /></section>
+
+<div id="result">
+  ### `Result`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">Result</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#result-_meta">&#95;meta</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span> <span class="tsd-signature-symbol">&#125;</span><span class="tsd-signature-symbol">;</span><br />  <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="result-_meta"><code class="tsd-tag">Optional</code><span>&#95;<wbr />meta</span><a href="#result-_meta" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="ja/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">&#95;meta</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p><a href="/ja/specification/2025-06-18/basic/index#meta">汎用フィールド：<code>&#95;meta</code></a> を参照して、<code>&#95;meta</code> の使用に関する注意事項を確認してください。</p> </div><div class="tsd-comment tsd-typography" /></section>
+
+<div id="role">
+  ### `Role`
+</div>
+
+<div class="tsd-signature"><span class="tsd-kind-type-alias">Role</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">&quot;user&quot;</span> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">&quot;assistant&quot;</span></div><div class="tsd-comment tsd-typography"><p>会話におけるメッセージやデータの送受信者。</p> </div><div class="tsd-comment tsd-typography" />
+
+<div id="root">
+  ### `ルーツ`
+</div>
+
+<div id="samplingmessage">
+  ### `SamplingMessage`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">SamplingMessage</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#">content</a><span class="tsd-signature-symbol">:</span> <a href="#textcontent" class="tsd-signature-type tsd-kind-interface">TextContent</a> <span class="tsd-signature-symbol">|</span> <a href="#imagecontent" class="tsd-signature-type tsd-kind-interface">ImageContent</a> <span class="tsd-signature-symbol">|</span> <a href="#audiocontent" class="tsd-signature-type tsd-kind-interface">AudioContent</a><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">role</a><span class="tsd-signature-symbol">:</span> <a href="#role" class="tsd-signature-type tsd-kind-type-alias">Role</a><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>LLM API に対して送信された、または LLM API から受信したメッセージを表します。</p> </div>
+
+<div id="servercapabilities">
+  ### `ServerCapabilities`
+</div>
+
+<div class="tsd-comment tsd-typography"><p>サーバーがサポートしうる機能。既知の機能はこのスキーマで定義されていますが、これは閉じた集合ではありません。各サーバーは独自の追加機能を定義できます。</p> </div><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="servercapabilities-completions"><code class="tsd-tag">任意</code><span>completions</span><a href="#servercapabilities-completions" aria-label="パーマリンク" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="ja/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">completions</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">object</span></div><div class="tsd-comment tsd-typography"><p>サーバーが引数のオートコンプリート候補をサポートしている場合に存在します。</p> </div><div class="tsd-comment tsd-typography" /></section><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="servercapabilities-experimental"><code class="tsd-tag">任意</code><span>experimental</span><a href="#servercapabilities-experimental" aria-label="パーマリンク" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="ja/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">experimental</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">object</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>サーバーがサポートする実験的な非標準機能。</p> </div><div class="tsd-comment tsd-typography" /></section><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="servercapabilities-logging"><code class="tsd-tag">任意</code><span>logging</span><a href="#servercapabilities-logging" aria-label="パーマリンク" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="ja/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">logging</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">object</span></div><div class="tsd-comment tsd-typography"><p>サーバーがクライアントへのログメッセージ送信をサポートしている場合に存在します。</p> </div><div class="tsd-comment tsd-typography" /></section><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="servercapabilities-prompts"><code class="tsd-tag">任意</code><span>prompts</span><a href="#servercapabilities-prompts" aria-label="パーマリンク" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="ja/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">prompts</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">listChanged</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>サーバーがプロンプトのテンプレートを提供する場合に存在します。</p> </div><div class="tsd-type-declaration"><div data-typedoc-h="4">型定義</div><ul class="tsd-parameters"><li class="tsd-parameter"><div data-typedoc-h="5"><code class="tsd-tag">任意</code><span class="tsd-kind-property">listChanged</span><span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">boolean</span></div><div class="tsd-comment tsd-typography"><p>このサーバーがプロンプト一覧の変更通知をサポートしているかどうか。</p> </div><div class="tsd-comment tsd-typography" /></li></ul></div><div class="tsd-comment tsd-typography" /></section><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="servercapabilities-resources"><code class="tsd-tag">任意</code><span>resources</span><a href="#servercapabilities-resources" aria-label="パーマリンク" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="ja/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">resources</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">listChanged</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">;</span> <span class="tsd-kind-property">subscribe</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>サーバーが読み取り可能なリソースを提供する場合に存在します。</p> </div><div class="tsd-type-declaration"><div data-typedoc-h="4">型定義</div><ul class="tsd-parameters"><li class="tsd-parameter"><div data-typedoc-h="5"><code class="tsd-tag">任意</code><span class="tsd-kind-property">listChanged</span><span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">boolean</span></div><div class="tsd-comment tsd-typography"><p>このサーバーがリソース一覧の変更通知をサポートしているかどうか。</p> </div><div class="tsd-comment tsd-typography" /></li><li class="tsd-parameter"><div data-typedoc-h="5"><code class="tsd-tag">任意</code><span class="tsd-kind-property">subscribe</span><span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">boolean</span></div><div class="tsd-comment tsd-typography"><p>このサーバーがリソース更新の購読をサポートしているかどうか。</p> </div><div class="tsd-comment tsd-typography" /></li></ul></div><div class="tsd-comment tsd-typography" /></section><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="servercapabilities-tools"><code class="tsd-tag">任意</code><span>tools</span><a href="#servercapabilities-tools" aria-label="パーマリンク" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="ja/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">tools</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">listChanged</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>サーバーが呼び出し可能なツールを提供する場合に存在します。</p> </div><div class="tsd-type-declaration"><div data-typedoc-h="4">型定義</div><ul class="tsd-parameters"><li class="tsd-parameter"><div data-typedoc-h="5"><code class="tsd-tag">任意</code><span class="tsd-kind-property">listChanged</span><span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">boolean</span></div><div class="tsd-comment tsd-typography"><p>このサーバーがツール一覧の変更通知をサポートしているかどうか。</p> </div><div class="tsd-comment tsd-typography" /></li></ul></div><div class="tsd-comment tsd-typography" /></section>
+
+<div id="stringschema">
+  ### `StringSchema`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">StringSchema</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#">description</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">format</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">&quot;uri&quot;</span> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">&quot;email&quot;</span> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">&quot;date&quot;</span> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">&quot;date-time&quot;</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">maxLength</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">minLength</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">title</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">type</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">&quot;string&quot;</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div>
+
+<div id="textcontent">
+  ### `TextContent`
+</div>
+
+<div class="tsd-comment tsd-typography"><p>メッセージのテキスト本文。</p> </div>
+
+<div id="textresourcecontents">
+  ### `TextResourceContents`
+</div>
+
+<aside class="tsd-sources"><p><a href="#resourcecontents">ResourceContents</a> からの継承。<a href="#resourcecontents-uri">uri</a></p></aside>
+
+<div id="tool">
+  ### `ツール`
+</div>
+
+<div id="toolannotations">
+  ### `ToolAnnotations`
+</div>
+
+<div id="completioncomplete">
+  ## `completion/complete`
+</div>
+
+<div id="completerequest">
+  ### `CompleteRequest`
+</div>
+
+<aside class="tsd-sources"><p>Request.params をオーバーライドします</p></aside>
+
+<div id="completeresult">
+  ### `CompleteResult`
+</div>
+
+<div class="tsd-comment tsd-typography"><p>補完候補の配列。100件を超えてはなりません。</p> </div>
+
+<div id="elicitationcreate">
+  ## `elicitation/create`
+</div>
+
+<div id="elicitrequest">
+  ### `ElicitRequest`
+</div>
+
+<div id="elicitresult">
+  ### `ElicitResult`
+</div>
+
+<div id="initialize">
+  ## `initialize`
+</div>
+
+<div id="initializerequest">
+  ### `InitializeRequest`
+</div>
+
+<aside class="tsd-sources"><p>Request.params をオーバーライド</p></aside>
+
+<div id="initializeresult">
+  ### `InitializeResult`
+</div>
+
+サーバーが使用したい Model Context Protocol のバージョン。これはクライアントが要求したバージョンと一致しない場合があります。クライアントがこのバージョンをサポートできない場合、必ず切断しなければなりません。
+
+<div id="loggingsetlevel">
+  ## `logging/setLevel`
+</div>
+
+<div id="setlevelrequest">
+  ### `SetLevelRequest`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">SetLevelRequest</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#">method</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">&quot;logging/setLevel&quot;</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#setlevelrequest-params">params</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">level</span><span class="tsd-signature-symbol">:</span> <a href="#logginglevel" class="tsd-signature-type tsd-kind-type-alias">LoggingLevel</a> <span class="tsd-signature-symbol">&#125;</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>ロギングを有効化または調整するために、クライアントからサーバーへ送るリクエスト。</p> </div><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="setlevelrequest-params"><span>params</span><a href="#setlevelrequest-params" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="ja/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">params</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">level</span><span class="tsd-signature-symbol">:</span> <a href="#logginglevel" class="tsd-signature-type tsd-kind-type-alias">LoggingLevel</a> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-type-declaration"><div data-typedoc-h="4">型宣言</div><ul class="tsd-parameters"><li class="tsd-parameter"><div data-typedoc-h="5"><span class="tsd-kind-property">level</span><span class="tsd-signature-symbol">: </span><a href="#logginglevel" class="tsd-signature-type tsd-kind-type-alias">LoggingLevel</a></div><div class="tsd-comment tsd-typography"><p>クライアントがサーバーから受け取りたいログのレベル。サーバーは、このレベル以上（すなわち、より重大なもの）のすべてのログを、通知/メッセージとしてクライアントに送信する必要があります。</p> </div><div class="tsd-comment tsd-typography" /></li></ul></div><aside class="tsd-sources"><p>Request.params をオーバーライド</p></aside></section>
+
+<div id="notificationscancelled">
+  ## `notifications/cancelled`
+</div>
+
+<div id="cancellednotification">
+  ### `CancelledNotification`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">CancelledNotification</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#">method</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">&quot;notifications/cancelled&quot;</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#cancellednotification-params">params</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">reason</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span> <span class="tsd-kind-property">requestId</span><span class="tsd-signature-symbol">:</span> <a href="#requestid" class="tsd-signature-type tsd-kind-type-alias">RequestId</a> <span class="tsd-signature-symbol">&#125;</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>この通知は、以前に発行したリクエストをキャンセルすることを示すために、どちらの側からでも送信できます。</p> <p>リクエストはまだ進行中であるべきですが、通信遅延により、この通知がリクエスト完了後に到着する可能性は常にあります。</p> <p>この通知は結果が使用されないことを示すため、関連する処理は中止すべきです（SHOULD）。</p> <p>クライアントは自身の <code>initialize</code> リクエストをキャンセルしてはなりません（MUST NOT）。</p> </div><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="cancellednotification-params"><span>params</span><a href="#cancellednotification-params" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="ja/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">params</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">reason</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span> <span class="tsd-kind-property">requestId</span><span class="tsd-signature-symbol">:</span> <a href="#requestid" class="tsd-signature-type tsd-kind-type-alias">RequestId</a> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-type-declaration"><div data-typedoc-h="4">型宣言</div><ul class="tsd-parameters"><li class="tsd-parameter"><div data-typedoc-h="5"><code class="tsd-tag">Optional</code><span class="tsd-kind-property">reason</span><span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">string</span></div><div class="tsd-comment tsd-typography"><p>キャンセル理由を説明する任意の文字列。ログに記録されたり、ユーザーに表示されたりする場合があります（MAY）。</p> </div><div class="tsd-comment tsd-typography" /></li><li class="tsd-parameter"><div data-typedoc-h="5"><span class="tsd-kind-property">requestId</span><span class="tsd-signature-symbol">: </span><a href="#requestid" class="tsd-signature-type tsd-kind-type-alias">RequestId</a></div><div class="tsd-comment tsd-typography"><p>キャンセル対象のリクエストID。</p> <p>これは同一方向で以前に発行されたリクエストのIDと一致していなければなりません（MUST）。</p> </div><div class="tsd-comment tsd-typography" /></li></ul></div><aside class="tsd-sources"><p>Notification.params をオーバーライド</p></aside></section>
+
+<div id="notificationsinitialized">
+  ## `notifications/initialized`
+</div>
+
+<div id="initializednotification">
+  ### `InitializedNotification`
+</div>
+
+<div class="tsd-comment tsd-typography"><p>初期化が完了すると、クライアントからサーバーへこの通知が送信されます。</p> </div><section class="tsd-panel tsd-member tsd-is-inherited"><div data-typedoc-h="3" class="tsd-anchor-link" id="initializednotification-params"><code class="tsd-tag">任意</code><span>params</span><a href="#initializednotification-params" aria-label="パーマリンク" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="ja/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">params</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">&#95;meta</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span> <span class="tsd-signature-symbol">&#125;</span><span class="tsd-signature-symbol">;</span> <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-type-declaration"><div data-typedoc-h="4">型宣言</div><ul class="tsd-parameters"><li class="tsd-parameter-index-signature"><div data-typedoc-h="5"><span class="tsd-signature-symbol">[</span><span class="tsd-kind-parameter">key</span>: <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span></div></li><li class="tsd-parameter"><div data-typedoc-h="5"><code class="tsd-tag">任意</code><span class="tsd-kind-property">&#95;meta</span><span class="tsd-signature-symbol">?: </span><span class="tsd-signature-symbol">&#123;</span> <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p><a href="/ja/specification/2025-06-18/basic/index#meta">共通フィールド: <code>&#95;meta</code></a> を参照してください。<code>&#95;meta</code> の使用に関する注意事項があります。</p> </div><div class="tsd-comment tsd-typography" /></li></ul></div><aside class="tsd-sources"><p>Notification.params からの継承</p></aside></section>
+
+<div id="notificationsmessage">
+  ## `notifications/message`
+</div>
+
+<div id="loggingmessagenotification">
+  ### `LoggingMessageNotification`
+</div>
+
+<aside class="tsd-sources"><p>Notification.params をオーバーライド</p></aside>
+
+<div id="notificationsprogress">
+  ## `notifications/progress`
+</div>
+
+<div id="progressnotification">
+  ### `ProgressNotification`
+</div>
+
+<aside class="tsd-sources"><p>Notification.params をオーバーライド</p></aside>
+
+<div id="notificationspromptslist_changed">
+  ## `notifications/prompts/list_changed`
+</div>
+
+<div id="promptlistchangednotification">
+  ### `PromptListChangedNotification`
+</div>
+
+<aside class="tsd-sources"><p>Notification.params からの継承</p></aside>
+
+<div id="notificationsresourceslist_changed">
+  ## `notifications/resources/list_changed`
+</div>
+
+<div id="resourcelistchangednotification">
+  ### `ResourceListChangedNotification`
+</div>
+
+<aside class="tsd-sources"><p>Notification.params からの継承</p></aside>
+
+<div id="notificationsresourcesupdated">
+  ## `notifications/resources/updated`
+</div>
+
+<div id="resourceupdatednotification">
+  ### `ResourceUpdatedNotification`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">ResourceUpdatedNotification</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#">method</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">&quot;notifications/resources/updated&quot;</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#resourceupdatednotification-params">params</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">uri</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">&#125;</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>サーバーからクライアントへの通知で、リソースが変更され、再読込が必要になる場合があることを知らせます。これは、クライアントが事前に resources/subscribe リクエストを送信している場合にのみ送信されます。</p> </div><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="resourceupdatednotification-params"><span>params</span><a href="#resourceupdatednotification-params" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="ja/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">params</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">uri</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-type-declaration"><div data-typedoc-h="4">Type declaration</div><ul class="tsd-parameters"><li class="tsd-parameter"><div data-typedoc-h="5"><span class="tsd-kind-property">uri</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span></div><div class="tsd-comment tsd-typography"><p>更新されたリソースの URI。クライアントが実際に購読したリソースのサブリソースである場合があります。</p> </div><div class="tsd-comment tsd-typography" /></li></ul></div><aside class="tsd-sources"><p>Notification.params をオーバーライド</p></aside></section>
+
+<div id="notificationsrootslist_changed">
+  ## `notifications/roots/list_changed`
+</div>
+
+<div id="rootslistchangednotification">
+  ### `RootsListChangedNotification`
+</div>
+
+<div class="tsd-comment tsd-typography"><p>クライアントからサーバーへの通知で、ルーツの一覧が変更されたことを伝えます。
+この通知は、クライアントがいずれかのルーツを追加・削除・変更したタイミングで送信してください。その後、サーバーは ListRootsRequest を使用してルーツの最新一覧を要求する必要があります。</p> </div><section class="tsd-panel tsd-member tsd-is-inherited"><div data-typedoc-h="3" class="tsd-anchor-link" id="rootslistchangednotification-params"><code class="tsd-tag">Optional</code><span>params</span><a href="#rootslistchangednotification-params" aria-label="パーマリンク" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="ja/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">params</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">&#95;meta</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span> <span class="tsd-signature-symbol">&#125;</span><span class="tsd-signature-symbol">;</span> <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-type-declaration"><div data-typedoc-h="4">型宣言</div><ul class="tsd-parameters"><li class="tsd-parameter-index-signature"><div data-typedoc-h="5"><span class="tsd-signature-symbol">[</span><span class="tsd-kind-parameter">key</span>: <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span></div></li><li class="tsd-parameter"><div data-typedoc-h="5"><code class="tsd-tag">Optional</code><span class="tsd-kind-property">&#95;meta</span><span class="tsd-signature-symbol">?: </span><span class="tsd-signature-symbol">&#123;</span> <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p><a href="/ja/specification/2025-06-18/basic/index#meta">一般フィールド: <code>&#95;meta</code></a> を参照して、<code>&#95;meta</code> の使用に関する注意点をご確認ください。</p> </div><div class="tsd-comment tsd-typography" /></li></ul></div><aside class="tsd-sources"><p>Notification.params から継承</p></aside></section>
+
+<div id="notificationstoolslist_changed">
+  ## `notifications/tools/list_changed`
+</div>
+
+<div id="toollistchangednotification">
+  ### `ToolListChangedNotification`
+</div>
+
+<div class="tsd-comment tsd-typography"><p>サーバーからクライアントへ送られる任意の通知で、サーバーが提供するツール一覧の変更を知らせます。これは、クライアント側で事前に購読を行っていなくてもサーバーから送信される場合があります。</p> </div><section class="tsd-panel tsd-member tsd-is-inherited"><div data-typedoc-h="3" class="tsd-anchor-link" id="toollistchangednotification-params"><code class="tsd-tag">任意</code><span>params</span><a href="#toollistchangednotification-params" aria-label="パーマリンク" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="ja/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">params</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">&#95;meta</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span> <span class="tsd-signature-symbol">&#125;</span><span class="tsd-signature-symbol">;</span> <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-type-declaration"><div data-typedoc-h="4">型定義</div><ul class="tsd-parameters"><li class="tsd-parameter-index-signature"><div data-typedoc-h="5"><span class="tsd-signature-symbol">[</span><span class="tsd-kind-parameter">key</span>: <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span></div></li><li class="tsd-parameter"><div data-typedoc-h="5"><code class="tsd-tag">任意</code><span class="tsd-kind-property">&#95;meta</span><span class="tsd-signature-symbol">?: </span><span class="tsd-signature-symbol">&#123;</span> <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p><a href="/ja/specification/2025-06-18/basic/index#meta">共通フィールド: <code>&#95;meta</code></a> を参照し、<code>&#95;meta</code> の使用に関する注意点をご確認ください。</p> </div><div class="tsd-comment tsd-typography" /></li></ul></div><aside class="tsd-sources"><p>Notification.params から継承</p></aside></section>
+
+<div id="ping">
+  ## `ping`
+</div>
+
+<div id="pingrequest">
+  ### `PingRequest`
+</div>
+
+<div class="tsd-comment tsd-typography"><p>サーバーまたはクライアントが、相手が稼働中かどうかを確認するために送信する ping。受信側は速やかに応答する必要があり、応答しない場合は切断されることがあります。</p> </div><section class="tsd-panel tsd-member tsd-is-inherited"><div data-typedoc-h="3" class="tsd-anchor-link" id="pingrequest-params"><code class="tsd-tag">任意</code><span>params</span><a href="#pingrequest-params" aria-label="パーマリンク" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="ja/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-type-declaration"><div data-typedoc-h="4">型宣言</div><ul class="tsd-parameters"><li class="tsd-parameter-index-signature"><div data-typedoc-h="5"><span class="tsd-signature-symbol">[</span><span class="tsd-kind-parameter">key</span>: <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span></div></li><li class="tsd-parameter"><div data-typedoc-h="5"><code class="tsd-tag">任意</code><span class="tsd-kind-property">&#95;meta</span><span class="tsd-signature-symbol">?: </span><span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">progressToken</span><span class="tsd-signature-symbol">?:</span> <a href="#progresstoken" class="tsd-signature-type tsd-kind-type-alias">ProgressToken</a><span class="tsd-signature-symbol">;</span> <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p><a href="/ja/specification/2025-06-18/basic/index#meta">一般フィールド: <code>&#95;meta</code></a> に <code>&#95;meta</code> の使用に関する注意事項があります。</p> </div><div class="tsd-comment tsd-typography" /><ul class="tsd-parameters"><li class="tsd-parameter"><div data-typedoc-h="5"><code class="tsd-tag">任意</code><span class="tsd-kind-property">progressToken</span><span class="tsd-signature-symbol">?: </span><a href="#progresstoken" class="tsd-signature-type tsd-kind-type-alias">ProgressToken</a></div><div class="tsd-comment tsd-typography"><p>指定された場合、呼び出し元はこのリクエストに対する帯域外の進捗通知（notifications/progress で表現）を要求しています。このパラメータの値は不透明なトークンで、以降の通知に添付されます。受信側にはこれらの通知を提供する義務はありません。</p> </div><div class="tsd-comment tsd-typography" /></li></ul></li></ul></div><aside class="tsd-sources"><p>Request.params から継承</p></aside></section>
+
+<div id="promptsget">
+  ## `prompts/get`
+</div>
+
+<div id="getpromptrequest">
+  ### `GetPromptRequest`
+</div>
+
+<div class="tsd-comment tsd-typography"><p>クライアントがサーバー提供のプロンプトを取得するために使用されます。</p> </div><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="getpromptrequest-params"><span>params</span><a href="#getpromptrequest-params" aria-label="パーマリンク" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="ja/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">params</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">arguments</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">&#125;</span><span class="tsd-signature-symbol">;</span> <span class="tsd-kind-property">name</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-type-declaration"><div data-typedoc-h="4">型定義</div><ul class="tsd-parameters"><li class="tsd-parameter"><div data-typedoc-h="5"><code class="tsd-tag">Optional</code><span class="tsd-kind-property">arguments</span><span class="tsd-signature-symbol">?: </span><span class="tsd-signature-symbol">&#123;</span> <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>プロンプトをテンプレート化する際に使用する引数。</p> </div><div class="tsd-comment tsd-typography" /></li><li class="tsd-parameter"><div data-typedoc-h="5"><span class="tsd-kind-property">name</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span></div><div class="tsd-comment tsd-typography"><p>プロンプトまたはプロンプトテンプレートの名前。</p> </div><div class="tsd-comment tsd-typography" /></li></ul></div><aside class="tsd-sources"><p>Request.params をオーバーライドします</p></aside></section>
+
+<div id="getpromptresult">
+  ### `GetPromptResult`
+</div>
+
+<div class="tsd-comment tsd-typography"><p>プロンプトの任意の説明文。</p> </div>
+
+<div id="promptslist">
+  ## `prompts/list`
+</div>
+
+<div id="listpromptsrequest">
+  ### `ListPromptsRequest`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">ListPromptsRequest</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#">method</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">&quot;prompts/list&quot;</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#listpromptsrequest-params">params</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">cursor</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">&#125;</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>クライアントから送信され、サーバーが保有するプロンプトおよびプロンプトテンプレートの一覧を要求します。</p> </div><section class="tsd-panel tsd-member tsd-is-inherited"><div data-typedoc-h="3" class="tsd-anchor-link" id="listpromptsrequest-params"><code class="tsd-tag">Optional</code><span>params</span><a href="#listpromptsrequest-params" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="ja/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">params</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">cursor</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-type-declaration"><div data-typedoc-h="4">型定義</div><ul class="tsd-parameters"><li class="tsd-parameter"><div data-typedoc-h="5"><code class="tsd-tag">Optional</code><span class="tsd-kind-property">cursor</span><span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">string</span></div><div class="tsd-comment tsd-typography"><p>現在のページング位置を表す不透明なトークン。
+指定された場合、サーバーはこのカーソルの直後から結果を返すべきです。</p> </div><div class="tsd-comment tsd-typography" /></li></ul></div><aside class="tsd-sources"><p>PaginatedRequest.params から継承</p></aside></section>
+
+<div id="listpromptsresult">
+  ### `ListPromptsResult`
+</div>
+
+<div id="resourceslist">
+  ## `resources/list`
+</div>
+
+<div id="listresourcesrequest">
+  ### `ListResourcesRequest`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">ListResourcesRequest</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#">method</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">&quot;resources/list&quot;</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#listresourcesrequest-params">params</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">cursor</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">&#125;</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>クライアントから送信され、サーバーが持つリソースの一覧を要求します。</p> </div><section class="tsd-panel tsd-member tsd-is-inherited"><div data-typedoc-h="3" class="tsd-anchor-link" id="listresourcesrequest-params"><code class="tsd-tag">Optional</code><span>params</span><a href="#listresourcesrequest-params" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="ja/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">params</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">cursor</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-type-declaration"><div data-typedoc-h="4">型定義</div><ul class="tsd-parameters"><li class="tsd-parameter"><div data-typedoc-h="5"><code class="tsd-tag">Optional</code><span class="tsd-kind-property">cursor</span><span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">string</span></div><div class="tsd-comment tsd-typography"><p>現在のページネーション位置を表す不透明なトークン。
+指定された場合、サーバーはこのカーソル以降の結果を返すべきです。</p> </div><div class="tsd-comment tsd-typography" /></li></ul></div><aside class="tsd-sources"><p>PaginatedRequest.params から継承</p></aside></section>
+
+<div id="listresourcesresult">
+  ### `ListResourcesResult`
+</div>
+
+<div id="resourcesread">
+  ## `resources/read`
+</div>
+
+<div id="readresourcerequest">
+  ### `ReadResourceRequest`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">ReadResourceRequest</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#">method</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">&quot;resources/read&quot;</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#readresourcerequest-params">params</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">uri</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">&#125;</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>特定のリソースのURIを読み取るために、クライアントからサーバーへ送信されます。</p> </div><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="readresourcerequest-params"><span>params</span><a href="#readresourcerequest-params" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="ja/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">params</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">uri</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-type-declaration"><div data-typedoc-h="4">型宣言</div><ul class="tsd-parameters"><li class="tsd-parameter"><div data-typedoc-h="5"><span class="tsd-kind-property">uri</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span></div><div class="tsd-comment tsd-typography"><p>読み取るリソースのURI。URIは任意のプロトコルを使用できます。解釈方法はサーバーに委ねられます。</p> </div><div class="tsd-comment tsd-typography" /></li></ul></div><aside class="tsd-sources"><p>Request.params をオーバーライド</p></aside></section>
+
+<div id="readresourceresult">
+  ### `ReadResourceResult`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">ReadResourceResult</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#readresourceresult-_meta">&#95;meta</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span> <span class="tsd-signature-symbol">&#125;</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">contents</a><span class="tsd-signature-symbol">:</span> (<a href="#textresourcecontents" class="tsd-signature-type tsd-kind-interface">TextResourceContents</a> <span class="tsd-signature-symbol">|</span> <a href="#blobresourcecontents" class="tsd-signature-type tsd-kind-interface">BlobResourceContents</a>)<span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">;</span><br />  <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>クライアントからの resources/read リクエストに対するサーバーの応答。</p> </div><section class="tsd-panel tsd-member tsd-is-inherited"><div data-typedoc-h="3" class="tsd-anchor-link" id="readresourceresult-_meta"><code class="tsd-tag">Optional</code><span>&#95;<wbr />meta</span><a href="#readresourceresult-_meta" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="ja/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">&#95;meta</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p><a href="/ja/specification/2025-06-18/basic/index#meta">General fields: <code>&#95;meta</code></a> の <code>&#95;meta</code> の使用に関する注意事項を参照してください。</p> </div><div class="tsd-comment tsd-typography" /><aside class="tsd-sources"><p><a href="#result">Result</a> からの継承。<a href="#result-_meta">&#95;meta</a></p></aside></section>
+
+<div id="resourcessubscribe">
+  ## `resources/subscribe`
+</div>
+
+<div id="subscriberequest">
+  ### `SubscribeRequest`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">SubscribeRequest</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#">method</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">&quot;resources/subscribe&quot;</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#subscriberequest-params">params</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">uri</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">&#125;</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>クライアントから送信され、特定のリソースが変更されるたびにサーバーから「resources/updated」通知を受け取れるよう要求します。</p> </div><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="subscriberequest-params"><span>params</span><a href="#subscriberequest-params" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="ja/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">params</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">uri</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-type-declaration"><div data-typedoc-h="4">型定義</div><ul class="tsd-parameters"><li class="tsd-parameter"><div data-typedoc-h="5"><span class="tsd-kind-property">uri</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span></div><div class="tsd-comment tsd-typography"><p>購読するリソースのURI。URIは任意のプロトコルを使用できます。解釈方法はサーバーに依存します。</p> </div><div class="tsd-comment tsd-typography" /></li></ul></div><aside class="tsd-sources"><p>Request.params をオーバーライド</p></aside></section>
+
+<div id="resourcestemplateslist">
+  ## `resources/templates/list`
+</div>
+
+<div id="listresourcetemplatesrequest">
+  ### `ListResourceTemplatesRequest`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">ListResourceTemplatesRequest</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#">method</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">&quot;resources/templates/list&quot;</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#listresourcetemplatesrequest-params">params</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">cursor</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">&#125;</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>クライアントから送信され、サーバーが提供するリソーステンプレートの一覧を要求します。</p> </div><section class="tsd-panel tsd-member tsd-is-inherited"><div data-typedoc-h="3" class="tsd-anchor-link" id="listresourcetemplatesrequest-params"><code class="tsd-tag">Optional</code><span>params</span><a href="#listresourcetemplatesrequest-params" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="ja/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">params</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">cursor</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-type-declaration"><div data-typedoc-h="4">型宣言</div><ul class="tsd-parameters"><li class="tsd-parameter"><div data-typedoc-h="5"><code class="tsd-tag">Optional</code><span class="tsd-kind-property">cursor</span><span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">string</span></div><div class="tsd-comment tsd-typography"><p>現在のページネーション位置を示す不透明なトークン。
+指定された場合、サーバーはこのカーソルの次から結果を返す必要があります。</p> </div><div class="tsd-comment tsd-typography" /></li></ul></div><aside class="tsd-sources"><p>PaginatedRequest.params から継承</p></aside></section>
+
+<div id="listresourcetemplatesresult">
+  ### `ListResourceTemplatesResult`
+</div>
+
+<div id="resourcesunsubscribe">
+  ## `resources/unsubscribe`
+</div>
+
+<div id="unsubscriberequest">
+  ### `UnsubscribeRequest`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">UnsubscribeRequest</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#">method</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">&quot;resources/unsubscribe&quot;</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#unsubscriberequest-params">params</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">uri</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">&#125;</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>クライアントから送信され、サーバーによる resources/updated 通知の停止を要求します。これは、事前に行われた resources/subscribe リクエストに続いて実行される必要があります。</p> </div><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="unsubscriberequest-params"><span>params</span><a href="#unsubscriberequest-params" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="ja/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">params</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">uri</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-type-declaration"><div data-typedoc-h="4">型定義</div><ul class="tsd-parameters"><li class="tsd-parameter"><div data-typedoc-h="5"><span class="tsd-kind-property">uri</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span></div><div class="tsd-comment tsd-typography"><p>購読を解除するリソースのURI。</p> </div><div class="tsd-comment tsd-typography" /></li></ul></div><aside class="tsd-sources"><p>Request.params をオーバーライド</p></aside></section>
+
+<div id="rootslist">
+  ## `roots/list`
+</div>
+
+<div id="listrootsrequest">
+  ### `ListRootsRequest`
+</div>
+
+<div id="listrootsresult">
+  ### `ListRootsResult`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">ListRootsResult</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#listrootsresult-_meta">&#95;meta</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span> <span class="tsd-signature-symbol">&#125;</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">roots</a><span class="tsd-signature-symbol">:</span> <a href="#root" class="tsd-signature-type tsd-kind-interface">Root</a><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">;</span><br />  <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>サーバーからの roots/list リクエストに対するクライアントの応答。
+この結果には Root オブジェクトの配列が含まれ、各オブジェクトはサーバーが操作可能なルートディレクトリ
+またはファイルを表します。</p> </div><section class="tsd-panel tsd-member tsd-is-inherited"><div data-typedoc-h="3" class="tsd-anchor-link" id="listrootsresult-_meta"><code class="tsd-tag">Optional</code><span>&#95;<wbr />meta</span><a href="#listrootsresult-_meta" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="ja/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">&#95;meta</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p><a href="/ja/specification/2025-06-18/basic/index#meta">一般フィールド: <code>&#95;meta</code></a> を参照してください。<code>&#95;meta</code> の使用に関する注意点があります。</p> </div><div class="tsd-comment tsd-typography" /><aside class="tsd-sources"><p><a href="#result">Result</a> から継承。<a href="#result-_meta">&#95;meta</a></p></aside></section>
+
+<div id="samplingcreatemessage">
+  ## `sampling/createMessage`
+</div>
+
+<div id="createmessagerequest">
+  ### `CreateMessageRequest`
+</div>
+
+<aside class="tsd-sources"><p>Request.params のオーバーライド</p></aside>
+
+<div id="createmessageresult">
+  ### `CreateMessageResult`
+</div>
+
+<div class="tsd-comment tsd-typography"><p>判明している場合、サンプリングが停止した理由。</p> </div>
+
+<div id="toolscall">
+  ## `tools/call`
+</div>
+
+<div id="calltoolrequest">
+  ### `CallToolRequest`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">CallToolRequest</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#">method</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">&quot;tools/call&quot;</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">params</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">arguments</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span> <span class="tsd-signature-symbol">&#125;</span><span class="tsd-signature-symbol">;</span> <span class="tsd-kind-property">name</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">&#125;</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>クライアントがサーバー提供のツールを呼び出す際に使用されます。</p> </div>
+
+<div id="calltoolresult">
+  ### `CallToolResult`
+</div>
+
+<div id="toolslist">
+  ## `tools/list`
+</div>
+
+<div id="listtoolsrequest">
+  ### `ListToolsRequest`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">ListToolsRequest</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#">method</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">&quot;tools/list&quot;</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#listtoolsrequest-params">params</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">cursor</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">&#125;</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>クライアントから送信し、サーバーが提供するツールの一覧をリクエストします。</p> </div><section class="tsd-panel tsd-member tsd-is-inherited"><div data-typedoc-h="3" class="tsd-anchor-link" id="listtoolsrequest-params"><code class="tsd-tag">Optional</code><span>params</span><a href="#listtoolsrequest-params" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="ja/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">params</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">cursor</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-type-declaration"><div data-typedoc-h="4">型宣言</div><ul class="tsd-parameters"><li class="tsd-parameter"><div data-typedoc-h="5"><code class="tsd-tag">Optional</code><span class="tsd-kind-property">cursor</span><span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">string</span></div><div class="tsd-comment tsd-typography"><p>現在のページネーション位置を表す不透明なトークン。
+指定された場合、サーバーはこのカーソルの直後から結果を返す必要があります。</p> </div><div class="tsd-comment tsd-typography" /></li></ul></div><aside class="tsd-sources"><p>PaginatedRequest.params から継承</p></aside></section>
+
+<div id="listtoolsresult">
+  ### `ListToolsResult`
+</div>

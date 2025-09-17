@@ -1,0 +1,38 @@
+---
+title: 主要な変更点
+---
+
+このドキュメントは、前回の改訂版 [2024-11-05](/ja/specification/2024-11-05) 以降に Model Context Protocol（MCP）仕様に加えられた変更点を一覧するものです。
+
+<div id="major-changes">
+  ## 主要な変更
+</div>
+
+1. OAuth 2.1に基づく包括的な**[認可フレームワーク](/ja/specification/2025-03-26/basic/authorization)**を追加
+   （PR [#133](https://github.com/modelcontextprotocol/specification/pull/133)）
+2. 既存のHTTP+SSEトランスポートを、より柔軟な**[ストリーム対応HTTP
+   トランスポート](/ja/specification/2025-03-26/basic/transports#streamable-http)**に置き換え（PR
+   [#206](https://github.com/modelcontextprotocol/specification/pull/206)）
+3. JSON-RPCの**[バッチ処理](https://www.jsonrpc.org/specification#batch)**をサポート（PR
+   [#228](https://github.com/modelcontextprotocol/specification/pull/228)）
+4. 読み取り専用か破壊的かなどの動作をより明確に記述できるよう、包括的な**ツール注釈**を追加（PR
+   [#185](https://github.com/modelcontextprotocol/specification/pull/185)）
+
+<div id="other-schema-changes">
+  ## その他のスキーマ変更
+</div>
+
+* 状況を説明するステータス更新を提供するため、`ProgressNotification` に `message` フィールドを追加
+* 既存のテキストおよび画像のコンテンツタイプに加えて、音声データをサポート
+* 引数の自動補完候補のサポートを明示するために、`completions` 機能を追加
+
+詳細は
+[更新されたスキーマ](http://github.com/modelcontextprotocol/specification/tree/main/schema/2025-03-26/schema.ts)
+を参照してください。
+
+<div id="full-changelog">
+  ## 変更履歴（全件）
+</div>
+
+直近のプロトコル改訂以降に行われたすべての変更の一覧は、
+[GitHubをご覧ください](https://github.com/modelcontextprotocol/specification/compare/2024-11-05...2025-03-26)。
