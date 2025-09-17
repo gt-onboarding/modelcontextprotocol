@@ -1,0 +1,80 @@
+---
+title: Übersicht
+---
+
+<Info>**Protokollrevision**: 2024-11-05</Info>
+
+Alle Nachrichten zwischen MCP-Clients und MCP-Servern **MÜSSEN** der
+[JSON-RPC 2.0](https://www.jsonrpc.org/specification)-Spezifikation entsprechen. Das Protokoll definiert
+drei grundlegende Nachrichtentypen:
+
+| Typ             | Beschreibung                             | Anforderungen                                 |
+| --------------- | ----------------------------------------- | --------------------------------------------- |
+| `Requests`      | Nachrichten zum Initiieren einer Operation | Müssen eine eindeutige ID und einen Methodennamen enthalten |
+| `Responses`     | Nachrichten als Antwort auf Requests      | Müssen dieselbe ID wie der Request enthalten  |
+| `Notifications` | Einweg-Nachrichten ohne Antwort           | Dürfen keine ID enthalten                     |
+
+**Responses** werden weiter in **erfolgreiche Ergebnisse** oder **Fehler** unterteilt.
+Ergebnisse können beliebige JSON-Objektstrukturen aufweisen, während Fehler mindestens einen Fehlercode und
+eine Fehlermeldung enthalten müssen.
+
+<div id="protocol-layers">
+  ## Protokollschichten
+</div>
+
+Das Model Context Protocol besteht aus mehreren zentralen Komponenten, die zusammenarbeiten:
+
+* **Basisprotokoll**: Kern-JSON-RPC-Nachrichtentypen
+* **Lebenszyklusverwaltung**: Verbindungsinitialisierung, Fähigkeitsaushandlung und
+  Sitzungssteuerung
+* **Serverfunktionen**: Ressourcen, Prompts und Tools, die von Servern bereitgestellt werden
+* **Clientfunktionen**: Sampling und Root-Verzeichnisse, die von Clients bereitgestellt werden
+* **Hilfsfunktionen**: Querschnittsthemen wie Logging und Argumentvervollständigung
+
+Alle Implementierungen **MÜSSEN** das Basisprotokoll und die Komponenten der Lebenszyklusverwaltung
+unterstützen. Weitere Komponenten **KÖNNEN** je nach den spezifischen Anforderungen der
+Anwendung implementiert werden.
+
+Diese Protokollschichten schaffen eine klare Trennung der Verantwortlichkeiten und ermöglichen gleichzeitig
+umfangreiche Interaktionen zwischen Clients und Servern. Das modulare Design erlaubt Implementierungen,
+genau die Funktionen zu unterstützen, die benötigt werden.
+
+Weitere Details zu den verschiedenen Komponenten finden Sie auf den folgenden Seiten:
+
+<CardGroup cols={3}>
+  <Card title="Lebenszyklus" icon="arrows-rotate" href="/de/specification/2024-11-05/basic/lifecycle" />
+
+  <Card title="Ressourcen" icon="file-lines" href="/de/specification/2024-11-05/server/resources" />
+
+  <Card title="Prompts" icon="message" href="/de/specification/2024-11-05/server/prompts" />
+
+  <Card title="Tools" icon="wrench" href="/de/specification/2024-11-05/server/tools" />
+
+  <Card title="Logging" icon="rectangle-list" href="/de/specification/2024-11-05/server/utilities/logging" />
+
+  <Card title="Sampling" icon="code" href="/de/specification/2024-11-05/client/sampling" />
+</CardGroup>
+
+<div id="auth">
+  ## Auth
+</div>
+
+Authentifizierung und Autorisierung sind derzeit nicht Teil der MCP-Kern­spezifikation,
+wir prüfen jedoch Möglichkeiten, sie in Zukunft einzuführen. Beteilige dich an den
+[GitHub Discussions](https://github.com/modelcontextprotocol/specification/discussions),
+um die Zukunft des Protokolls mitzugestalten!
+
+Clients und Server **KÖNNEN** eigene benutzerdefinierte Strategien für Authentifizierung und Autorisierung aushandeln.
+
+<div id="schema">
+  ## Schema
+</div>
+
+Die vollständige Spezifikation des Protokolls ist als
+[TypeScript-Schema](http://github.com/modelcontextprotocol/specification/tree/main/schema/2024-11-05/schema.ts) definiert.
+Dies ist die maßgebliche Referenz für alle Protokollnachrichten und -strukturen.
+
+Es gibt außerdem ein
+[JSON-Schema](http://github.com/modelcontextprotocol/specification/tree/main/schema/2024-11-05/schema.json),
+das automatisch aus der maßgeblichen TypeScript-Quelle generiert wird und mit
+verschiedenen automatisierten Tools verwendet werden kann.

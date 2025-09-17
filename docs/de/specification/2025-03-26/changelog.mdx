@@ -1,0 +1,41 @@
+---
+title: Wichtige Änderungen
+---
+
+Dieses Dokument führt Änderungen an der Model Context Protocol (MCP)-Spezifikation auf, die seit der vorherigen Revision [2024-11-05](/de/specification/2024-11-05) vorgenommen wurden.
+
+<div id="major-changes">
+  ## Wichtige Änderungen
+</div>
+
+1. Ein umfassendes **[Autorisierungs-Framework](/de/specification/2025-03-26/basic/authorization)** hinzugefügt,
+   basierend auf OAuth 2.1 (PR
+   [#133](https://github.com/modelcontextprotocol/specification/pull/133))
+2. Den bisherigen HTTP+SSE-Transport durch einen flexibleren **[Streamable-HTTP-
+   Transport](/de/specification/2025-03-26/basic/transports#streamable-http)** ersetzt (PR
+   [#206](https://github.com/modelcontextprotocol/specification/pull/206))
+3. Unterstützung für **[Batching](https://www.jsonrpc.org/specification#batch)** in JSON-RPC hinzugefügt
+   (PR [#228](https://github.com/modelcontextprotocol/specification/pull/228))
+4. Umfassende **Tool-Anmerkungen** hinzugefügt, um das Verhalten von Werkzeugen besser zu beschreiben,
+   z. B. ob sie nur lesend oder destruktiv sind (PR
+   [#185](https://github.com/modelcontextprotocol/specification/pull/185))
+
+<div id="other-schema-changes">
+  ## Weitere Schemaänderungen
+</div>
+
+* `message`-Feld zu `ProgressNotification` hinzugefügt, um aussagekräftige Statusaktualisierungen bereitzustellen
+* Unterstützung für Audiodaten hinzugefügt, zusätzlich zu den bestehenden Inhalts­typen Text und Bild
+* `completions`-Fähigkeit hinzugefügt, um die Unterstützung für Argument-
+  Autovervollständigungsvorschläge explizit anzuzeigen
+
+Siehe
+[das aktualisierte Schema](http://github.com/modelcontextprotocol/specification/tree/main/schema/2025-03-26/schema.ts)
+für weitere Details.
+
+<div id="full-changelog">
+  ## Vollständiges Änderungsprotokoll
+</div>
+
+Eine vollständige Liste aller seit der letzten Protokollrevision vorgenommenen Änderungen
+[finden Sie auf GitHub](https://github.com/modelcontextprotocol/specification/compare/2024-11-05...2025-03-26).

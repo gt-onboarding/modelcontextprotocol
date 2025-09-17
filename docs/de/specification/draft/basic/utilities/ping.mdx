@@ -1,0 +1,78 @@
+---
+title: Ping
+---
+
+<div id="enable-section-numbers" />
+
+<Info>**Protokollrevision**: Entwurf</Info>
+
+Das Model Context Protocol (MCP) enthält einen optionalen Ping-Mechanismus, mit dem beide Parteien prüfen können, ob das jeweilige Gegenüber noch reagiert und die Verbindung besteht.
+
+<div id="overview">
+  ## Übersicht
+</div>
+
+Die Ping-Funktion wird über ein einfaches Anfrage-/Antwortmuster umgesetzt. Sowohl der Client als auch der Server können einen Ping auslösen, indem sie eine `ping`-Anfrage senden.
+
+<div id="message-format">
+  ## Nachrichtenformat
+</div>
+
+Eine Ping-Anfrage ist eine standardmäßige JSON-RPC-2.0-Anfrage ohne Parameter:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "123",
+  "method": "ping"
+}
+```
+
+<div id="behavior-requirements">
+  ## Verhaltensanforderungen
+</div>
+
+1. Der Empfänger MUSS umgehend mit einer leeren Antwort reagieren:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "123",
+  "result": {}
+}
+```
+
+2. Wenn innerhalb eines angemessenen Timeout-Zeitraums keine Antwort eingeht, KANN der Absender:
+   - Die Verbindung als inaktiv betrachten
+   - Die Verbindung beenden
+   - Einen Wiederverbindungsversuch unternehmen
+
+<div id="usage-patterns">
+  ## Nutzungsmuster
+</div>
+
+```mermaid
+sequenceDiagram
+    participant Sender
+    participant Empfänger
+
+    Sender->>Empfänger: Ping-Anfrage
+    Empfänger->>Sender: leere Antwort
+```
+
+<div id="implementation-considerations">
+  ## Überlegungen zur Implementierung
+</div>
+
+- Implementierungen **SOLLEN** regelmäßig Pings senden, um die Verbindungsqualität zu prüfen
+- Die Ping-Frequenz **SOLLTE** konfigurierbar sein
+- Timeouts **SOLLEN** an die jeweilige Netzwerkumgebung angepasst sein
+- Übermäßiges Pingen **SOLLTE** vermieden werden, um den Netzwerkaufwand zu reduzieren
+
+<div id="error-handling">
+  ## Fehlerbehandlung
+</div>
+
+- Timeouts **SOLLTEN** als Verbindungsfehler behandelt werden
+- Mehrere fehlgeschlagene Pings **KÖNNEN** einen Verbindungsneustart auslösen
+- Implementierungen **SOLLTEN** Ping-Fehler zu Diagnosezwecken protokollieren

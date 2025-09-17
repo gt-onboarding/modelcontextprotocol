@@ -1,0 +1,76 @@
+---
+title: "FAQs"
+description: "Das Model Context Protocol (MCP) in einfachen Worten und warum es wichtig ist"
+---
+
+<div id="what-is-mcp">
+  ## Was ist MCP?
+</div>
+
+MCP (Model Context Protocol) ist ein standardisiertes Verfahren, mit dem KI-Anwendungen und -Agenten eine Verbindung zu Ihren Datenquellen (z. B. lokalen Dateien, Datenbanken oder Content-Repositories) und Werkzeugen (z. B. GitHub, Google Maps oder Puppeteer) herstellen und mit ihnen arbeiten können.
+
+Stellen Sie sich MCP als universellen Adapter für KI-Anwendungen vor – ähnlich wie USB‑C für physische Geräte. USB‑C dient als universeller Adapter, um Geräte mit verschiedenem Zubehör und Peripherie zu verbinden. Ebenso bietet MCP eine standardisierte Möglichkeit, KI-Anwendungen mit unterschiedlichen Daten und Werkzeugen zu verbinden.
+
+Vor USB‑C benötigte man für unterschiedliche Verbindungen verschiedene Kabel. Ebenso mussten Entwickler vor MCP kundenspezifische Anbindungen an jede Datenquelle oder jedes Werkzeug erstellen, mit dem ihre KI-Anwendung arbeiten sollte – ein zeitaufwändiger Prozess, der häufig zu eingeschränkter Funktionalität führte. Mit MCP können Entwickler nun problemlos Verbindungen zu ihren KI-Anwendungen hinzufügen und diese von Anfang an deutlich leistungsfähiger machen.
+
+<div id="why-does-mcp-matter">
+  ## Warum ist das MCP wichtig?
+</div>
+
+<div id="for-ai-application-users">
+  ### Für Nutzerinnen und Nutzer von KI-Anwendungen
+</div>
+
+MCP bedeutet, dass Ihre KI-Anwendungen auf die Informationen und Werkzeuge zugreifen können, mit denen Sie täglich arbeiten, und dadurch deutlich hilfreicher werden. Statt darauf beschränkt zu sein, was die KI bereits weiß, kann sie nun Ihre spezifischen Dokumente, Daten und Ihren Arbeitskontext verstehen.
+
+Beispielsweise können Anwendungen mithilfe von MCP-Servern auf Ihre persönlichen Dokumente in Google Drive oder auf Daten zu Ihrer Codebasis bei GitHub zugreifen und so individuellere und kontextbezogenere Unterstützung bieten.
+
+Stellen Sie sich vor, Sie bitten eine KI-Assistenz: „Fasse die Notizen der Team-Meetings von letzter Woche zusammen und vereinbare Follow-ups mit allen.“
+
+Durch die Nutzung von Verbindungen zu Datenquellen, die über MCP bereitgestellt werden, kann die KI-Assistenz:
+
+* Über einen MCP-Server eine Verbindung zu Ihrem Google Drive herstellen, um Meeting-Notizen zu lesen
+* Ermitteln, wer auf Basis der Notizen Follow-ups benötigt
+* Über einen weiteren MCP-Server eine Verbindung zu Ihrem Kalender herstellen, um die Termine automatisch zu vereinbaren
+
+<div id="for-developers">
+  ### Für Entwickler
+</div>
+
+MCP reduziert Entwicklungszeit und -komplexität beim Erstellen von KI-Anwendungen, die auf verschiedene Datenquellen zugreifen müssen. Mit MCP können sich Entwickler darauf konzentrieren, großartige KI-Erlebnisse zu schaffen, statt immer wieder benutzerdefinierte Connectoren zu bauen.
+
+Traditionell erforderte das Verbinden von Anwendungen mit Datenquellen den Aufbau benutzerdefinierter, einmaliger Verbindungen für jede Datenquelle und jede Anwendung. Das führte zu erheblicher doppelter Arbeit – jeder Entwickler, der seine KI-Anwendung mit Google Drive oder Slack verbinden wollte, musste seine eigene Verbindung erstellen.
+
+MCP vereinfacht dies, indem es Entwicklern ermöglicht, MCP-Server für Datenquellen zu erstellen, die dann von verschiedenen Anwendungen wiederverwendet werden können. Beispielsweise können mit dem Open-Source-Google-Drive-MCP-Server viele unterschiedliche Anwendungen auf Daten aus Google Drive zugreifen, ohne dass jeder Entwickler eine benutzerdefinierte Verbindung entwickeln muss.
+
+Dieses Open-Source-Ökosystem von MCP-Servern bedeutet, dass Entwickler auf bestehende Arbeit zurückgreifen können, statt bei null zu beginnen. So wird es einfacher, leistungsfähige KI-Anwendungen zu entwickeln, die nahtlos mit den Werkzeugen und Datenquellen integriert sind, auf die sich ihre Nutzer bereits verlassen.
+
+<div id="how-does-mcp-work">
+  ## Wie funktioniert MCP?
+</div>
+
+<Frame>
+  <img src="/images/mcp-simple-diagram.png" />
+</Frame>
+
+MCP bildet eine Brücke zwischen Ihren KI-Anwendungen und Ihren Daten über ein unkompliziertes System:
+
+* **MCP‑Server** verbinden sich mit Ihren Datenquellen und Werkzeugen (wie Google Drive oder Slack)
+* **MCP‑Clients** werden von KI-Anwendungen (wie Claude Desktop) ausgeführt, um sie mit diesen Servern zu verbinden
+* Wenn Sie es erlauben, erkennt Ihre KI-Anwendung verfügbare MCP‑Server
+* Das KI-Modell kann diese Verbindungen dann nutzen, um Informationen zu lesen und Aktionen auszuführen
+
+Dieses modulare System ermöglicht es, neue Funktionen hinzuzufügen, ohne die KI-Anwendungen selbst zu ändern – ganz wie beim Hinzufügen neuer Zubehörteile zu Ihrem Computer, ohne das gesamte System aufzurüsten.
+
+<div id="who-creates-and-maintains-mcp-servers">
+  ## Wer entwickelt und betreut MCP-Server?
+</div>
+
+MCP-Server werden entwickelt und gepflegt von:
+
+* Entwicklerinnen und Entwicklern bei Anthropic, die Server für gängige Werkzeuge und Datenquellen bauen
+* Open-Source-Mitwirkenden, die Server für die von ihnen genutzten Werkzeuge erstellen
+* Enterprise-Entwicklungsteams, die Server für ihre internen Systeme entwickeln
+* Softwareanbietern, die ihre Anwendungen KI‑fähig machen
+
+Sobald ein Open-Source-MCP-Server für eine Datenquelle erstellt wurde, kann er von jeder MCP‑kompatiblen KI-Anwendung genutzt werden – so entsteht ein wachsendes Ökosystem von Verbindungen. Siehe unsere [Liste von Beispielservern](/de/examples) oder [beginnen Sie mit dem Erstellen eines eigenen Servers](/de/quickstart/server).

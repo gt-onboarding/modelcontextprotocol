@@ -1,0 +1,439 @@
+---
+title: Autorisierung
+---
+
+<div id="enable-section-numbers" />
+
+<Info>**Protokollrevision**: Entwurf</Info>
+
+<div id="introduction">
+  ## Einleitung
+</div>
+
+<div id="purpose-and-scope">
+  ### Zweck und Umfang
+</div>
+
+Der Model Context Protocol definiert Autorisierungsfunktionen auf der Transporteebene
+und ermöglicht MCP-Clients, im Namen von Ressourceninhabern Anfragen an eingeschränkte MCP-Server zu stellen. Diese Spezifikation beschreibt den Autorisierungsablauf für HTTP-basierte Transporte.
+
+<div id="protocol-requirements">
+  ### Protokollanforderungen
+</div>
+
+Die Autorisierung ist für MCP-Implementierungen **OPTIONAL**. Falls unterstützt:
+
+* Implementierungen, die einen HTTP-basierten Transport verwenden, **SOLLTEN** dieser Spezifikation entsprechen.
+* Implementierungen, die einen STDIO-Transport verwenden, **SOLLTEN NICHT** dieser Spezifikation folgen, sondern
+  stattdessen Anmeldedaten aus der Umgebung beziehen.
+* Implementierungen, die alternative Transporte verwenden, **MÜSSEN** etablierte Sicherheitsbest Practices
+  für ihr Protokoll befolgen.
+
+<div id="standards-compliance">
+  ### Standards-konformität
+</div>
+
+Dieser Autorisierungsmechanismus basiert auf den unten aufgeführten etablierten Spezifikationen, implementiert jedoch bewusst nur eine ausgewählte Teilmenge ihrer Funktionen, um Sicherheit und Interoperabilität bei gleichzeitiger Einfachheit zu gewährleisten:
+
+* OAuth 2.1 IETF-Draft ([draft-ietf-oauth-v2-1-13](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13))
+* OAuth 2.0 Authorization Server Metadata
+  ([RFC8414](https://datatracker.ietf.org/doc/html/rfc8414))
+* OAuth 2.0 Dynamic Client Registration Protocol
+  ([RFC7591](https://datatracker.ietf.org/doc/html/rfc7591))
+* OAuth 2.0 Protected Resource Metadata ([RFC9728](https://datatracker.ietf.org/doc/html/rfc9728))
+
+<div id="authorization-flow">
+  ## Autorisierungsvorgang
+</div>
+
+<div id="roles">
+  ### Rollen
+</div>
+
+Ein geschützter *MCP-Server* fungiert als [OAuth 2.1-Ressourcenserver](https://www.ietf.org/archive/id/draft-ietf-oauth-v2-1-13.html#name-roles),
+der geschützte Ressourcenanforderungen mithilfe von Zugriffstoken annehmen und beantworten kann.
+
+Ein *MCP-Client* fungiert als [OAuth 2.1-Client](https://www.ietf.org/archive/id/draft-ietf-oauth-v2-1-13.html#name-roles),
+der im Namen eines Ressourceninhabers Anfragen auf geschützte Ressourcen stellt.
+
+Der *Autorisierungsserver* ist dafür verantwortlich, bei Bedarf mit dem Benutzer zu interagieren und Zugriffstoken für die Verwendung beim MCP-Server auszustellen.
+Die Implementierungsdetails des Autorisierungsservers liegen außerhalb des Geltungsbereichs dieser Spezifikation. Er kann zusammen mit dem
+Ressourcenserver oder als separate Instanz gehostet werden. Der Abschnitt [Ermittlung des Autorisierungsservers](#authorization-server-discovery)
+legt fest, wie ein MCP-Server einem Client den Ort seines zugehörigen Autorisierungsservers mitteilt.
+
+<div id="overview">
+  ### Übersicht
+</div>
+
+1. Autorisierungsserver **MÜSSEN** OAuth 2.1 mit geeigneten Sicherheitsmaßnahmen für vertrauliche wie auch öffentliche Clients implementieren.
+
+2. Autorisierungsserver und MCP-Clients **SOLLEN** das OAuth 2.0 Dynamic Client Registration Protocol ([RFC7591](https://datatracker.ietf.org/doc/html/rfc7591)) unterstützen.
+
+3. MCP-Server **MÜSSEN** OAuth 2.0 Protected Resource Metadata ([RFC9728](https://datatracker.ietf.org/doc/html/rfc9728)) implementieren.
+   MCP-Clients **MÜSSEN** OAuth 2.0 Protected Resource Metadata für die Entdeckung von Autorisierungsservern verwenden.
+
+4. MCP-Autorisierungsserver **MÜSSEN** mindestens einen der folgenden Discovery-Mechanismen bereitstellen:
+
+   * OAuth 2.0 Authorization Server Metadata ([RFC8414](https://datatracker.ietf.org/doc/html/rfc8414))
+   * [OpenID Connect Discovery 1.0](https://openid.net/specs/openid-connect-discovery-1_0.html)
+
+   MCP-Clients **MÜSSEN** beide Discovery-Mechanismen unterstützen, um die für die Interaktion mit dem Autorisierungsserver erforderlichen Informationen zu erhalten.
+
+<div id="authorization-server-discovery">
+  ### Ermittlung von Autorisierungsservern
+</div>
+
+Dieser Abschnitt beschreibt die Mechanismen, mit denen MCP-Server ihre zugehörigen Autorisierungsserver gegenüber MCP-Clients bekannt geben, sowie den Ermittlungsprozess, durch den MCP-Clients die Endpunkte von Autorisierungsservern und die unterstützten Fähigkeiten feststellen können.
+
+<div id="authorization-server-location">
+  #### Standort des Authorization Servers
+</div>
+
+MCP-Server **MÜSSEN** die Spezifikation OAuth 2.0 Protected Resource Metadata ([RFC9728](https://datatracker.ietf.org/doc/html/rfc9728)) implementieren, um die Standorte von Authorization-Servern anzugeben. Das vom MCP-Server zurückgegebene Protected-Resource-Metadata-Dokument **MUSS** das Feld `authorization_servers` enthalten, das mindestens einen Authorization-Server umfasst.
+
+Die konkrete Verwendung von `authorization_servers` liegt außerhalb des Geltungsbereichs dieser Spezifikation; Implementierende sollten für Hinweise zu Implementierungsdetails die OAuth 2.0 Protected Resource Metadata ([RFC9728](https://datatracker.ietf.org/doc/html/rfc9728)) konsultieren.
+
+Implementierende sollten beachten, dass Protected-Resource-Metadata-Dokumente mehrere Authorization-Server definieren können. Die Verantwortung für die Auswahl, welcher Authorization-Server verwendet wird, liegt beim MCP-Client und folgt den in
+[RFC9728 Abschnitt 7.6 „Authorization Servers“](https://datatracker.ietf.org/doc/html/rfc9728#name-authorization-servers) festgelegten Richtlinien.
+
+MCP-Server **MÜSSEN** den HTTP-Header `WWW-Authenticate` verwenden, wenn sie ein *401 Unauthorized* zurückgeben, um den Standort der Ressourcenserver-Metadaten-URL anzugeben,
+wie in [RFC9728 Abschnitt 5.1 „WWW-Authenticate Response“](https://datatracker.ietf.org/doc/html/rfc9728#name-www-authenticate-response) beschrieben.
+
+MCP-Clients **MÜSSEN** in der Lage sein, `WWW-Authenticate`-Header zu parsen und angemessen auf `HTTP 401 Unauthorized`-Antworten vom MCP-Server zu reagieren.
+
+<div id="server-metadata-discovery">
+  #### Erkennung von Server-Metadaten
+</div>
+
+Um unterschiedliche Aussteller-URL-Formate zu handhaben und die Interoperabilität sowohl mit den Spezifikationen zu OAuth 2.0 Authorization Server Metadata als auch zu OpenID Connect Discovery 1.0 sicherzustellen, MÜSSEN MCP-Clients bei der Ermittlung von Metadaten des Authorization Servers mehrere well-known-Endpunkte ausprobieren.
+
+Der Erkennungsansatz basiert auf [RFC8414 Abschnitt 3.1 „Authorization Server Metadata Request“](https://datatracker.ietf.org/doc/html/rfc8414#section-3.1) für die Discovery von OAuth 2.0 Authorization Server Metadata und [RFC8414 Abschnitt 5 „Compatibility Notes“](https://datatracker.ietf.org/doc/html/rfc8414#section-5) für die Interoperabilität mit OpenID Connect Discovery 1.0.
+
+Für Aussteller-URLs mit Pfadkomponenten (z. B. `https://auth.example.com/tenant1`) MÜSSEN Clients die Endpunkte in folgender Prioritätsreihenfolge ausprobieren:
+
+1. OAuth 2.0 Authorization Server Metadata mit Pfadeinfügung: `https://auth.example.com/.well-known/oauth-authorization-server/tenant1`
+2. OpenID Connect Discovery 1.0 mit Pfadeinfügung: `https://auth.example.com/.well-known/openid-configuration/tenant1`
+3. OpenID Connect Discovery 1.0 mit Pfadanfügung: `https://auth.example.com/tenant1/.well-known/openid-configuration`
+
+Für Aussteller-URLs ohne Pfadkomponenten (z. B. `https://auth.example.com`) MÜSSEN Clients Folgendes ausprobieren:
+
+1. OAuth 2.0 Authorization Server Metadata: `https://auth.example.com/.well-known/oauth-authorization-server`
+2. OpenID Connect Discovery 1.0: `https://auth.example.com/.well-known/openid-configuration`
+
+<div id="sequence-diagram">
+  #### Sequenzdiagramm
+</div>
+
+Das folgende Diagramm zeigt einen Beispielablauf:
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant M as MCP-Server (Resource Server)
+    participant A as Authorization Server
+
+    C->>M: MCP-Anfrage ohne Token
+    M-->>C: HTTP 401 Unauthorized mit WWW-Authenticate-Header
+    Note over C: resource_metadata aus<br />WWW-Authenticate extrahieren
+
+    C->>M: GET /.well-known/oauth-protected-resource
+    M-->>C: Ressourcen-Metadaten mit URL des Authorization Servers
+    Note over C: RS-Metadaten validieren,<br />AS-Metadaten-URL erstellen
+
+    C->>A: GET-Metadaten-Endpunkt des Authorization Servers
+    Note over C,A: OAuth 2.0- und OpenID-Connect-<br/>Discovery-Endpunkte in Prioritätsreihenfolge prüfen
+    A-->>C: Metadaten des Authorization Servers
+
+    Note over C,A: Hier findet der OAuth-2.1-Autorisierungsablauf statt
+
+    C->>A: Token-Anfrage
+    A-->>C: Access Token
+
+    C->>M: MCP-Anfrage mit Access Token
+    M-->>C: MCP-Antwort
+    Note over C,M: MCP-Kommunikation setzt sich mit gültigem Token fort
+```
+
+<div id="dynamic-client-registration">
+  ### Dynamische Client-Registrierung
+</div>
+
+MCP-Clients und Autorisierungsserver SOLLTEN das
+OAuth 2.0 Dynamic Client Registration Protocol [RFC7591](https://datatracker.ietf.org/doc/html/rfc7591)
+unterstützen, damit MCP-Clients OAuth-Client-IDs ohne Benutzerinteraktion erhalten können. Dies bietet eine
+standardisierte Möglichkeit für Clients, sich automatisch bei neuen Autorisierungsservern zu registrieren, was für MCP entscheidend ist,
+weil:
+
+* Clients möglicherweise nicht alle potenziellen MCP-Server und deren Autorisierungsserver im Voraus kennen.
+* Manuelle Registrierung für Benutzer Reibung verursachen würde.
+* So eine nahtlose Verbindung zu neuen MCP-Servern und deren Autorisierungsservern ermöglicht wird.
+* Autorisierungsserver ihre eigenen Registrierungsrichtlinien implementieren können.
+
+Alle Autorisierungsserver, die Dynamic Client Registration nicht unterstützen, müssen
+alternative Wege bereitstellen, um eine Client-ID (und, falls zutreffend, Client-Anmeldedaten) zu erhalten. Für einen solchen
+Autorisierungsserver müssen MCP-Clients entweder:
+
+1. Eine Client-ID (und, falls zutreffend, Client-Anmeldedaten) fest im Code hinterlegen, speziell für die Verwendung durch den MCP-Client bei der
+   Interaktion mit diesem Autorisierungsserver, oder
+2. Eine Benutzeroberfläche bereitstellen, über die Benutzer diese Details eingeben können, nachdem sie selbst einen
+   OAuth-Client registriert haben (z. B. über eine vom
+   Server gehostete Konfigurationsoberfläche).
+
+<div id="authorization-flow-steps">
+  ### Schritte des Autorisierungsablaufs
+</div>
+
+Der vollständige Autorisierungsablauf verläuft wie folgt:
+
+```mermaid
+sequenceDiagram
+    participant B as User-Agent (Browser)
+    participant C as Client
+    participant M as MCP-Server (Ressourcenserver)
+    participant A as Autorisierungsserver
+
+    C->>M: MCP-Anfrage ohne Token
+    M->>C: HTTP 401 Unauthorized mit WWW-Authenticate-Header
+    Note over C: resource_metadata-URL aus WWW-Authenticate extrahieren
+
+    C->>M: Geschützte Ressourcen-Metadaten anfordern
+    M->>C: Metadaten zurückgeben
+
+    Note over C: Metadaten parsen und Autorisierungsserver extrahieren<br/>Client wählt den zu verwendenden AS
+
+    C->>A: GET-Metadaten-Endpunkt des Autorisierungsservers
+    Note over C,A: OAuth 2.0- und OpenID-Connect-<br/>Discovery-Endpunkte in Prioritätsreihenfolge versuchen
+    A-->>C: Metadaten des Autorisierungsservers
+
+    alt Dynamische Client-Registrierung
+        C->>A: POST /register
+        A->>C: Client-Zugangsdaten
+    end
+
+    Note over C: PKCE-Parameter erzeugen<br/>Ressourcenparameter einschließen
+    C->>B: Browser mit Autorisierungs-URL + code_challenge + resource öffnen
+    B->>A: Autorisierungsanfrage mit Ressourcenparameter
+    Note over A: Benutzer autorisiert
+    A->>B: Redirect zum Callback mit Autorisierungscode
+    B->>C: Callback mit Autorisierungscode
+    C->>A: Token-Anfrage + code_verifier + resource
+    A->>C: Zugriffstoken (+ Refresh-Token)
+    C->>M: MCP-Anfrage mit Zugriffstoken
+    M-->>C: MCP-Antwort
+    Note over C,M: MCP-Kommunikation wird mit gültigem Token fortgesetzt
+```
+
+<div id="resource-parameter-implementation">
+  #### Implementierung des Ressourcenparameters
+</div>
+
+MCP-Clients **MÜSSEN** Resource Indicators für OAuth 2.0 gemäß [RFC 8707](https://www.rfc-editor.org/rfc/rfc8707.html) implementieren,
+um explizit die Zielressource anzugeben, für die das Token angefordert wird. Der Parameter `resource`:
+
+1. **MUSS** sowohl in Autorisierungsanfragen als auch in Tokenanfragen enthalten sein.
+2. **MUSS** den MCP-Server identifizieren, mit dem der Client das Token verwenden will.
+3. **MUSS** die kanonische URI des MCP-Servers verwenden, wie in [RFC 8707, Abschnitt 2](https://www.rfc-editor.org/rfc/rfc8707.html#name-access-token-request) definiert.
+
+<div id="canonical-server-uri">
+  ##### Kanonische Server-URI
+</div>
+
+Für die Zwecke dieser Spezifikation wird die kanonische URI eines MCP-Servers als Ressourcenbezeichner definiert, wie in
+[RFC 8707 Abschnitt 2](https://www.rfc-editor.org/rfc/rfc8707.html#section-2) angegeben, und entspricht dem Parameter `resource` in
+[RFC 9728](https://datatracker.ietf.org/doc/html/rfc9728).
+
+MCP-Clients **SOLLEN** die spezifischste URI für den MCP-Server angeben, auf den sie zugreifen möchten, entsprechend den Empfehlungen in [RFC 8707](https://www.rfc-editor.org/rfc/rfc8707). Während die kanonische Form Kleinbuchstaben für Scheme- und Host-Komponenten verwendet, **SOLLEN** Implementierungen zur Robustheit und Interoperabilität auch Großbuchstaben in diesen Komponenten akzeptieren.
+
+Beispiele gültiger kanonischer URIs:
+
+* `https://mcp.example.com/mcp`
+* `https://mcp.example.com`
+* `https://mcp.example.com:8443`
+* `https://mcp.example.com/server/mcp` (wenn die Pfadkomponente erforderlich ist, um einen einzelnen MCP-Server zu identifizieren)
+
+Beispiele ungültiger kanonischer URIs:
+
+* `mcp.example.com` (fehlendes Scheme)
+* `https://mcp.example.com#fragment` (enthält Fragment)
+
+> **Hinweis:** Sowohl `https://mcp.example.com/` (mit nachgestelltem Slash) als auch `https://mcp.example.com` (ohne nachgestellten Slash) sind gemäß [RFC 3986](https://www.rfc-editor.org/rfc/rfc3986) technisch gültige absolute URIs. Implementierungen **SOLLEN** jedoch der Interoperabilität halber konsequent die Form ohne nachgestellten Slash verwenden, es sei denn, der Slash ist für die spezifische Ressource semantisch bedeutsam.
+
+Wenn beispielsweise auf einen MCP-Server unter `https://mcp.example.com` zugegriffen wird, würde die Autorisierungsanfrage Folgendes enthalten:
+
+```
+&resource=https%3A%2F%2Fmcp.example.com
+```
+
+MCP-Clients **MÜSSEN** diesen Parameter senden, unabhängig davon, ob Autorisierungsserver ihn unterstützen.
+
+<div id="access-token-usage">
+  ### Verwendung von Zugriffstoken
+</div>
+
+<div id="token-requirements">
+  #### Tokenanforderungen
+</div>
+
+Die Handhabung von Zugriffstokens bei Anfragen an MCP-Server **MUSS** den Anforderungen aus
+[OAuth 2.1 Abschnitt 5 „Resource Requests“](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#section-5) entsprechen.
+Konkret gilt:
+
+1. Der MCP-Client **MUSS** das in
+   [OAuth 2.1 Abschnitt 5.1.1](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#section-5.1.1) definierte Request-Header-Feld „Authorization“ verwenden:
+
+```
+Authorization: Bearer <access-token>
+```
+
+Beachten Sie, dass die Autorisierung **in jeder** HTTP-Anfrage vom Client an den Server enthalten sein **MUSS**,
+auch wenn sie Teil derselben logischen Sitzung sind.
+
+2. Zugriffstokens **DÜRFEN NICHT** in der URI-Query enthalten sein
+
+Beispielanfrage:
+
+```http
+GET /mcp HTTP/1.1
+Host: mcp.example.com
+Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+```
+
+<div id="token-handling">
+  #### Token-Verarbeitung
+</div>
+
+MCP-Server, die in ihrer Rolle als OAuth-2.1-Ressourcenserver agieren, MÜSSEN Zugriffstoken wie in
+[OAuth 2.1 Abschnitt 5.2](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#section-5.2) beschrieben validieren.
+MCP-Server MÜSSEN sicherstellen, dass Zugriffstoken ausdrücklich für sie als vorgesehene Zielgruppe (Audience) ausgestellt wurden,
+gemäß [RFC 8707 Abschnitt 2](https://www.rfc-editor.org/rfc/rfc8707.html#section-2).
+Schlägt die Validierung fehl, MÜSSEN Server gemäß den
+Fehlerbehandlungsanforderungen in [OAuth 2.1 Abschnitt 5.3](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#section-5.3)
+antworten. Ungültige oder abgelaufene Token MÜSSEN mit HTTP 401 beantwortet werden.
+
+MCP-Clients DÜRFEN dem MCP-Server keine anderen Token senden als solche, die vom Authorization-Server des MCP-Servers ausgestellt wurden.
+
+Authorization-Server DÜRFEN nur Token akzeptieren, die für die Verwendung mit ihren
+eigenen Ressourcen gültig sind.
+
+MCP-Server DÜRFEN keine anderen Token akzeptieren oder weiterleiten.
+
+<div id="error-handling">
+  ### Fehlerbehandlung
+</div>
+
+Server **MÜSSEN** geeignete HTTP-Statuscodes für Autorisierungsfehler zurückgeben:
+
+| Status Code | Beschreibung       | Verwendung                                   |
+| ----------- | ------------------ | -------------------------------------------- |
+| 401         | Nicht autorisiert  | Autorisierung erforderlich oder Token ungültig |
+| 403         | Verboten           | Ungültige Scopes oder unzureichende Berechtigungen |
+| 400         | Ungültige Anforderung | Fehlerhafte Autorisierungsanfrage            |
+
+<div id="security-considerations">
+  ## Sicherheitshinweise
+</div>
+
+Implementierungen **MÜSSEN** den Sicherheits-Best Practices von OAuth 2.1 folgen, wie in [OAuth 2.1, Abschnitt 7 „Sicherheitshinweise“](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#name-security-considerations) dargelegt.
+
+<div id="token-audience-binding-and-validation">
+  ### Bindung und Validierung der Token-Zielgruppe
+</div>
+
+[RFC 8707](https://www.rfc-editor.org/rfc/rfc8707.html) Resource Indicators bieten wesentliche Sicherheitsvorteile, indem sie Tokens an ihre vorgesehenen
+Zielgruppen binden, **wenn der Authorization Server diese Funktion unterstützt**. Um die aktuelle und zukünftige Einführung zu ermöglichen:
+
+* MCP-Clients **MÜSSEN** den Parameter `resource` in Autorisierungs- und Token-Anfragen einschließen, wie im Abschnitt [Resource Parameter Implementation](#resource-parameter-implementation) beschrieben
+* MCP-Server **MÜSSEN** überprüfen, dass ihnen vorgelegte Tokens ausdrücklich für ihre Nutzung ausgestellt wurden
+
+Das Dokument [Security Best Practices](/de/specification/draft/basic/security_best_practices#token-passthrough)
+erläutert, warum die Validierung der Token-Zielgruppe entscheidend ist und warum Token-Passthrough ausdrücklich verboten ist.
+
+<div id="token-theft">
+  ### Token-Diebstahl
+</div>
+
+Angreifer, die vom Client gespeicherte Token oder auf dem Server zwischengespeicherte oder protokollierte Token erlangen, können mit Anfragen auf geschützte Ressourcen zugreifen, die für Ressourcenserver legitim erscheinen.
+
+Clients und Server **MÜSSEN** eine sichere Token-Speicherung implementieren und den OAuth-Best-Practices folgen,
+wie in [OAuth 2.1, Abschnitt 7.1](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#section-7.1) beschrieben.
+
+Autorisierungsserver **SOLLEN** kurzlebige Zugriffstoken ausstellen, um die Auswirkungen geleakter Token zu verringern.
+Für öffentliche Clients **MÜSSEN** Autorisierungsserver Refresh Token rotieren, wie in [OAuth 2.1, Abschnitt 4.3.1 „Token Endpoint Extension“](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#section-4.3.1) beschrieben.
+
+<div id="communication-security">
+  ### Kommunikationssicherheit
+</div>
+
+Implementierungen **MÜSSEN** [OAuth 2.1, Abschnitt 1.5 „Kommunikationssicherheit“](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#section-1.5) befolgen.
+
+Konkret gilt:
+
+1. Alle Endpunkte des Autorisierungsservers **MÜSSEN** über HTTPS bereitgestellt werden.
+2. Alle Redirect-URIs **MÜSSEN** entweder `localhost` sein oder HTTPS verwenden.
+
+<div id="authorization-code-protection">
+  ### Schutz des Autorisierungscodes
+</div>
+
+Ein Angreifer, der Zugriff auf einen in einer Autorisierungsantwort enthaltenen Autorisierungscode erlangt hat, kann versuchen, den Code für ein Zugriffstoken einzulösen oder ihn anderweitig zu missbrauchen.
+(Näher erläutert in [OAuth 2.1 Abschnitt 7.5](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#section-7.5))
+
+Um dies zu verhindern, **MÜSSEN** MCP-Clients PKCE gemäß [OAuth 2.1 Abschnitt 7.5.2](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#section-7.5.2) implementieren und **MÜSSEN** die PKCE-Unterstützung prüfen, bevor sie mit der Autorisierung fortfahren.
+PKCE hilft, das Abfangen und die Injection von Autorisierungscodes zu verhindern, indem Clients ein geheimes Verifier-/Challenge-Paar erstellen müssen. So wird sichergestellt, dass nur der ursprüngliche Anforderer einen Autorisierungscode gegen Token eintauschen kann.
+
+MCP-Clients **MÜSSEN** die `S256`-Code-Challenge-Methode verwenden, wenn dies technisch möglich ist, wie in [OAuth 2.1 Abschnitt 4.1.1](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#section-4.1.1) gefordert.
+
+Da die OAuth-2.1- und PKCE-Spezifikationen keinen Mechanismus definieren, mit dem Clients die PKCE-Unterstützung ermitteln können, **MÜSSEN** sich MCP-Clients auf Metadaten des Autorisierungsservers stützen, um diese Fähigkeit zu prüfen:
+
+* **OAuth 2.0 Authorization Server Metadata**: Wenn `code_challenge_methods_supported` fehlt, unterstützt der Autorisierungsserver PKCE nicht und MCP-Clients **MÜSSEN** die Fortsetzung ablehnen.
+
+* **OpenID Connect Discovery 1.0**: Obwohl die [OpenID-Provider-Metadaten](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderMetadata) `code_challenge_methods_supported` nicht definieren, wird dieses Feld von OpenID-Providern häufig mitgeliefert. MCP-Clients **MÜSSEN** das Vorhandensein von `code_challenge_methods_supported` in der Provider-Metadatenantwort prüfen. Wenn das Feld fehlt, **MÜSSEN** MCP-Clients die Fortsetzung ablehnen.
+
+Autorisierungsserver, die OpenID Connect Discovery 1.0 bereitstellen, **MÜSSEN** `code_challenge_methods_supported` in ihre Metadaten aufnehmen, um MCP-Kompatibilität sicherzustellen.
+
+<div id="open-redirection">
+  ### Offene Weiterleitung
+</div>
+
+Ein Angreifer kann bösartige Weiterleitungs-URIs erstellen, um Nutzer auf Phishing-Seiten zu lenken.
+
+MCP-Clients **MÜSSEN** Weiterleitungs-URIs beim Autorisierungsserver registriert haben.
+
+Autorisierungsserver **MÜSSEN** die exakten Weiterleitungs-URIs gegen vorab registrierte Werte prüfen, um Weiterleitungsangriffe zu verhindern.
+
+MCP-Clients **SOLLTEN** im Authorization-Code-Flow State-Parameter verwenden und überprüfen
+und alle Ergebnisse verwerfen, die den ursprünglichen State nicht enthalten oder nicht damit übereinstimmen.
+
+Autorisierungsserver **MÜSSEN** Vorkehrungen treffen, um zu verhindern, dass User Agents zu nicht vertrauenswürdigen URIs umgeleitet werden, und dabei die in [OAuth 2.1 Abschnitt 7.12.2](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13#section-7.12.2) dargelegten Empfehlungen befolgen.
+
+Autorisierungsserver **SOLLTEN** den User Agent nur automatisch weiterleiten, wenn sie der Weiterleitungs-URI vertrauen. Ist die URI nicht vertrauenswürdig, DARF der Autorisierungsserver den Benutzer informieren und sich darauf verlassen, dass der Benutzer die richtige Entscheidung trifft.
+
+<div id="confused-deputy-problem">
+  ### Confused-Deputy-Problem
+</div>
+
+Angreifer können MCP-Server ausnutzen, die als Vermittler zu APIs von Drittanbietern fungieren, was zu [Confused-Deputy-Schwachstellen](/de/specification/draft/basic/security_best_practices#confused-deputy-problem) führt.
+Mit gestohlenen Autorisierungscodes können sie Zugriffstoken ohne Zustimmung der Nutzer erlangen.
+
+MCP-Proxyserver, die statische Client-IDs verwenden, **MÜSSEN** für jeden dynamisch registrierten Client die Zustimmung der Nutzer einholen, bevor sie Anfragen an Drittanbieter-Autorisierungsserver weiterleiten (was zusätzliche Zustimmungen erfordern kann).
+
+<div id="access-token-privilege-restriction">
+  ### Einschränkung von Zugriffsrechte-Token
+</div>
+
+Ein Angreifer kann sich unbefugten Zugriff verschaffen oder einen MCP-Server anderweitig kompromittieren, wenn der Server Token akzeptiert, die für andere Ressourcen ausgestellt wurden.
+
+Diese Schwachstelle hat zwei kritische Dimensionen:
+
+1. **Fehlende Audience-Validierung.** Wenn ein MCP-Server nicht prüft, dass Token ausdrücklich für ihn bestimmt sind (zum Beispiel über den Audience-Claim, wie in [RFC9068](https://www.rfc-editor.org/rfc/rfc9068.html) beschrieben), kann er Token akzeptieren, die ursprünglich für andere Dienste ausgestellt wurden. Das verletzt eine grundlegende OAuth-Sicherheitsgrenze und ermöglicht es Angreifern, legitime Token zweckentfremdet dienstübergreifend wiederzuverwenden.
+2. **Token-Passthrough.** Wenn der MCP-Server nicht nur Token mit falscher Audience akzeptiert, sondern diese unverändert an nachgelagerte Dienste weiterleitet, kann dies das [&quot;Confused Deputy&quot;-Problem](#confused-deputy-problem) verursachen, bei dem die nachgelagerte API dem Token fälschlicherweise vertraut, als stamme es vom MCP-Server, oder annimmt, das Token sei bereits von der vorgelagerten API validiert worden. Siehe den [Abschnitt Token-Passthrough](/de/specification/draft/basic/security_best_practices#token-passthrough) der Security Best Practices für weitere Details.
+
+MCP-Server **MÜSSEN** Zugriffstoken validieren, bevor sie die Anfrage verarbeiten, sicherstellen, dass das Zugriffstoken speziell für den MCP-Server ausgestellt wurde, und alle notwendigen Schritte unternehmen, um zu gewährleisten, dass keine Daten an Unbefugte zurückgegeben werden.
+
+Ein MCP-Server **MUSS** die Richtlinien in [OAuth 2.1 – Abschnitt 5.2](https://www.ietf.org/archive/id/draft-ietf-oauth-v2-1-13.html#section-5.2) befolgen, um eingehende Token zu validieren.
+
+MCP-Server **DÜRFEN** nur Token akzeptieren, die ausdrücklich für sie bestimmt sind, und **MÜSSEN** Token ablehnen, die sie nicht im Audience-Claim nennen oder anderweitig nicht belegen, dass der Server der beabsichtigte Empfänger des Tokens ist. Siehe den [Abschnitt Token-Passthrough in den Security Best Practices](/de/specification/draft/basic/security_best_practices#token-passthrough) für Details.
+
+Wenn der MCP-Server Anfragen an vorgelagerte APIs stellt, kann er ihnen gegenüber als OAuth-Client agieren. Das Zugriffstoken, das bei der vorgelagerten API verwendet wird, ist ein separates Token, das vom vorgelagerten Autorisierungsserver ausgestellt wurde. Der MCP-Server **DARF NICHT** das Token, das er vom MCP-Client erhalten hat, durchreichen.
+
+MCP-Clients **MÜSSEN** den Parameter `resource` implementieren und verwenden, wie in [RFC 8707 – Resource Indicators for OAuth 2.0](https://www.rfc-editor.org/rfc/rfc8707.html) definiert, um die Zielressource, für die das Token angefordert wird, ausdrücklich anzugeben. Diese Anforderung entspricht der Empfehlung in [RFC 9728, Abschnitt 7.4](https://datatracker.ietf.org/doc/html/rfc9728#section-7.4). Dies stellt sicher, dass Zugriffstoken an ihre vorgesehenen Ressourcen gebunden sind und nicht dienstübergreifend missbraucht werden können.

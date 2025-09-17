@@ -1,0 +1,92 @@
+---
+title: Abbruch
+weight: 10
+---
+
+<Info>**Protokollrevision**: 2024-11-05</Info>
+
+Das Model Context Protocol (MCP) unterstützt optional das Abbrechen laufender Anfragen
+über Benachrichtigungen. Beide Seiten können eine Abbruchbenachrichtigung senden, um
+anzuzeigen, dass eine zuvor gestellte Anfrage beendet werden soll.
+
+<div id="cancellation-flow">
+  ## Ablauf der Abbruchanforderung
+</div>
+
+Wenn eine Partei eine laufende Anfrage abbrechen möchte, sendet sie eine `notifications/cancelled`-
+Benachrichtigung mit:
+
+- Der ID der zu stornierenden Anfrage
+- Einer optionalen Begründung, die protokolliert oder angezeigt werden kann
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/cancelled",
+  "params": {
+    "requestId": "123",
+    "reason": "User requested cancellation"
+  }
+}
+```
+
+<div id="behavior-requirements">
+  ## Verhaltensanforderungen
+</div>
+
+1. Abbruchbenachrichtigungen **MÜSSEN** nur auf Anforderungen verweisen, die:
+   - Zuvor in derselben Richtung gestellt wurden
+   - Voraussichtlich noch in Bearbeitung sind
+2. Die `initialize`-Anforderung **DARF NICHT** von Clients abgebrochen werden
+3. Empfänger von Abbruchbenachrichtigungen **SOLLEN**:
+   - Die Verarbeitung der abgebrochenen Anforderung beenden
+   - Zugehörige Ressourcen freigeben
+   - Keine Antwort auf die abgebrochene Anforderung senden
+4. Empfänger **DÜRFEN** Abbruchbenachrichtigungen ignorieren, wenn:
+   - Die referenzierte Anforderung unbekannt ist
+   - Die Verarbeitung bereits abgeschlossen ist
+   - Die Anforderung nicht abgebrochen werden kann
+5. Der Absender der Abbruchbenachrichtigung **SOLLTE** jede Antwort auf die
+   Anforderung ignorieren, die anschließend eintrifft
+
+<div id="timing-considerations">
+  ## Zeitliche Aspekte
+</div>
+
+Aufgrund von Netzwerklatenz kann es vorkommen, dass Abbruchbenachrichtigungen erst nach Abschluss der Anfrageverarbeitung eintreffen – möglicherweise sogar, nachdem bereits eine Antwort gesendet wurde.
+
+Beide Parteien **MÜSSEN** diese Race-Conditions robust handhaben:
+
+```mermaid
+sequenceDiagram
+   participant Client
+   participant Server
+
+   Client->>Server: Request (ID: 123)
+   Note over Server: Verarbeitung beginnt
+   Client--)Server: notifications/cancelled (ID: 123)
+   alt
+      Note over Server: Die Verarbeitung könnte<br/>bereits abgeschlossen sein,<br/>bevor der Abbruch eintrifft
+   else If not completed
+      Note over Server: Verarbeitung stoppen
+   end
+```
+
+<div id="implementation-notes">
+  ## Hinweise zur Implementierung
+</div>
+
+- Beide Seiten **sollten** Abbruchgründe zu Debugging-Zwecken protokollieren
+- Anwendungs-UIs **sollten** anzeigen, wenn ein Abbruch angefordert wird
+
+<div id="error-handling">
+  ## Fehlerbehandlung
+</div>
+
+Ungültige Abbruchbenachrichtigungen **SOLLTEN** ignoriert werden:
+
+- Unbekannte Anfrage-IDs
+- Bereits abgeschlossene Anfragen
+- Fehlgebildete Benachrichtigungen
+
+Dies erhält den „Fire-and-Forget“-Charakter von Benachrichtigungen und berücksichtigt gleichzeitig mögliche Race Conditions in der asynchronen Kommunikation.

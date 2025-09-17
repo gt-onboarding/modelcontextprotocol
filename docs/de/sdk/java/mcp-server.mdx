@@ -1,0 +1,1054 @@
+---
+title: Java MCP-Server
+description: Erfahren Sie, wie Sie einen Model Context Protocol (MCP)-Server implementieren und konfigurieren
+---
+
+<div id="sdk-contents">
+  ## SDK-Inhalte
+</div>
+
+[Java MCP-Überblick](/de/sdk/java/mcp-overview)
+
+[Java MCP-Client](/de/sdk/java/mcp-client)
+
+[Java MCP-Server](/de/sdk/java/mcp-server)
+
+<div id="server-features">
+  ## Serverfunktionen
+</div>
+
+Der MCP-Server ist eine grundlegende Komponente der Model Context Protocol (MCP)-Architektur, die Werkzeuge, Ressourcen und Funktionen für Clients bereitstellt. Er implementiert die Serverseite des Protokolls und ist verantwortlich für:
+
+* Bereitstellung von Werkzeugen, die Clients entdecken und ausführen können.
+  Unterstützt Eingabe- und Ausgabeschemata und liefert strukturierte und unstrukturierte Inhaltstypen zurück.
+* Verwaltung von Ressourcen mit URI-basierten Zugriffsmustern
+* Bereitstellung von Prompt-Vorlagen und Verarbeitung von Prompt-Anfragen
+* Unterstützung der Fähigkeitenaushandlung mit Clients
+* Implementierung serverseitiger Protokolloperationen
+* Verwaltung gleichzeitiger Clientverbindungen
+* Bereitstellung von strukturiertem Logging, Fortschrittsverfolgung und Benachrichtigungen
+* Stellt `STDIO`-, `Streamable-HTTP`- und `SSE`-Servertransport-Implementierungen bereit, ohne externe Webframeworks zu benötigen.
+* **Optional**: Spring-spezifische Transportabhängigkeiten `io.modelcontextprotocol.sdk:mcp-spring-webflux`, `io.modelcontextprotocol.sdk:mcp-spring-webmvc` für Nutzer von [Spring AI](https://docs.spring.io/spring-ai/reference/api/mcp/mcp-server-boot-starter-docs.html).
+
+<Tip>
+  Diese [Schnellstart-Demo](/de/quickstart/server) auf Basis von Spring AI MCP zeigt Ihnen,
+  wie Sie einen MCP-Server erstellen.
+</Tip>
+
+Der Server unterstützt sowohl synchrone als auch asynchrone APIs und ermöglicht eine flexible Integration in unterschiedlichen Anwendungskontexten.
+
+<Tabs>
+  <Tab title="Sync API">
+    ```java
+    // Create a server with custom configuration
+    McpSyncServer syncServer = McpServer.sync(transportProvider)
+        .serverInfo("my-server", "1.0.0")
+        .capabilities(ServerCapabilities.builder()
+            .resources(false, true)  // Enable resource support
+            .tools(true)             // Enable tool support
+            .prompts(true)           // Enable prompt support
+            .logging()               // Enable logging support
+            .completions()           // Enable completions support
+            .build())
+        .build();
+
+    // Register tools, resources, and prompts
+    syncServer.addTool(syncToolSpecification);
+    syncServer.addResource(syncResourceSpecification);
+    syncServer.addPrompt(syncPromptSpecification);
+
+    // Close the server when done
+    syncServer.close();
+    ```
+
+    ### Thread-Locals in Handlern beibehalten
+
+    `McpSyncServer` delegiert die Ausführung an einen zugrunde liegenden `McpAsyncServer`.
+    Die Ausführung von Handlern für Werkzeuge, Ressourcen usw. erfolgt möglicherweise nicht in dem Thread, der die Methode aufruft.
+    In diesem Fall gehen Thread-Locals verloren, was bestimmte Funktionen in Frameworks beeinträchtigen kann, die auf threadgebundene Arbeit angewiesen sind.
+    Um sicherzustellen, dass die Ausführung im aufrufenden Thread erfolgt und Thread-Locals verfügbar bleiben, setzen Sie `McpServer.sync(...).immediateExecution(true)`.
+
+    <Note>
+      Dies ist nur für Sync-Server relevant. Async-Server verwenden den reaktiven Stack und sollten sich nicht auf Thread-Locals verlassen.
+    </Note>
+  </Tab>
+
+  <Tab title="Async API">
+    ```java
+    // Create an async server with custom configuration
+    McpAsyncServer asyncServer = McpServer.async(transportProvider)
+        .serverInfo("my-server", "1.0.0")
+        .capabilities(ServerCapabilities.builder()
+            .resources(false, true)     // Enable resource support
+            .tools(true)                // Enable tool support
+            .prompts(true)              // Enable prompt support
+            .logging()                  // Enable logging support
+            .completions()              // Enable completions support
+            .build())
+        .build();
+
+    // Register tools, resources, and prompts
+    asyncServer.addTool(asyncToolSpecification)
+        .doOnSuccess(v -> logger.info("Tool registered"))
+        .subscribe();
+
+    asyncServer.addResource(asyncResourceSpecification)
+        .doOnSuccess(v -> logger.info("Resource registered"))
+        .subscribe();
+
+    asyncServer.addPrompt(asyncPromptSpecification)
+        .doOnSuccess(v -> logger.info("Prompt registered"))
+        .subscribe();
+
+    // Close the server when done
+    asyncServer.close()
+        .doOnSuccess(v -> logger.info("Server closed"))
+        .subscribe();
+    ```
+  </Tab>
+</Tabs>
+
+<div id="server-transport-providers">
+  ## Server-Transporte
+</div>
+
+Die Transportschicht im MCP-SDK ist für die Kommunikation zwischen Clients und Servern verantwortlich.
+Sie stellt verschiedene Implementierungen bereit, um unterschiedliche Kommunikationsprotokolle und -muster zu unterstützen.
+Das SDK enthält mehrere integrierte Implementierungen von Transportanbietern:
+
+<Tabs>
+  <Tab title="STDIO">
+    Create in-process based transport:
+
+    ```java
+    StdioServerTransportProvider transportProvider = new StdioServerTransportProvider(new ObjectMapper());
+    ```
+
+    Bietet bidirektionale JSON-RPC-2.0-Nachrichtenverarbeitung über Standard-Ein-/Ausgabeströme mit nicht blockierender Verarbeitung, Serialisierung/Deserialisierung und Unterstützung für einen geregelten Shutdown.
+
+    Wichtige Merkmale:
+
+    <ul>
+      <li>Bidirektionale Kommunikation über stdin/stdout</li>
+      <li>Prozessbasierte Integration</li>
+      <li>Einfache Einrichtung und Konfiguration</li>
+      <li>Leichtgewichtige Implementierung</li>
+    </ul>
+  </Tab>
+
+  <Tab title="WebFlux">
+    <p>WebFlux-basierter SSE- und Streamable-HTTP-Servertransport. [Erfordert die Abhängigkeit `mcp-spring-webflux`](/de/sdk/java/mcp-overview#dependencies).</p>
+
+    <Tabs>
+      <Tab title="Streamable-HTTP (WebFlux)">
+        ```java
+        @Configuration
+        class McpConfig {
+            @Bean
+            WebFluxStreamableServerTransportProvider webFluxStreamableServerTransportProvider(ObjectMapper mapper) {
+              	return this.mcpStreamableServerTransportProvider = WebFluxStreamableServerTransportProvider.builder()
+                        .objectMapper(mapper)
+                        .messageEndpoint("/mcp")
+                        .build();
+            }
+
+            @Bean
+            RouterFunction<?> mcpRouterFunction(WebFluxStreamableServerTransportProvider transportProvider) {
+                return transportProvider.getRouterFunction();
+            }
+        }
+        ```
+
+        <p>Implementiert die Streamable-HTTP-Transportspezifikation und bietet:</p>
+
+        <ul>
+          <li>Bidirektionale Kommunikation über Streamable-HTTP</li>
+          <li>Reaktives HTTP-Streaming mit WebFlux</li>
+          <li>Gleichzeitige Client-Verbindungen über Streamable-HTTP-Endpunkte</li>
+          <li>Nachrichten-Routing und Sitzungsverwaltung</li>
+          <li>Geordnetes Herunterfahren</li>
+        </ul>
+
+        <Note>
+          Die aktuelle Implementierung unterstützt keine Wiederaufnahme, da keine Sitzungen gespeichert werden.
+        </Note>
+
+        <Tip>
+          In verteilten Umgebungen mit mehreren MCP-Serverinstanzen ist korrektes Nachrichten-Routing erforderlich.
+          Um Skalierbarkeit ohne erheblichen Infrastruktur-Overhead zu erreichen, ziehen Sie die Implementierung des Servertransports „Stateless Streamable-HTTP“ in Betracht.
+        </Tip>
+      </Tab>
+
+      <Tab title="Stateless Streamable-HTTP (WebFlux)">
+        Zustandslose MCP-Server sind für vereinfachte Deployments konzipiert, bei denen der Sitzungszustand zwischen Anfragen nicht beibehalten wird.
+        Sie implementieren eine Teilmenge der `Streamable-HTTP`-Spezifikation, die `application/json`-Antworten zurückgibt.
+        Sie heißen zustandslos, weil sie im Gegensatz zum standardmäßigen Streamable-HTTP-Transport den Sitzungszustand nicht zwischen Anfragen beibehalten.
+        Diese Server sind ideal für Microservices-Architekturen und cloud-native Deployments.
+
+        ```java
+        @Configuration
+        class McpConfig {
+            @Bean
+            WebFluxStatelessServerTransport webFluxStatelessServerTransport(ObjectMapper mapper) {
+              	return this.mcpStatelessServerTransport = WebFluxStatelessServerTransport.builder()
+                        .objectMapper(mapper)
+                        .messageEndpoint("/mcp")
+                        .build();
+            }
+
+            @Bean
+            RouterFunction<?> mcpRouterFunction(WebFluxStatelessServerTransport transportProvider) {
+                return transportProvider.getRouterFunction();
+            }
+
+            @Bean
+            public McpStatelessSyncServer prepareSyncServerBuilder(WebFluxStatelessServerTransport statelessServerTransport) {
+              return McpServer.sync(statelessServerTransport)
+                      //...
+                      .build();
+            }
+
+        }
+        ```
+
+        <p>Implementiert die MCP-Stateless-Streamable-HTTP-Transportspezifikation und bietet:</p>
+
+        <ul>
+          <li>Unidirektionale (Client-zu-Server) Kommunikation über Streamable-HTTP</li>
+          <li>Reaktives HTTP-Streaming mit WebFlux</li>
+          <li>Gleichzeitige Client-Verbindungen über zustandslose Endpunkte</li>
+          <li>Nachrichten-Routing und Sitzungsverwaltung</li>
+          <li>Geordnetes Herunterfahren</li>
+        </ul>
+
+        <Note>
+          Die aktuelle Implementierung unterstützt das Senden von Benachrichtigungen an Clients nicht.
+        </Note>
+      </Tab>
+
+      <Tab title="SSE (WebFlux)">
+        ```java
+        @Configuration
+        class McpConfig {
+            @Bean
+            WebFluxSseServerTransportProvider webFluxSseServerTransportProvider(ObjectMapper mapper) {
+                return new WebFluxSseServerTransportProvider(mapper, "/mcp/message");
+            }
+
+            @Bean
+            RouterFunction<?> mcpRouterFunction(WebFluxSseServerTransportProvider transportProvider) {
+                return transportProvider.getRouterFunction();
+            }
+        }
+        ```
+
+        <p>Implementiert die MCP-SSE-Transportspezifikation und bietet:</p>
+
+        <ul>
+          <li>Reaktives HTTP-Streaming mit WebFlux</li>
+          <li>Gleichzeitige Client-Verbindungen über SSE-Endpunkte</li>
+          <li>Nachrichten-Routing und Sitzungsverwaltung</li>
+          <li>Geordnetes Herunterfahren</li>
+        </ul>
+      </Tab>
+    </Tabs>
+  </Tab>
+
+  <Tab title="WebMVC">
+    <p>Erstellt einen auf WebMvc basierenden SSE-Servertransport. Erfordert die Abhängigkeit <code>mcp-spring-webmvc</code>.</p>
+
+    <Tabs>
+      <Tab title="Streamable-HTTP (WebMvc)">
+        ```java
+        @Configuration
+        @EnableWebMvc
+        class McpConfig {
+            @Bean
+            WebMvcStreamableServerTransportProvider webMvcStreamableHttpServerTransportProvider(ObjectMapper mapper) {
+                return new WebMvcStreamableServerTransportProvider(mapper, "/mcp/message");
+            }
+
+            @Bean
+            RouterFunction<ServerResponse> mcpRouterFunction(WebMvcStreamableServerTransportProvider transportProvider) {
+                return transportProvider.getRouterFunction();
+            }
+        }
+        ```
+
+        <p>Implementiert die Streamable-HTTP-Transportspezifikation und bietet:</p>
+
+        <ul>
+          <li>Bidirektionale Kommunikation über Streamable-HTTP</li>
+          <li>Reaktives HTTP-Streaming mit WebFlux</li>
+          <li>Parallele Client-Verbindungen über Streamable-HTTP-Endpunkte</li>
+          <li>Nachrichtenrouting und Sitzungsverwaltung</li>
+          <li>Graceful-Shutdown-Funktionen</li>
+        </ul>
+
+        <Note>
+          Die aktuelle Implementierung unterstützt keine Wiederaufnahme (resumability), da es keine Sitzungsspeicherung gibt.
+        </Note>
+
+        <Tip>
+          In verteilten Umgebungen mit mehreren MCP-Server-Instanzen ist korrektes Nachrichtenrouting erforderlich.
+          Um Skalierbarkeit ohne erheblichen Infrastruktur-Overhead zu erreichen, ziehen Sie die Implementierung des Servertransports „Stateless Streamable-HTTP“ in Betracht.
+        </Tip>
+      </Tab>
+
+      <Tab title="Stateless Streamable-HTTP (WebMvc)">
+        Zustandslose MCP-Server sind für vereinfachte Deployments konzipiert, bei denen der Sitzungszustand zwischen Anfragen nicht beibehalten wird.
+        Sie implementieren eine Teilmenge der „Streamable-HTTP“-Spezifikation, die `application/json`-Antworten zurückgibt.
+        Sie heißen zustandslos, weil sie im Gegensatz zum Standard-Streamable-HTTP-Transport den Sitzungszustand zwischen Anfragen nicht beibehalten.
+        Diese Server eignen sich ideal für Microservices-Architekturen und Cloud-native Deployments.
+
+        ```java
+        @Configuration
+        @EnableWebMvc
+        static class McpConfig {
+
+          @Bean
+          public WebMvcStatelessServerTransport webMvcStatelessServerTransport() {
+
+            return WebMvcStatelessServerTransport.builder()
+              .objectMapper(new ObjectMapper())
+              .messageEndpoint(MESSAGE_ENDPOINT)
+              .build();
+
+          }
+
+          @Bean
+          public RouterFunction<ServerResponse> routerFunction(WebMvcStatelessServerTransport statelessServerTransport) {
+            return statelessServerTransport.getRouterFunction();
+          }
+
+          @Bean
+          public McpStatelessSyncServer prepareSyncServerBuilder(WebMvcStatelessServerTransport statelessServerTransport) {
+            return McpServer.sync(statelessServerTransport)
+                    //...
+                    .build();
+          }
+        }
+        ```
+
+        <p>Implementiert die MCP-Streamable-HTTP-, Stateless-Transportspezifikation und bietet:</p>
+
+        <ul>
+          <li>Unidirektionale (Client-zu-Server-)Kommunikation über Streamable-HTTP</li>
+          <li>Reaktives HTTP-Streaming mit WebFlux</li>
+          <li>Parallele Client-Verbindungen über Stateless-Endpunkte</li>
+          <li>Nachrichtenrouting und Sitzungsverwaltung</li>
+          <li>Graceful-Shutdown-Funktionen</li>
+        </ul>
+
+        <Note>
+          Die aktuelle Implementierung unterstützt das Senden von Benachrichtigungen an Clients nicht.
+        </Note>
+      </Tab>
+
+      <Tab title="SSE (WebMvc)">
+        ```java
+        @Configuration
+        @EnableWebMvc
+        class McpConfig {
+            @Bean
+            WebMvcSseServerTransportProvider webMvcSseServerTransportProvider(ObjectMapper mapper) {
+                return new WebMvcSseServerTransportProvider(mapper, "/mcp/message");
+            }
+
+            @Bean
+            RouterFunction<ServerResponse> mcpRouterFunction(WebMvcSseServerTransportProvider transportProvider) {
+                return transportProvider.getRouterFunction();
+            }
+        }
+        ```
+
+        <p>Implementiert die MCP-SSE-Transportspezifikation und bietet:</p>
+
+        <ul>
+          <li>Serverseitiges Event-Streaming</li>
+          <li>Integration mit Spring WebMvc</li>
+          <li>Unterstützung für traditionelle Webanwendungen</li>
+          <li>Synchrones Verarbeiten von Operationen</li>
+        </ul>
+      </Tab>
+    </Tabs>
+  </Tab>
+
+  <Tab title="Servlet">
+    <p>
+      Erstellt einen servletbasierten Server-Transport für `SSE`, `Streamable HTTP` und `Stateless`.
+      Er kann mit jedem Servlet-Container verwendet werden.
+    </p>
+
+    <Tabs>
+      <Tab title="Streamable-HTTP (Servlet)">
+        ```java
+        @Configuration
+        @EnableWebMvc
+        public class McpServerConfig implements WebMvcConfigurer {
+
+            @Bean
+            public HttpServletStreamableServerTransportProvider servletStreamableMcpSessionTransport() {
+                return HttpServletStreamableServerTransportProvider.builder()
+                  .objectMapper(new ObjectMapper())
+                  .contextExtractor(TEST_CONTEXT_EXTRACTOR)
+                  .mcpEndpoint(MESSAGE_ENDPOINT)
+                  .keepAliveInterval(Duration.ofSeconds(1))
+                  .build();
+            }
+
+            //(Optional) Um es in einer Spring-Web-Anwendung zu verwenden, können Sie es als Servlet-Bean registrieren
+            @Bean
+            public ServletRegistrationBean customServletBean(HttpServletStreamableServerTransportProvider transportProvider) {
+                return new ServletRegistrationBean(transportProvider);
+            }
+        }
+        ```
+
+        <p>
+          Implementiert die Streamable-HTTP-Transportspezifikation mit der traditionellen Servlet-API und bietet:
+        </p>
+
+        <ul>
+          <li>Bidirektionale Kommunikation über Streamable-HTTP</li>
+          <li>Asynchrone Nachrichtenverarbeitung mit Servlet‑6.0‑Async-Unterstützung</li>
+          <li>Sitzungsverwaltung für mehrere Clientverbindungen</li>
+
+          <li>
+            Ein Endpunkt:
+
+            <ul>
+              <li>Message-Endpunkt (konfigurierbar) für Client-zu-Server-Anfragen</li>
+            </ul>
+          </li>
+
+          <li>Fehlerbehandlung und Antwortformatierung</li>
+          <li>Unterstützung für einen geordneten Shutdown</li>
+        </ul>
+
+        <Note>
+          Die aktuelle Implementierung unterstützt keine Wiederaufnahme, da eine Sitzungspeicherung fehlt
+        </Note>
+
+        <Tip>
+          In verteilten Umgebungen mit mehreren MCP-Server-Instanzen ist korrektes Nachrichtenrouting erforderlich.
+          Um Skalierbarkeit ohne erheblichen Infrastruktur-Overhead zu erreichen, erwägen Sie die Implementierung des Servertransports „Stateless Streamable-HTTP“.
+        </Tip>
+      </Tab>
+
+      <Tab title="Stateless Streamable-HTTP (Servlet)">
+        Zustandslose MCP-Server sind für vereinfachte Bereitstellungen konzipiert, bei denen kein Sitzungszustand zwischen Anfragen beibehalten wird.
+        Sie implementieren eine Teilmenge der Streamable-HTTP-Spezifikation und liefern Antworten im Format application/json.
+        Sie heißen zustandslos, weil sie im Gegensatz zum standardmäßigen Streamable-HTTP-Transport keinen Sitzungszustand zwischen Anfragen aufrechterhalten.
+        Diese Server eignen sich ideal für Microservices-Architekturen und cloud-native Deployments.
+
+        ```java
+        @Configuration
+        @EnableWebMvc
+        public class McpServerConfig implements WebMvcConfigurer {
+
+            @Bean
+            public HttpServletStatelessServerTransport servletStatelessMcpSessionTransport() {
+                return HttpServletStatelessServerTransport.builder()
+                  .objectMapper(new ObjectMapper())
+                  .mcpEndpoint(MESSAGE_ENDPOINT)
+                  .keepAliveInterval(Duration.ofSeconds(1))
+                  .build();
+            }
+
+
+            //(Optionally) To use it with a Spring Web application, you can register it as a Servlet bean
+            @Bean
+            public ServletRegistrationBean customServletBean(HttpServletStatelessServerTransport transportProvider) {
+                return new ServletRegistrationBean(transportProvider);
+            }
+
+            @Bean
+            public McpStatelessSyncServer prepareSyncServerBuilder(HttpServletStatelessServerTransport statelessServerTransport) {
+                return McpServer.sync(statelessServerTransport)
+                        .build();
+            }
+          }
+        }
+        ```
+
+        <p>
+          Implementiert die Streamable-HTTP-Spezifikation für zustandslosen Transport mithilfe der klassischen Servlet-API und bietet:
+        </p>
+
+        <ul>
+          <li>Unidirektionale (Client-zu-Server) Kommunikation über Streamable-HTTP</li>
+          <li>Asynchrone Nachrichtenverarbeitung mit asynchroner Servlet-6.0-Unterstützung</li>
+          <li>Sitzungsverwaltung für mehrere Client-Verbindungen</li>
+
+          <li>
+            Einen Endpunkt:
+
+            <ul>
+              <li>Nachrichtenendpunkt (konfigurierbar) für Client-zu-Server-Anfragen</li>
+            </ul>
+          </li>
+
+          <li>Fehlerbehandlung und Antwortformatierung</li>
+          <li>Unterstützung für einen geregelten Shutdown</li>
+        </ul>
+
+        <Note>
+          Die aktuelle Implementierung unterstützt das Senden von Benachrichtigungen an die Clients nicht.
+        </Note>
+      </Tab>
+
+      <Tab title="SSE (Servlet)">
+        ```java
+        @Configuration
+        @EnableWebMvc
+        public class McpServerConfig implements WebMvcConfigurer {
+
+            @Bean
+            public HttpServletSseServerTransportProvider servletSseServerTransportProvider() {
+                return HttpServletSseServerTransportProvider.builder()
+                    .objectMapper(new ObjectMapper())
+                    .messageEndpoint("/mcp/message")
+                    .keepAliveInterval(Duration.ofSeconds(1))
+                    .build();
+            }
+
+            //(Optional) Zur Verwendung mit einer Spring-Web-Anwendung können Sie ihn als Servlet-Bean registrieren
+            @Bean
+            public ServletRegistrationBean customServletBean(HttpServletSseServerTransportProvider transportProvider) {
+                return new ServletRegistrationBean(transportProvider);
+            }
+        }
+        ```
+
+        <p>
+          Implementiert die MCP-SSE-Transportspezifikation mit der traditionellen Servlet-API und bietet:
+        </p>
+
+        <ul>
+          <li>Asynchrone Nachrichtenverarbeitung über die asynchrone Unterstützung von Servlet 6.0</li>
+          <li>Sitzungsverwaltung für mehrere Client-Verbindungen</li>
+
+          <li>
+            Zwei Arten von Endpunkten:
+
+            <ul>
+              <li>SSE-Endpunkt (<code>/sse</code>) für Server-zu-Client-Ereignisse</li>
+              <li>Nachrichtenendpunkt (konfigurierbar) für Client-zu-Server-Anfragen</li>
+            </ul>
+          </li>
+
+          <li>Fehlerbehandlung und Antwortformatierung</li>
+          <li>Unterstützung für ein geordnetes Herunterfahren</li>
+        </ul>
+      </Tab>
+    </Tabs>
+  </Tab>
+</Tabs>
+
+<div id="server-capabilities">
+  ## Server-Fähigkeiten
+</div>
+
+Der Server kann mit verschiedenen Fähigkeiten konfiguriert werden:
+
+```java
+var capabilities = ServerCapabilities.builder()
+    .resources(false, true)  // Ressourcen-Unterstützung mit Benachrichtigungen über Listenänderungen
+    .tools(true)             // Werkzeuge-Unterstützung mit Benachrichtigungen über Listenänderungen
+    .prompts(true)           // Prompt-Unterstützung mit Benachrichtigungen über Listenänderungen
+    .logging()               // Protokollierungsunterstützung aktivieren (standardmäßig mit Protokollierungsstufe INFO aktiviert)
+    .build();
+```
+
+<div id="tool-specification">
+  ### Werkzeugspezifikation
+</div>
+
+Das Model Context Protocol ermöglicht es Servern, [Werkzeuge bereitzustellen](/de/specification/2024-11-05/server/tools/), die von Sprachmodellen aufgerufen werden können.
+Das Java-SDK ermöglicht die Implementierung von Werkzeugspezifikationen mit zugehörigen Handler-Funktionen.
+Werkzeuge ermöglichen es KI-Modellen, Berechnungen durchzuführen, auf externe APIs zuzugreifen, Datenbanken zu abzufragen und Dateien zu bearbeiten:
+
+<Tabs>
+  <Tab title="Sync">
+    ```java
+    // Sync tool specification
+    var schema = """
+                {
+                  "type" : "object",
+                  "id" : "urn:jsonschema:Operation",
+                  "properties" : {
+                    "operation" : {
+                      "type" : "string"
+                    },
+                    "a" : {
+                      "type" : "number"
+                    },
+                    "b" : {
+                      "type" : "number"
+                    }
+                  }
+                }
+                """;
+    var syncToolSpecification = new McpServerFeatures.SyncToolSpecification(
+        new Tool("calculator", "Basic calculator", schema),
+        (exchange, arguments) -> {
+            // Tool implementation
+            return new CallToolResult(result, false);
+        }
+    );
+    ```
+  </Tab>
+
+  <Tab title="Async">
+    ```java
+    // Async tool specification
+    var schema = """
+                {
+                  "type" : "object",
+                  "id" : "urn:jsonschema:Operation",
+                  "properties" : {
+                    "operation" : {
+                      "type" : "string"
+                    },
+                    "a" : {
+                      "type" : "number"
+                    },
+                    "b" : {
+                      "type" : "number"
+                    }
+                  }
+                }
+                """;
+    var asyncToolSpecification = new McpServerFeatures.AsyncToolSpecification(
+        new Tool("calculator", "Basic calculator", schema),
+        (exchange, arguments) -> {
+            // Tool implementation
+            return Mono.just(new CallToolResult(result, false));
+        }
+    );
+    ```
+  </Tab>
+</Tabs>
+
+Die Werkzeugspezifikation umfasst eine Werkzeugdefinition mit `name`, `description` und `parameter schema`, gefolgt von einem Call-Handler, der die Logik des Werkzeugs implementiert.
+Das erste Argument der Funktion ist `McpAsyncServerExchange` für die Interaktion mit dem Client, das zweite ist eine Map mit Werkzeugargumenten.
+
+<div id="resource-specification">
+  ### Ressourcenspezifikation
+</div>
+
+Spezifikation einer Ressource mit ihrer Handler-Funktion.
+Ressourcen liefern Kontext für KI-Modelle, indem sie Daten wie Dateiinhalte, Datenbankeinträge, API-Antworten, Systeminformationen und Anwendungszustand bereitstellen.
+Beispiel für eine Ressourcenspezifikation:
+
+<Tabs>
+  <Tab title="Sync">
+    ```java
+    // Sync resource specification
+    var syncResourceSpecification = new McpServerFeatures.SyncResourceSpecification(
+        new Resource("custom://resource", "name", "description", "mime-type", null),
+        (exchange, request) -> {
+            // Resource read implementation
+            return new ReadResourceResult(contents);
+        }
+    );
+    ```
+  </Tab>
+
+  <Tab title="Async">
+    ```java
+    // Async resource specification
+    var asyncResourceSpecification = new McpServerFeatures.AsyncResourceSpecification(
+        new Resource("custom://resource", "name", "description", "mime-type", null),
+        (exchange, request) -> {
+            // Resource read implementation
+            return Mono.just(new ReadResourceResult(contents));
+        }
+    );
+    ```
+  </Tab>
+</Tabs>
+
+Die Ressourcenspezifikation besteht aus Ressourcen­definitionen und einem Handler zum Lesen von Ressourcen.
+Die Ressourcen­definition umfasst `name`, `description` und `MIME type`.
+Das erste Argument der Funktion, die Leseanforderungen für Ressourcen verarbeitet, ist ein `McpAsyncServerExchange`, über den der Server mit dem verbundenen Client interagieren kann.
+Das zweite Argument ist ein `McpSchema.ReadResourceRequest`.
+
+<div id="prompt-specification">
+  ### Prompt-Spezifikation
+</div>
+
+Als Teil der [Prompting-Funktionen](/de/specification/2024-11-05/server/prompts/) bietet das Model Context Protocol (MCP) eine standardisierte Möglichkeit für Server, Prompt-Vorlagen für Clients bereitzustellen.
+Die Prompt-Spezifikation ist eine strukturierte Vorlage für Interaktionen mit KI-Modellen, die eine konsistente Nachrichtenformatierung, Parametereinsatz, Kontextinjektion, Antwortformatierung und Instruktions-Templating ermöglicht.
+
+<Tabs>
+  <Tab title="Sync">
+    ```java
+    // Sync prompt specification
+    var syncPromptSpecification = new McpServerFeatures.SyncPromptSpecification(
+        new Prompt("greeting", "description", List.of(
+            new PromptArgument("name", "description", true)
+        )),
+        (exchange, request) -> {
+            // Prompt implementation
+            return new GetPromptResult(description, messages);
+        }
+    );
+    ```
+  </Tab>
+
+  <Tab title="Async">
+    ```java
+    // Async prompt specification
+    var asyncPromptSpecification = new McpServerFeatures.AsyncPromptSpecification(
+        new Prompt("greeting", "description", List.of(
+            new PromptArgument("name", "description", true)
+        )),
+        (exchange, request) -> {
+            // Prompt implementation
+            return Mono.just(new GetPromptResult(description, messages));
+        }
+    );
+    ```
+  </Tab>
+</Tabs>
+
+Die Prompt-Definition umfasst den Namen (Bezeichner des Prompts), die Beschreibung (Zweck des Prompts) und eine Liste von Argumenten (Parameter fürs Templating).
+Die Handler-Funktion verarbeitet Anfragen und gibt formatierte Vorlagen zurück.
+Das erste Argument ist `McpAsyncServerExchange` für die Interaktion mit dem Client, das zweite Argument ist eine Instanz von `GetPromptRequest`.
+
+<div id="completion-specification">
+  ### Completion-Spezifikation
+</div>
+
+Als Teil der [Completion-Funktionen](/de/specification/2025-03-26/server/utilities/completion) stellt MCP eine standardisierte Methode bereit, mit der Server Argument-Autovervollständigungen für Prompts und Ressourcen-URIs anbieten können.
+
+<Tabs>
+  <Tab title="Sync">
+    ```java
+    // Sync-Completion-Spezifikation
+    var syncCompletionSpecification = new McpServerFeatures.SyncCompletionSpecification(
+    			new McpSchema.PromptReference("code_review"), (exchange, request) -> {
+
+            // Completion-Implementierung ...
+
+            return new McpSchema.CompleteResult(
+                new CompleteResult.CompleteCompletion(
+                  List.of("python", "pytorch", "pyside"),
+                  10, // total
+                  false // hasMore
+                ));
+          }
+    );
+
+    // Sync-Server mit Completion-Funktionen erstellen
+    var mcpServer = McpServer.sync(mcpServerTransportProvider)
+      .capabilities(ServerCapabilities.builder()
+        .completions() // Completions-Unterstützung aktivieren
+          // ...
+        .build())
+      // ...
+      .completions(new McpServerFeatures.SyncCompletionSpecification( // Completion-Spezifikation registrieren
+          new McpSchema.PromptReference("code_review"), syncCompletionSpecification))
+      .build();
+
+    ```
+  </Tab>
+
+  <Tab title="Async">
+    ```java
+    // Async-Completion-Spezifikation
+    var asyncCompletionSpecification = new McpServerFeatures.AsyncCompletionSpecification(
+    			new McpSchema.PromptReference("code_review"), (exchange, request) -> {
+
+            // Completion-Implementierung ...
+
+            return Mono.just(new McpSchema.CompleteResult(
+                new CompleteResult.CompleteCompletion(
+                  List.of("python", "pytorch", "pyside"),
+                  10, // total
+                  false // hasMore
+                )));
+          }
+    );
+
+    // Async-Server mit Completion-Funktionen erstellen
+    var mcpServer = McpServer.async(mcpServerTransportProvider)
+      .capabilities(ServerCapabilities.builder()
+        .completions() // Completions-Unterstützung aktivieren
+          // ...
+        .build())
+      // ...
+      .completions(new McpServerFeatures.AsyncCompletionSpecification( // Completion-Spezifikation registrieren
+          new McpSchema.PromptReference("code_review"), asyncCompletionSpecification))
+      .build();
+
+    ```
+  </Tab>
+</Tabs>
+
+Die Definition von `McpSchema.CompletionReference` legt den Typ (`PromptReference` oder `ResourceReference`) sowie den Bezeichner für die Completion-Spezifikation fest (z. B. Handler).
+Die Handler-Funktion verarbeitet Anfragen und gibt die Completion-Antwort zurück.
+Das erste Argument ist `McpAsyncServerExchange` für die Client-Interaktion, das zweite Argument ist eine `CompleteRequest`-Instanz.
+
+Siehe [Completion verwenden](/de/sdk/java/mcp-client#using-completion), um zu erfahren, wie die Completion-Funktionen auf Client-Seite genutzt werden.
+
+<div id="using-sampling-from-a-server">
+  ### Sampling auf einem Server verwenden
+</div>
+
+Um [Sampling-Funktionen](/de/specification/2024-11-05/client/sampling/) zu nutzen, benötigen Sie einen kompatiblen Client, der Sampling unterstützt.
+Eine spezielle Serverkonfiguration ist nicht erforderlich, prüfen Sie jedoch vor Anfragen, ob der Client Sampling unterstützt.
+Erfahren Sie mehr über die [Sampling-Unterstützung von Clients](de/./mcp-client#sampling-support).
+
+Wenn ein kompatibler Client eine Verbindung zu einem zustandsbehafteten Server herstellt, kann der Server Generierungen durch das Sprachmodell anfordern:
+
+<Tabs>
+  <Tab title="Sync API">
+    ```java
+    // Create a server
+    McpSyncServer server = McpServer.sync(transportProvider)
+        .serverInfo("my-server", "1.0.0")
+        .build();
+
+    // Define a tool that uses sampling
+    var calculatorTool = new McpServerFeatures.SyncToolSpecification(
+        new Tool("ai-calculator", "Performs calculations using AI", schema),
+        (exchange, arguments) -> {
+            // Check if client supports sampling
+            if (exchange.getClientCapabilities().sampling() == null) {
+                return new CallToolResult("Client does not support AI capabilities", false);
+            }
+
+            // Create a sampling request
+            McpSchema.CreateMessageRequest request = McpSchema.CreateMessageRequest.builder()
+                .messages(List.of(new McpSchema.SamplingMessage(McpSchema.Role.USER,
+                    new McpSchema.TextContent("Calculate: " + arguments.get("expression")))
+                .modelPreferences(McpSchema.ModelPreferences.builder()
+                    .hints(List.of(
+                        McpSchema.ModelHint.of("claude-3-sonnet"),
+                        McpSchema.ModelHint.of("claude")
+                    ))
+                    .intelligencePriority(0.8)  // Prioritize intelligence
+                    .speedPriority(0.5)         // Moderate speed importance
+                    .build())
+                .systemPrompt("You are a helpful calculator assistant. Provide only the numerical answer.")
+                .maxTokens(100)
+                .build();
+
+            // Request sampling from the client
+            McpSchema.CreateMessageResult result = exchange.createMessage(request);
+
+            // Process the result
+            String answer = result.content().text();
+            return new CallToolResult(answer, false);
+        }
+    );
+
+    // Add the tool to the server
+    server.addTool(calculatorTool);
+    ```
+  </Tab>
+
+  <Tab title="Async API">
+    ```java
+    // Create a server
+    McpAsyncServer server = McpServer.async(transportProvider)
+        .serverInfo("my-server", "1.0.0")
+        .build();
+
+    // Define a tool that uses sampling
+    var calculatorTool = new McpServerFeatures.AsyncToolSpecification(
+        new Tool("ai-calculator", "Performs calculations using AI", schema),
+        (exchange, arguments) -> {
+            // Check if client supports sampling
+            if (exchange.getClientCapabilities().sampling() == null) {
+                return Mono.just(new CallToolResult("Client does not support AI capabilities", false));
+            }
+
+            // Create a sampling request
+            McpSchema.CreateMessageRequest request = McpSchema.CreateMessageRequest.builder()
+                .content(new McpSchema.TextContent("Calculate: " + arguments.get("expression")))
+                .modelPreferences(McpSchema.ModelPreferences.builder()
+                    .hints(List.of(
+                        McpSchema.ModelHint.of("claude-3-sonnet"),
+                        McpSchema.ModelHint.of("claude")
+                    ))
+                    .intelligencePriority(0.8)  // Prioritize intelligence
+                    .speedPriority(0.5)         // Moderate speed importance
+                    .build())
+                .systemPrompt("You are a helpful calculator assistant. Provide only the numerical answer.")
+                .maxTokens(100)
+                .build();
+
+            // Request sampling from the client
+            return exchange.createMessage(request)
+                .map(result -> {
+                    // Process the result
+                    String answer = result.content().text();
+                    return new CallToolResult(answer, false);
+                });
+        }
+    );
+
+    // Add the tool to the server
+    server.addTool(calculatorTool)
+        .subscribe();
+    ```
+  </Tab>
+</Tabs>
+
+Das Objekt `CreateMessageRequest` erlaubt Ihnen, Folgendes anzugeben: `Content` – den Eingabetext oder das Bild für das Modell,
+`Model Preferences` – Hinweise und Prioritäten für die Modellauswahl, `System Prompt` – Anweisungen für das Verhalten des Modells und
+`Max Tokens` – die maximale Länge der generierten Antwort.
+
+<div id="using-elicitation-from-a-server">
+  ### Verwendung von Elicitation auf einem Server
+</div>
+
+Um [Elicitation-Funktionen](/de/specification/2025-06-18/client/elicitation) zu nutzen, benötigen Sie einen kompatiblen Client mit Elicitation-Unterstützung.
+Eine spezielle Serverkonfiguration ist nicht erforderlich, prüfen Sie jedoch die Elicitation-Fähigkeiten des Clients, bevor Sie Anfragen stellen.
+Weitere Informationen zur [Elicitation-Unterstützung im Client](de/./mcp-client#elicitation-support).
+
+Wenn sich ein kompatibler Client mit einem zustandsbehafteten Server verbindet, kann der Server Generierungen durch ein Sprachmodell anfordern:
+
+<Tabs>
+  <Tab title="Sync API">
+    ```java
+    // Create a server
+    McpSyncServer server = McpServer.sync(transportProvider)
+        .serverInfo("my-server", "1.0.0")
+        .build();
+
+    // Define a tool that uses sampling
+    var calculatorTool = new McpServerFeatures.SyncToolSpecification(
+        new Tool("ai-calculator", "Performs calculations using AI", schema),
+        (exchange, arguments) -> {
+            // Check if client supports elicitation
+            if (exchange.getClientCapabilities().elicitation() == null) {
+                return new CallToolResult("Client does not support elicitation capabilities", false);
+            }
+
+            // Create an elicitation request
+            McpSchema.ElicitRequest request = McpSchema.ElicitRequest.builder()
+    					.message("Test message")
+    					.requestedSchema(
+    							Map.of("type", "object", "properties", Map.of("message", Map.of("type", "string"))))
+    					.build();
+
+            // Request elicitation from the client
+            McpSchema.ElicitResult result = exchange.createElicitation(request);
+
+            // Process the result
+            Map<String, Object> answer = result.content();
+            return new CallToolResult(answer, false);
+        }
+    );
+
+    // Add the tool to the server
+    server.addTool(calculatorTool);
+    ```
+  </Tab>
+
+  <Tab title="Async API">
+    ```java
+    // Create a server
+    McpAsyncServer server = McpServer.async(transportProvider)
+        .serverInfo("my-server", "1.0.0")
+        .build();
+
+    // Define a tool that uses elicitation
+    var calculatorTool = new McpServerFeatures.AsyncToolSpecification(
+        new Tool("ai-calculator", "Performs calculations using AI", schema),
+        (exchange, arguments) -> {
+            // Check if client supports elicitation
+            if (exchange.getClientCapabilities().elicitation() == null) {
+                return Mono.just(new CallToolResult("Client does not support elicitation capabilities", false));
+            }
+
+            // Create an elicitation request
+            McpSchema.ElicitRequest request = McpSchema.ElicitRequest.builder()
+                .message("Test message")
+                .requestedSchema(
+                        Map.of("type", "object", "properties", Map.of("message", Map.of("type", "string"))))
+                .build();
+
+            // Request elicitation from the client
+            return exchange.createElicitation(request)
+                .map(result -> {
+                    // Process the result
+                    Map<String, Object> answer = result.content();
+                    return new CallToolResult(answer, false);
+                });
+        }
+    );
+
+    // Add the tool to the server
+    server.addTool(calculatorTool)
+        .subscribe();
+    ```
+  </Tab>
+</Tabs>
+
+<div id="logging-support">
+  ### Unterstützung für Logging
+</div>
+
+Der Server bietet strukturierte Logging-Funktionen, mit denen Protokollnachrichten mit unterschiedlichen Schweregraden an Clients gesendet werden können. Log-Benachrichtigungen können nur innerhalb einer bestehenden Client-Sitzung gesendet werden, etwa bei Aufrufen von Werkzeugen, Ressourcen und Prompts.
+
+Beispielsweise können wir eine Protokollnachricht innerhalb einer Tool-Handler-Funktion senden.
+Auf Client-Seite können Sie einen Logging-Consumer registrieren, um Protokollnachrichten vom Server zu empfangen, und eine minimale Protokollstufe festlegen, um Nachrichten zu filtern.
+
+```java
+var mcpClient = McpClient.sync(transport)
+        .loggingConsumer(notification -> {
+            System.out.println("Received log message: " + notification.data());
+        })
+        .build();
+
+mcpClient.initialize();
+
+mcpClient.setLoggingLevel(McpSchema.LoggingLevel.INFO);
+
+// Call the tool that sends logging notifications
+CallToolResult result = mcpClient.callTool(new McpSchema.CallToolRequest("logging-test", Map.of()));
+```
+
+Der Server kann Protokollnachrichten über das Objekt `McpAsyncServerExchange`/`McpSyncServerExchange` in der Tool-/Ressourcen-/Prompt-Handler-Funktion senden:
+
+```java
+var tool = new McpServerFeatures.AsyncToolSpecification(
+    new McpSchema.Tool("logging-test", "Test logging notifications", emptyJsonSchema),
+    (exchange, request) -> {
+
+      exchange.loggingNotification( // Use the exchange to send log messages
+          McpSchema.LoggingMessageNotification.builder()
+            .level(McpSchema.LoggingLevel.DEBUG)
+            .logger("test-logger")
+            .data("Debug message")
+            .build())
+        .block();
+
+      return Mono.just(new CallToolResult("Logging test completed", false));
+    });
+
+var mcpServer = McpServer.async(mcpServerTransportProvider)
+  .serverInfo("test-server", "1.0.0")
+  .capabilities(
+    ServerCapabilities.builder()
+      .logging() // Enable logging support
+      .tools(true)
+      .build())
+  .tools(tool)
+  .build();
+```
+
+Clients können die minimale empfangene Protokollstufe über den Aufruf `mcpClient.setLoggingLevel(level)` steuern. Nachrichten unterhalb der festgelegten Stufe werden herausgefiltert.
+Unterstützte Protokollstufen (in aufsteigender Schwere): DEBUG (0), INFO (1), NOTICE (2), WARNING (3), ERROR (4), CRITICAL (5), ALERT (6), EMERGENCY (7)
+
+<div id="error-handling">
+  ## Fehlerbehandlung
+</div>
+
+Das SDK bietet eine umfassende Fehlerbehandlung über die Klasse McpError und deckt dabei Protokollkompatibilität, Transportkommunikation, JSON-RPC 2.0‑Nachrichten, Ausführung von Werkzeugen, Ressourcenverwaltung, Prompt‑Verarbeitung, Zeitüberschreitungen und Verbindungsprobleme ab. Dieser einheitliche Ansatz gewährleistet konsistentes und zuverlässiges Fehlermanagement in synchronen wie auch asynchronen Operationen.

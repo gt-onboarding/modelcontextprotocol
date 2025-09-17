@@ -1,0 +1,313 @@
+---
+title: Prompts
+---
+
+<div id="enable-section-numbers" />
+
+<Info>**Protokollrevision**: Entwurf</Info>
+
+Das Model Context Protocol (MCP) bietet eine standardisierte Möglichkeit, mit der Server Prompt‑Vorlagen für Clients bereitstellen können. Prompts ermöglichen es Servern, strukturierte Nachrichten und Anweisungen für die Interaktion mit Sprachmodellen bereitzustellen. Clients können verfügbare Prompts auffinden, deren Inhalte abrufen und Parameter angeben, um sie zu konfigurieren.
+
+<div id="user-interaction-model">
+  ## Benutzerinteraktionsmodell
+</div>
+
+Prompts sind so konzipiert, dass sie **vom Benutzer gesteuert** sind. Das bedeutet, sie werden von Servern gegenüber Clients bereitgestellt, damit Nutzer sie gezielt zur Verwendung auswählen können.
+
+In der Regel werden Prompts durch vom Nutzer initiierte Aktionen in der Benutzeroberfläche ausgelöst, wodurch Nutzer verfügbare Prompts auf natürliche Weise entdecken und aufrufen können.
+
+Zum Beispiel als Slash-Befehle:
+
+![Beispiel für einen als Slash-Befehl verfügbaren Prompt](/specification/draft/server/slash-command.png)
+
+Implementierer sind jedoch frei, Prompts über jedes Interaktionsmuster bereitzustellen, das ihren Anforderungen entspricht—das Protokoll selbst schreibt kein bestimmtes Benutzerinteraktionsmodell vor.
+
+<div id="capabilities">
+  ## Fähigkeiten
+</div>
+
+Server, die Prompts unterstützen, MÜSSEN während der
+[Initialisierung](/de/specification/draft/basic/lifecycle#initialization) die `prompts`-Fähigkeit deklarieren:
+
+```json
+{
+  "capabilities": {
+    "prompts": {
+      "listChanged": true
+    }
+  }
+}
+```
+
+`listChanged` gibt an, ob der Server Benachrichtigungen ausgibt, wenn sich die Liste der
+verfügbaren Prompts ändert.
+
+<div id="protocol-messages">
+  ## Protokollnachrichten
+</div>
+
+<div id="listing-prompts">
+  ### Prompts auflisten
+</div>
+
+Um verfügbare Prompts abzurufen, senden Clients eine `prompts/list`-Anfrage. Dieser Vorgang
+unterstützt [Seitennumerierung](/de/specification/draft/server/utilities/pagination).
+
+**Anfrage:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "prompts/list",
+  "params": {
+    "cursor": "optional-cursor-value"
+  }
+}
+```
+
+**Antwort:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "prompts": [
+      {
+        "name": "code_review",
+        "title": "Code-Review anfordern",
+        "description": "Fordert das LLM auf, die Codequalität zu analysieren und Verbesserungen vorzuschlagen",
+        "arguments": [
+          {
+            "name": "code",
+            "description": "Der zu prüfende Code",
+            "required": true
+          }
+        ],
+        "icons": [
+          {
+            "src": "https://example.com/review-icon.svg",
+            "mimeType": "image/svg+xml",
+            "sizes": "any"
+          }
+        ]
+      }
+    ],
+    "nextCursor": "next-page-cursor"
+  }
+}
+```
+
+<div id="getting-a-prompt">
+  ### Abrufen eines Prompts
+</div>
+
+Um ein bestimmtes Prompt abzurufen, senden Clients eine `prompts/get`-Anfrage. Argumente können über [die Completion-API](/de/specification/draft/server/utilities/completion) automatisch vervollständigt werden.
+
+**Anfrage:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "prompts/get",
+  "params": {
+    "name": "code_review",
+    "arguments": {
+      "code": "def hello():\n    print('world')"
+    }
+  }
+}
+```
+
+**Antwort:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "description": "Code-Review-Prompt",
+    "messages": [
+      {
+        "role": "user",
+        "content": {
+          "type": "text",
+          "text": "Please review this Python code:\ndef hello():\n    print('world')"
+        }
+      }
+    ]
+  }
+}
+```
+
+<div id="list-changed-notification">
+  ### Benachrichtigung über geänderte Liste
+</div>
+
+Wenn sich die Liste der verfügbaren Prompts ändert, sollten Server, die die Fähigkeit `listChanged` deklariert haben, eine Benachrichtigung senden:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/prompts/list_changed"
+}
+```
+
+<div id="message-flow">
+  ## Nachrichtenfluss
+</div>
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Server
+
+    Note over Client,Server: Auffindung
+    Client->>Server: prompts/list
+    Server-->>Client: Liste der Prompts
+
+    Note over Client,Server: Nutzung
+    Client->>Server: prompts/get
+    Server-->>Client: Promptinhalt
+
+    opt listChanged
+      Note over Client,Server: Änderungen
+      Server--)Client: prompts/list_changed
+      Client->>Server: prompts/list
+      Server-->>Client: Aktualisierte Prompts
+    end
+```
+
+<div id="data-types">
+  ## Datentypen
+</div>
+
+<div id="prompt">
+  ### Prompt
+</div>
+
+Eine Prompt-Definition umfasst:
+
+* `name`: Eindeutiger Bezeichner für den Prompt
+* `title`: Optionale, gut lesbare Bezeichnung des Prompts für Anzeigezwecke
+* `description`: Optionale, gut lesbare Beschreibung
+* `arguments`: Optionale Liste von Argumenten zur Anpassung
+
+<div id="promptmessage">
+  ### PromptMessage
+</div>
+
+Nachrichten in einem Prompt können Folgendes enthalten:
+
+* `role`: Entweder „user“ oder „assistant“, um die sprechende Person anzugeben
+* `content`: Einer der folgenden Inhaltstypen:
+
+<Note>
+  Alle Inhaltstypen in Prompt-Nachrichten unterstützen optionale
+  [Annotations](/de/specification/2025-06-18/server/resources#annotations) für
+  Metadaten zur Zielgruppe, Priorität und zu Änderungszeiten.
+</Note>
+
+<div id="text-content">
+  #### Textinhalt
+</div>
+
+Textinhalt steht für einfache Textnachrichten:
+
+```json
+{
+  "type": "text",
+  "text": "The text content of the message"
+}
+```
+
+Dies ist der gebräuchlichste Inhaltstyp für Interaktionen in natürlicher Sprache.
+
+<div id="image-content">
+  #### Bildinhalt
+</div>
+
+Bildinhalt ermöglicht das Einbinden visueller Informationen in Nachrichten:
+
+```json
+{
+  "type": "image",
+  "data": "base64-encoded-image-data",
+  "mimeType": "image/png"
+}
+```
+
+Die Bilddaten **MÜSSEN** base64-codiert sein und einen gültigen MIME-Typ enthalten. Dies ermöglicht
+multimodale Interaktionen, bei denen visueller Kontext wichtig ist.
+
+<div id="audio-content">
+  #### Audioinhalte
+</div>
+
+Audioinhalte ermöglichen das Einbinden von Audioinformationen in Nachrichten:
+
+```json
+{
+  "type": "audio",
+  "data": "base64-encoded-audio-data",
+  "mimeType": "audio/wav"
+}
+```
+
+Die Audiodaten MÜSSEN base64-codiert sein und einen gültigen MIME-Typ enthalten. Dies ermöglicht
+multimodale Interaktionen, bei denen der Audiokontext wichtig ist.
+
+<div id="embedded-resources">
+  #### Eingebettete Ressourcen
+</div>
+
+Eingebettete Ressourcen ermöglichen das direkte Referenzieren serverseitiger Ressourcen in Nachrichten:
+
+```json
+{
+  "type": "resource",
+  "resource": {
+    "uri": "resource://example",
+    "name": "example",
+    "title": "My Example Resource",
+    "mimeType": "text/plain",
+    "text": "Resource content"
+  }
+}
+```
+
+Ressourcen können entweder Text- oder binäre (Blob-)Daten enthalten und **MÜSSEN** Folgendes enthalten:
+
+* Eine gültige Ressourcen-URI
+* Den passenden MIME-Typ
+* Entweder Textinhalt oder base64-codierte Blob-Daten
+
+Eingebettete Ressourcen ermöglichen es Prompts, von Servern verwaltete Inhalte wie
+Dokumentation, Codebeispiele oder andere Referenzmaterialien nahtlos direkt in den Gesprächsfluss
+einzubinden.
+
+<div id="error-handling">
+  ## Fehlerbehandlung
+</div>
+
+MCP-Server **SOLLTEN** Standardfehler nach JSON-RPC 2.0 für gängige Fehlerfälle zurückgeben:
+
+* Ungültiger Prompt-Name: `-32602` (Ungültige Parameter)
+* Fehlende erforderliche Argumente: `-32602` (Ungültige Parameter)
+* Interne Fehler: `-32603` (Interner Fehler)
+
+<div id="implementation-considerations">
+  ## Hinweise zur Implementierung
+</div>
+
+1. Server **SOLLTEN** Prompt-Argumente vor der Verarbeitung validieren
+2. Clients **SOLLTEN** bei großen Prompt-Listen eine Paginierung unterstützen
+3. Beide Seiten **SOLLTEN** die Fähigkeitsaushandlung einhalten
+
+<div id="security">
+  ## Sicherheit
+</div>
+
+Implementierungen **MÜSSEN** alle Prompt-Eingaben und -Ausgaben sorgfältig validieren, um Injection-Angriffe oder unbefugten Zugriff auf Ressourcen zu verhindern.

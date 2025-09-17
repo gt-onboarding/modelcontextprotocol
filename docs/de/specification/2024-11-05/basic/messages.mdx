@@ -1,0 +1,73 @@
+---
+title: Nachrichten
+type: docs
+weight: 20
+---
+
+<Info>**Protokollrevision**: 2024-11-05</Info>
+
+Alle Nachrichten in MCP **MÜSSEN** der Spezifikation [JSON-RPC 2.0](https://www.jsonrpc.org/specification) entsprechen. Das Protokoll definiert drei Nachrichtentypen:
+
+<div id="requests">
+  ## Anfragen
+</div>
+
+Anfragen werden vom Client an den Server oder umgekehrt gesendet.
+
+```typescript
+{
+  jsonrpc: "2.0";
+  id: string | number;
+  method: string;
+  params?: {
+    [key: string]: unknown;
+  };
+}
+```
+
+- Anfragen **MÜSSEN** eine String- oder Integer-ID enthalten.
+- Anders als bei einfachem JSON-RPC darf die ID **NICHT** `null` sein.
+- Die Anfrage-ID **DARF NICHT** zuvor vom Anfragenden innerhalb derselben Sitzung verwendet worden sein.
+
+<div id="responses">
+  ## Antworten
+</div>
+
+Antworten werden als Reaktion auf Anfragen gesendet.
+
+```typescript
+{
+  jsonrpc: "2.0";
+  id: string | number;
+  result?: {
+    [key: string]: unknown;
+  }
+  error?: {
+    code: number;
+    message: string;
+    data?: unknown;
+  }
+}
+```
+
+- Antworten **MÜSSEN** dieselbe ID enthalten wie die Anfrage, auf die sie sich beziehen.
+- Entweder `result` oder `error` **MUSS** gesetzt sein. Eine Antwort **DARF NICHT** beides setzen.
+- Fehlercodes **MÜSSEN** ganze Zahlen (Integer) sein.
+
+<div id="notifications">
+  ## Benachrichtigungen
+</div>
+
+Benachrichtigungen werden vom Client an den Server oder umgekehrt gesendet. Sie erwarten keine Antwort.
+
+```typescript
+{
+  jsonrpc: "2.0";
+  method: string;
+  params?: {
+    [key: string]: unknown;
+  };
+}
+```
+
+- Benachrichtigungen **DÜRFEN KEINE** ID enthalten.

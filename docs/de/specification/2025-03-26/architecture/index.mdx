@@ -1,0 +1,182 @@
+---
+title: Architektur
+---
+
+Das Model Context Protocol (MCP) folgt einer Client-Host-Server-Architektur, in der jeder
+Host mehrere Client-Instanzen ausführen kann. Diese Architektur ermöglicht es Nutzerinnen und Nutzern, KI‑
+Funktionen anwendungsübergreifend zu integrieren, dabei klare Sicherheitsgrenzen einzuhalten
+und Zuständigkeiten zu trennen. Auf JSON-RPC 2.0 basierend bietet MCP ein zustandsbehaftetes Sitzungsprotokoll, das auf den Kontextaustausch und die Koordination des Sampling zwischen Clients und Servern ausgerichtet ist.
+
+<div id="core-components">
+  ## Zentrale Komponenten
+</div>
+
+```mermaid
+graph LR
+    subgraph "Anwendungs-Host-Prozess"
+        H[Host]
+        C1[Client 1]
+        C2[Client 2]
+        C3[Client 3]
+        H --> C1
+        H --> C2
+        H --> C3
+    end
+
+    subgraph "Lokale Maschine"
+        S1[Server 1<br>Dateien & Git]
+        S2[Server 2<br>Datenbank]
+        R1[("Lokale<br>Ressource A")]
+        R2[("Lokale<br>Ressource B")]
+
+        C1 --> S1
+        C2 --> S2
+        S1 <--> R1
+        S2 <--> R2
+    end
+
+    subgraph "Internet"
+        S3[Server 3<br>Externe APIs]
+        R3[("Remote<br>Ressource C")]
+
+        C3 --> S3
+        S3 <--> R3
+    end
+```
+
+<div id="host">
+  ### Host
+</div>
+
+Der Host-Prozess fungiert als Container und Koordinator:
+
+* Erstellt und verwaltet mehrere Client-Instanzen
+* Steuert Verbindungsberechtigungen der Clients und deren Lebenszyklus
+* Setzt Sicherheitsrichtlinien und Zustimmungserfordernisse durch
+* Trifft Entscheidungen zur Benutzerautorisierung
+* Koordiniert die Integration von KI/LLM und das Sampling
+* Verwaltet die Aggregation von Kontext über mehrere Clients hinweg
+
+<div id="clients">
+  ### Clients
+</div>
+
+Jeder Client wird vom Host erstellt und hält eine isolierte Serververbindung aufrecht:
+
+* Stellt eine zustandsbehaftete Sitzung pro Server her
+* Handhabt Protokollaushandlung und Fähigkeitsaustausch
+* Leitet Protokollnachrichten bidirektional weiter
+* Verwaltet Abonnements und Benachrichtigungen
+* Hält Sicherheitsgrenzen zwischen Servern aufrecht
+
+Eine Host-Anwendung erstellt und verwaltet mehrere Clients, wobei jeder Client eine 1:1-Beziehung zu einem bestimmten Server hat.
+
+<div id="servers">
+  ### Server
+</div>
+
+Server stellen spezialisierten Kontext und Fähigkeiten bereit:
+
+* Stellen Ressourcen, Werkzeuge und Prompts über MCP-Primitiven bereit
+* Arbeiten unabhängig mit klar abgegrenzten Verantwortlichkeiten
+* Fordern Sampling über Client-Schnittstellen an
+* Müssen Sicherheitsvorgaben einhalten
+* Können lokale Prozesse oder entfernte Dienste sein
+
+<div id="design-principles">
+  ## Designprinzipien
+</div>
+
+MCP basiert auf mehreren zentralen Designprinzipien, die seine Architektur und
+Implementierung leiten:
+
+1. **Server sollten äußerst einfach zu entwickeln sein**
+   * Host-Anwendungen übernehmen komplexe Orchestrierungsaufgaben
+   * Server konzentrieren sich auf spezifische, klar definierte Fähigkeiten
+   * Einfache Schnittstellen minimieren den Implementierungsaufwand
+   * Eine klare Trennung ermöglicht gut wartbaren Code
+
+2. **Server sollten hochgradig komponierbar sein**
+   * Jeder Server bietet fokussierte Funktionalität in Isolation
+   * Mehrere Server können nahtlos kombiniert werden
+   * Ein gemeinsames Protokoll ermöglicht Interoperabilität
+   * Ein modulares Design unterstützt Erweiterbarkeit
+
+3. **Server sollten weder das gesamte Gespräch lesen noch in andere
+   Server „hineinsehen“ können**
+   * Server erhalten nur die notwendigen kontextuellen Informationen
+   * Der vollständige Gesprächsverlauf verbleibt beim Host
+   * Jede Serververbindung bleibt isoliert
+   * Interaktionen zwischen Servern werden vom Host gesteuert
+   * Der Host-Prozess erzwingt Sicherheitsgrenzen
+
+4. **Funktionen können schrittweise zu Servern und Clients hinzugefügt werden**
+   * Das Kernprotokoll stellt die minimal erforderliche Funktionalität bereit
+   * Zusätzliche Fähigkeiten können bei Bedarf ausgehandelt werden
+   * Server und Clients entwickeln sich unabhängig weiter
+   * Das Protokoll ist für zukünftige Erweiterbarkeit ausgelegt
+   * Abwärtskompatibilität wird beibehalten
+
+<div id="capability-negotiation">
+  ## Fähigkeitsaushandlung
+</div>
+
+Das Model Context Protocol verwendet ein fähigkeitsbasiertes Aushandlungssystem, bei dem Clients und
+Server ihre unterstützten Funktionen während der Initialisierung ausdrücklich deklarieren. Fähigkeiten
+bestimmen, welche Protokollfunktionen und -primitiven während einer Sitzung verfügbar sind.
+
+* Server deklarieren Fähigkeiten wie Ressourcen-Abonnements, Unterstützung für Werkzeuge und Prompt-
+  Vorlagen
+* Clients deklarieren Fähigkeiten wie Unterstützung für Sampling und die Verarbeitung von Benachrichtigungen
+* Beide Parteien müssen die deklarierten Fähigkeiten während der gesamten Sitzung einhalten
+* Zusätzliche Fähigkeiten können über Erweiterungen des Protokolls ausgehandelt werden
+
+```mermaid
+sequenceDiagram
+    participant Host
+    participant Client
+    participant Server
+
+    Host->>+Client: Initialize client
+    Client->>+Server: Initialize session with capabilities
+    Server-->>Client: Respond with supported capabilities
+
+    Note over Host,Server: Active Session with Negotiated Features
+
+    loop Client Requests
+        Host->>Client: User- or model-initiated action
+        Client->>Server: Request (tools/resources)
+        Server-->>Client: Response
+        Client-->>Host: Update UI or respond to model
+    end
+
+    loop Server Requests
+        Server->>Client: Request (sampling)
+        Client->>Host: Forward to AI
+        Host-->>Client: AI response
+        Client-->>Server: Response
+    end
+
+    loop Notifications
+        Server--)Client: Resource updates
+        Client--)Server: Status changes
+    end
+
+    Host->>Client: Terminate
+    Client->>-Server: End session
+    deactivate Server
+```
+
+Jede Fähigkeit schaltet während der Sitzung spezifische Protokollfunktionen frei. Zum
+Beispiel:
+
+* Implementierte [Serverfunktionen](/de/specification/2025-03-26/server) müssen in den
+  Fähigkeiten des Servers angegeben werden
+* Das Senden von Benachrichtigungen zu Ressourcen-Abonnements erfordert, dass der Server
+  Unterstützung für Abonnements deklariert
+* Die Ausführung von Werkzeugen erfordert, dass der Server Werkzeugfähigkeiten deklariert
+* [Sampling](/de/specification/2025-03-26/client) erfordert, dass der Client Unterstützung in seinen
+  Fähigkeiten deklariert
+
+Diese Fähigkeitsaushandlung stellt sicher, dass Clients und Server ein klares Verständnis der
+unterstützten Funktionalität haben, während die Erweiterbarkeit des Protokolls gewahrt bleibt.

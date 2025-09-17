@@ -1,0 +1,137 @@
+---
+title: Übersicht
+---
+
+<Info>**Protokollrevision**: 2025-03-26</Info>
+
+Das Model Context Protocol besteht aus mehreren zentralen Komponenten, die zusammenwirken:
+
+* **Basisprotokoll**: Zentrale JSON-RPC-2.0-Nachrichtentypen
+* **Lebenszyklusverwaltung**: Verbindungsinitialisierung, Fähigkeitsaushandlung und
+  Sitzungssteuerung
+* **Serverfunktionen**: Von Servern bereitgestellte Ressourcen, Prompts und Werkzeuge
+* **Clientfunktionen**: Vom Client bereitgestelltes Sampling und Verzeichnislisten der Wurzeln
+* **Dienstprogramme**: Querschnittsthemen wie Logging und Argumentvervollständigung
+
+Alle Implementierungen **MÜSSEN** das Basisprotokoll und die Komponenten der Lebenszyklusverwaltung
+unterstützen. Weitere Komponenten **KÖNNEN** je nach den spezifischen Anforderungen der
+Anwendung implementiert werden.
+
+Diese Protokollschichten schaffen eine klare Trennung der Zuständigkeiten und ermöglichen zugleich
+umfangreiche Interaktionen zwischen Clients und Servern. Das modulare Design erlaubt Implementierungen,
+genau die Funktionen zu unterstützen, die sie benötigen.
+
+<div id="messages">
+  ## Nachrichten
+</div>
+
+Alle Nachrichten zwischen MCP-Client und MCP-Server **MÜSSEN** der
+Spezifikation [JSON-RPC 2.0](https://www.jsonrpc.org/specification) entsprechen. Das Protokoll definiert
+folgende Nachrichtentypen:
+
+<div id="requests">
+  ### Anfragen
+</div>
+
+Anfragen werden vom Client an den Server oder umgekehrt gesendet, um einen Vorgang zu starten.
+
+```typescript
+{
+  jsonrpc: "2.0";
+  id: string | number;
+  method: string;
+  params?: {
+    [key: string]: unknown;
+  };
+}
+```
+
+* Anfragen **MÜSSEN** eine ID als Zeichenkette oder Ganzzahl enthalten.
+* Anders als im grundlegenden JSON-RPC-Standard darf die ID **NICHT** `null` sein.
+* Die Anfrage-ID **DARF NICHT** zuvor vom Anfragenden innerhalb derselben Sitzung verwendet worden sein.
+
+<div id="responses">
+  ### Antworten
+</div>
+
+Antworten werden als Reaktion auf Anfragen gesendet und enthalten das Ergebnis oder den Fehler der Operation.
+
+```typescript
+{
+  jsonrpc: "2.0";
+  id: string | number;
+  result?: {
+    [key: string]: unknown;
+  }
+  error?: {
+    code: number;
+    message: string;
+    data?: unknown;
+  }
+}
+```
+
+* Antworten **MÜSSEN** dieselbe ID enthalten wie die zugehörige Anfrage.
+* **Antworten** werden weiter in **erfolgreiche Ergebnisse** oder **Fehler**
+  unterteilt. Entweder `result` oder `error` **MUSS** gesetzt sein. Eine Antwort **DARF NICHT**
+  beides setzen.
+* Ergebnisse **KÖNNEN** beliebige JSON-Objektstrukturen aufweisen, während Fehler **MINDestens** einen
+  Fehlercode und eine Nachricht enthalten **MÜSSEN**.
+* Fehlercodes **MÜSSEN** ganze Zahlen sein.
+
+<div id="notifications">
+  ### Benachrichtigungen
+</div>
+
+Benachrichtigungen werden als Einwegnachricht vom Client an den Server oder umgekehrt gesendet.
+Der Empfänger **DARF KEINE** Antwort senden.
+
+```typescript
+{
+  jsonrpc: "2.0";
+  method: string;
+  params?: {
+    [key: string]: unknown;
+  };
+}
+```
+
+* Benachrichtigungen **DÜRFEN KEINE** ID enthalten.
+
+<div id="batching">
+  ### Batching
+</div>
+
+JSON-RPC definiert außerdem eine Möglichkeit,
+[mehrere Anfragen und Benachrichtigungen zu bündeln](https://www.jsonrpc.org/specification#batch),
+indem sie in einem Array gesendet werden. MCP-Implementierungen **KÖNNEN** das Senden von JSON-RPC-Batches unterstützen, **MÜSSEN** jedoch das Empfangen von JSON-RPC-Batches unterstützen.
+
+<div id="auth">
+  ## Auth
+</div>
+
+MCP stellt einen [Authorization](/de/specification/2025-03-26/basic/authorization)-Rahmen für die Verwendung mit HTTP bereit.
+Implementierungen mit einem HTTP-basierten Transport **SOLLTEN** dieser Spezifikation entsprechen,
+während Implementierungen mit STDIO-Transport **NICHT SOLLTEN** dieser Spezifikation folgen,
+sondern stattdessen Anmeldedaten aus der Umgebung beziehen.
+
+Zusätzlich **KÖNNEN** Clients und Server eigene benutzerdefinierte Authentifizierungs- und
+Autorisierungsstrategien aushandeln.
+
+Für weiterführende Diskussionen und Beiträge zur Weiterentwicklung der Auth-Mechanismen von MCP, treten Sie
+uns in den
+[GitHub Discussions](https://github.com/modelcontextprotocol/specification/discussions)
+bei, um die Zukunft des Protokolls mitzugestalten!
+
+<div id="schema">
+  ## Schema
+</div>
+
+Die vollständige Spezifikation des Protokolls ist als
+[TypeScript-Schema](https://github.com/modelcontextprotocol/specification/blob/main/schema/2025-03-26/schema.ts) definiert.
+Dies ist die maßgebliche Referenz für alle Protokollnachrichten und -strukturen.
+
+Es gibt außerdem ein
+[JSON-Schema](https://github.com/modelcontextprotocol/specification/blob/main/schema/2025-03-26/schema.json),
+das automatisch aus der maßgeblichen TypeScript-Referenz generiert wird und mit
+verschiedenen automatisierten Werkzeugen verwendet werden kann.

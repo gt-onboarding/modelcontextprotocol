@@ -1,0 +1,97 @@
+---
+title: Fortschritt
+---
+
+<div id="enable-section-numbers" />
+
+<Info>**Protokollrevision**: 2025-06-18</Info>
+
+Das Model Context Protocol (MCP) unterstützt optionales Fortschritts-Tracking für langlaufende
+Operationen mittels Benachrichtigungen. Beide Seiten können Fortschrittsbenachrichtigungen senden, um
+Aktualisierungen zum Status von Operationen bereitzustellen.
+
+<div id="progress-flow">
+  ## Fortschrittsablauf
+</div>
+
+Wenn eine Partei Fortschrittsupdates für eine Anforderung _empfangen_ möchte, fügt sie ein
+`progressToken` in die Metadaten der Anforderung ein.
+
+- Fortschrittstoken **MÜSSEN** ein String- oder Integerwert sein
+- Fortschrittstoken können vom Absender auf beliebige Weise gewählt werden, müssen aber **EINDEUTIG** sein
+  über alle aktiven Anforderungen hinweg.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "some_method",
+  "params": {
+    "_meta": {
+      "progressToken": "abc123"
+    }
+  }
+}
+```
+
+Der Empfänger **KANN** dann Fortschrittsbenachrichtigungen senden, die Folgendes enthalten:
+
+- Das ursprüngliche Fortschrittstoken
+- Den aktuellen Fortschrittswert
+- Einen optionalen „total“-Wert
+- Einen optionalen „message“-Wert
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/progress",
+  "params": {
+    "progressToken": "abc123",
+    "progress": 50,
+    "total": 100,
+    "message": "Reticulating splines..."
+  }
+}
+```
+
+- Der Wert `progress` **MUSS** mit jeder Benachrichtigung steigen, selbst wenn der Gesamtwert unbekannt ist.
+- Die Werte `progress` und `total` **KÖNNEN** Gleitkommazahlen sein.
+- Das Feld `message` **SOLLTE** relevante, für Menschen lesbare Informationen zum Fortschritt liefern.
+
+<div id="behavior-requirements">
+  ## Verhaltensanforderungen
+</div>
+
+1. Fortschrittsbenachrichtigungen **MÜSSEN** nur auf Token verweisen, die:
+   - In einer aktiven Anforderung bereitgestellt wurden
+   - Einer laufenden Operation zugeordnet sind
+
+2. Empfänger von Fortschrittsanforderungen **DÜRFEN**:
+   - Sich entscheiden, keine Fortschrittsbenachrichtigungen zu senden
+   - Benachrichtigungen in beliebiger, aus ihrer Sicht geeigneter Häufigkeit senden
+   - Den Gesamtwert weglassen, wenn er unbekannt ist
+
+```mermaid
+sequenceDiagram
+    participant Sender
+    participant Receiver
+
+    Note over Sender,Receiver: Anforderung mit Fortschrittstoken
+    Sender->>Receiver: Methodenanforderung mit progressToken
+
+    Note over Sender,Receiver: Fortschrittsaktualisierungen
+    Receiver-->>Sender: Fortschrittsbenachrichtigung (0.2/1.0)
+    Receiver-->>Sender: Fortschrittsbenachrichtigung (0.6/1.0)
+    Receiver-->>Sender: Fortschrittsbenachrichtigung (1.0/1.0)
+
+    Note over Sender,Receiver: Operation abgeschlossen
+    Receiver->>Sender: Methodenantwort
+```
+
+<div id="implementation-notes">
+  ## Implementierungshinweise
+</div>
+
+- Sender und Empfänger **SOLLTEN** aktive Fortschritts-Token nachverfolgen
+- Beide Parteien **SOLLTEN** eine Ratenbegrenzung implementieren, um Überflutung zu verhindern
+- Fortschrittsbenachrichtigungen **MÜSSEN** nach Abschluss enden

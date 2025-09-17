@@ -1,0 +1,531 @@
+---
+title: "Werkzeuge"
+description: "Ermöglichen Sie LLMs, Aktionen über Ihren Server auszuführen"
+---
+
+Werkzeuge sind ein leistungsfähiges Grundelement im Model Context Protocol (MCP), mit dem Server ausführbare Funktionen für Clients bereitstellen können. Über Werkzeuge können LLMs mit externen Systemen interagieren, Berechnungen durchführen und Aktionen in der realen Welt auslösen.
+
+<Note>
+  Werkzeuge sind darauf ausgelegt, **modellgesteuert** zu sein. Das bedeutet, dass sie von Servern für Clients bereitgestellt werden, damit das KI-Modell sie automatisch aufrufen kann (mit einem Menschen im Freigabeprozess).
+</Note>
+
+<div id="overview">
+  ## Übersicht
+</div>
+
+Werkzeuge in MCP ermöglichen Servern, ausführbare Funktionen bereitzustellen, die von Clients aufgerufen und von LLMs zur Ausführung von Aktionen genutzt werden können. Wichtige Aspekte von Werkzeugen sind:
+
+* **Auffindbarkeit**: Clients können eine Liste verfügbarer Werkzeuge abrufen, indem sie eine `tools/list`-Anfrage senden
+* **Aufruf**: Werkzeuge werden über die `tools/call`-Anfrage aufgerufen, bei der Server die angeforderte Operation ausführen und Ergebnisse zurückgeben
+* **Flexibilität**: Werkzeuge reichen von einfachen Berechnungen bis hin zu komplexen API-Interaktionen
+
+Wie [Ressourcen](/de/legacy/concepts/resources) werden Werkzeuge durch eindeutige Namen identifiziert und können Beschreibungen enthalten, die ihre Nutzung erleichtern. Im Gegensatz zu Ressourcen repräsentieren Werkzeuge jedoch dynamische Operationen, die den Zustand verändern oder mit externen Systemen interagieren können.
+
+<div id="tool-definition-structure">
+  ## Struktur der Tool-Definition
+</div>
+
+Jedes Tool wird mit der folgenden Struktur definiert:
+
+```typescript
+{
+  name: string;          // Eindeutiger Bezeichner für das Tool
+  description?: string;  // Menschlich lesbare Beschreibung
+  inputSchema: {         // JSON-Schema für die Parameter des Tools
+    type: "object",
+    properties: { ... }  // Tool-spezifische Parameter
+  },
+  annotations?: {        // Optionale Hinweise zum Verhalten des Tools
+    title?: string;      // Menschlich lesbarer Titel für das Tool
+    readOnlyHint?: boolean;    // Wenn true, verändert das Tool seine Umgebung nicht
+    destructiveHint?: boolean; // Wenn true, kann das Tool destruktive Änderungen durchführen
+    idempotentHint?: boolean;  // Wenn true, haben wiederholte Aufrufe mit denselben Argumenten keinen zusätzlichen Effekt
+    openWorldHint?: boolean;   // Wenn true, interagiert das Tool mit externen Entitäten
+  }
+}
+```
+
+<div id="implementing-tools">
+  ## Implementierung von Werkzeugen
+</div>
+
+Hier ist ein Beispiel für die Implementierung eines einfachen Werkzeugs in einem MCP-Server:
+
+<CodeGroup>
+  ```typescript TypeScript
+  const server = new Server(
+    {
+      name: "example-server",
+      version: "1.0.0",
+    },
+    {
+      capabilities: {
+        tools: {},
+      },
+    },
+  );
+
+  // Verfügbare Werkzeuge definieren
+  server.setRequestHandler(ListToolsRequestSchema, async () => {
+    return {
+      tools: [
+        {
+          name: "calculate_sum",
+          description: "Zwei Zahlen addieren",
+          inputSchema: {
+            type: "object",
+            properties: {
+              a: { type: "number" },
+              b: { type: "number" },
+            },
+            required: ["a", "b"],
+          },
+        },
+      ],
+    };
+  });
+
+  // Werkzeugausführung behandeln
+  server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    if (request.params.name === "calculate_sum") {
+      const { a, b } = request.params.arguments;
+      return {
+        content: [
+          {
+            type: "text",
+            text: String(a + b),
+          },
+        ],
+      };
+    }
+    throw new Error("Tool not found");
+  });
+  ```
+
+  ```python Python
+  app = Server("example-server")
+
+  @app.list_tools()
+  async def list_tools() -> list[types.Tool]:
+      return [
+          types.Tool(
+              name="calculate_sum",
+              description="Zwei Zahlen addieren",
+              inputSchema={
+                  "type": "object",
+                  "properties": {
+                      "a": {"type": "number"},
+                      "b": {"type": "number"}
+                  },
+                  "required": ["a", "b"]
+              }
+          )
+      ]
+
+  @app.call_tool()
+  async def call_tool(
+      name: str,
+      arguments: dict
+  ) -> list[types.TextContent | types.ImageContent | types.EmbeddedResource]:
+      if name == "calculate_sum":
+          a = arguments["a"]
+          b = arguments["b"]
+          result = a + b
+          return [types.TextContent(type="text", text=str(result))]
+      raise ValueError(f"Tool not found: {name}")
+  ```
+</CodeGroup>
+
+<div id="example-tool-patterns">
+  ## Beispielhafte Tool-Muster
+</div>
+
+Hier sind einige Beispiele für Arten von Werkzeugen, die ein Server bereitstellen könnte:
+---MDX&#95;CONTENTEND---
+
+<div id="system-operations">
+  ### Systemoperationen
+</div>
+
+Werkzeuge, die mit dem lokalen System interagieren:
+
+```typescript
+{
+  name: "execute_command",
+  description: "Run a shell command",
+  inputSchema: {
+    type: "object",
+    properties: {
+      command: { type: "string" },
+      args: { type: "array", items: { type: "string" } }
+    }
+  }
+}
+```
+
+<div id="api-integrations">
+  ### API-Integrationen
+</div>
+
+Werkzeuge, die externe APIs einbinden:
+
+```typescript
+{
+  name: "github_create_issue",
+  description: "Create a GitHub issue",
+  inputSchema: {
+    type: "object",
+    properties: {
+      title: { type: "string" },
+      body: { type: "string" },
+      labels: { type: "array", items: { type: "string" } }
+    }
+  }
+}
+```
+
+<div id="data-processing">
+  ### Datenverarbeitung
+</div>
+
+Werkzeuge, die Daten transformieren oder analysieren:
+
+```typescript
+{
+  name: "analyze_csv",
+  description: "Analyze a CSV file",
+  inputSchema: {
+    type: "object",
+    properties: {
+      filepath: { type: "string" },
+      operations: {
+        type: "array",
+        items: {
+          enum: ["sum", "average", "count"]
+        }
+      }
+    }
+  }
+}
+```
+
+<div id="best-practices">
+  ## Bewährte Praktiken
+</div>
+
+Beim Implementieren von Werkzeugen:
+
+1. Verwenden Sie klare, aussagekräftige Namen und Beschreibungen
+2. Nutzen Sie detaillierte JSON-Schema-Definitionen für Parameter
+3. Fügen Sie Beispiele in die Werkzeugbeschreibungen ein, die zeigen, wie das Modell sie verwenden soll
+4. Implementieren Sie robuste Fehlerbehandlung und Validierung
+5. Verwenden Sie Fortschrittsmeldungen für lang laufende Operationen
+6. Halten Sie Werkzeugoperationen schlank und atomar
+7. Dokumentieren Sie die erwarteten Strukturen der Rückgabewerte
+8. Implementieren Sie angemessene Timeouts
+9. Ziehen Sie Ratenbegrenzungen für ressourcenintensive Operationen in Betracht
+10. Protokollieren Sie die Werkzeugnutzung für Debugging und Monitoring
+
+<div id="tool-name-conflicts">
+  ### Konflikte bei Werkzeugnamen
+</div>
+
+MCP-Client-Anwendungen und MCP-Server-Proxys können auf Konflikte bei Werkzeugnamen stoßen, wenn sie ihre eigenen Werkzeuglisten erstellen. Beispielsweise können zwei verbundene MCP-Server `web1` und `web2` beide ein Werkzeug namens `search_web` bereitstellen.
+
+Anwendungen können Werkzeuge mit einer der folgenden Strategien (unter anderem; keine vollständige Liste) unterscheiden:
+
+* Verketten eines eindeutigen, vom Benutzer festgelegten Servernamens mit dem Werkzeugnamen, z. B. `web1___search_web` und `web2___search_web`. Diese Strategie kann vorzuziehen sein, wenn der Benutzer bereits eindeutige Servernamen in einer Konfigurationsdatei angegeben hat.
+* Generieren eines zufälligen Präfixes für den Werkzeugnamen, z. B. `jrwxs___search_web` und `6cq52___search_web`. Diese Strategie kann in Server-Proxys vorzuziehen sein, in denen vom Benutzer vergebene eindeutige Namen nicht verfügbar sind.
+* Verwenden der Server-URI als Präfix für den Werkzeugnamen, z. B. `web1.example.com:search_web` und `web2.example.com:search_web`. Diese Strategie kann geeignet sein, wenn mit entfernten MCP-Servern gearbeitet wird.
+
+Beachten Sie, dass der vom Server im Initialisierungsablauf bereitgestellte Name nicht notwendigerweise eindeutig ist und im Allgemeinen nicht zur Disambiguierung geeignet ist.
+
+<div id="security-considerations">
+  ## Sicherheitsaspekte
+</div>
+
+Beim Bereitstellen von Werkzeugen:
+
+<div id="input-validation">
+  ### Eingabevalidierung
+</div>
+
+* Alle Parameter anhand des Schemas validieren
+* Dateipfade und Systembefehle bereinigen
+* URLs und externe Bezeichner validieren
+* Größen und Bereiche von Parametern prüfen
+* Kommandoinjektionen verhindern
+
+<div id="access-control">
+  ### Zugriffskontrolle
+</div>
+
+* Implementieren Sie bei Bedarf Authentifizierung
+* Führen Sie geeignete Autorisierungsprüfungen durch
+* Protokollieren Sie die Nutzung von Werkzeugen
+* Begrenzen Sie die Anfragerate
+* Überwachen Sie auf Missbrauch
+
+<div id="error-handling">
+  ### Fehlerbehandlung
+</div>
+
+* Interne Fehler nicht gegenüber Clients offenlegen
+* Sicherheitsrelevante Fehler protokollieren
+* Timeouts angemessen behandeln
+* Ressourcen nach Fehlern aufräumen
+* Rückgabewerte validieren
+
+<div id="tool-discovery-and-updates">
+  ## Werkzeugerkennung und -aktualisierung
+</div>
+
+MCP unterstützt die dynamische Erkennung von Werkzeugen:
+
+1. Clients können verfügbare Werkzeuge jederzeit auflisten
+2. Server können Clients benachrichtigen, wenn sich Werkzeuge ändern, über `notifications/tools/list_changed`
+3. Werkzeuge können zur Laufzeit hinzugefügt oder entfernt werden
+4. Werkzeugdefinitionen können aktualisiert werden (dies sollte jedoch mit Bedacht erfolgen)
+
+<div id="error-handling">
+  ## Fehlerbehandlung
+</div>
+
+Tool-Fehler sollten im Ergebnisobjekt gemeldet werden, nicht als MCP-Fehler auf Protokollebene. So kann das LLM den Fehler erkennen und ihn gegebenenfalls behandeln. Wenn ein Tool auf einen Fehler stößt:
+
+1. Setzen Sie `isError` im Ergebnis auf `true`.
+2. Fügen Sie Fehlerinformationen im `content`-Array hinzu.
+
+Hier ist ein Beispiel für eine korrekte Fehlerbehandlung bei Werkzeuge:
+
+<CodeGroup>
+  ```typescript TypeScript
+  try {
+    // Tool operation
+    const result = performOperation();
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Operation successful: ${result}`,
+        },
+      ],
+    };
+  } catch (error) {
+    return {
+      isError: true,
+      content: [
+        {
+          type: "text",
+          text: `Error: ${error.message}`,
+        },
+      ],
+    };
+  }
+  ```
+
+  ```python Python
+  try:
+      # Tool operation
+      result = perform_operation()
+      return types.CallToolResult(
+          content=[
+              types.TextContent(
+                  type="text",
+                  text=f"Operation successful: {result}"
+              )
+          ]
+      )
+  except Exception as error:
+      return types.CallToolResult(
+          isError=True,
+          content=[
+              types.TextContent(
+                  type="text",
+                  text=f"Error: {str(error)}"
+              )
+          ]
+      )
+  ```
+</CodeGroup>
+
+Dieser Ansatz ermöglicht es dem LLM zu erkennen, dass ein Fehler aufgetreten ist, und bei Bedarf Korrekturmaßnahmen zu ergreifen oder menschliches Eingreifen anzufordern.
+
+<div id="tool-annotations">
+  ## Tool-Anmerkungen
+</div>
+
+Tool-Anmerkungen liefern zusätzliche Metadaten zum Verhalten eines Werkzeugs und helfen Clients zu verstehen, wie Werkzeuge präsentiert und verwaltet werden sollten. Diese Anmerkungen sind Hinweise, die die Art und die Auswirkungen eines Werkzeugs beschreiben, sollten jedoch nicht als Grundlage für Sicherheitsentscheidungen dienen.
+
+<div id="purpose-of-tool-annotations">
+  ### Zweck von Tool-Anmerkungen
+</div>
+
+Tool-Anmerkungen erfüllen mehrere zentrale Zwecke:
+
+1. UX-spezifische Informationen bereitstellen, ohne den Kontext des Modells zu beeinflussen
+2. MCP-Clients dabei helfen, Werkzeuge passend zu kategorisieren und darzustellen
+3. Informationen über mögliche Nebenwirkungen eines Werkzeugs vermitteln
+4. Bei der Entwicklung intuitiver Oberflächen für die Freigabe von Werkzeugen unterstützen
+
+<div id="available-tool-annotations">
+  ### Verfügbare Tool-Anmerkungen
+</div>
+
+Die MCP-Spezifikation definiert die folgenden Anmerkungen für Werkzeuge:
+
+| Annotation        | Typ     | Standard | Beschreibung                                                                                                                         |
+| ----------------- | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `title`           | string  | -        | Ein menschenlesbarer Titel für das Werkzeug, nützlich für die Anzeige in der Benutzeroberfläche                                      |
+| `readOnlyHint`    | boolean | false    | Wenn true, weist dies darauf hin, dass das Werkzeug seine Umgebung nicht verändert                                                   |
+| `destructiveHint` | boolean | true     | Wenn true, kann das Werkzeug zerstörerische Änderungen vornehmen (nur sinnvoll, wenn `readOnlyHint` false ist)                      |
+| `idempotentHint`  | boolean | false    | Wenn true, hat wiederholtes Ausführen des Werkzeugs mit denselben Argumenten keinen zusätzlichen Effekt (nur sinnvoll, wenn `readOnlyHint` false ist) |
+| `openWorldHint`   | boolean | true     | Wenn true, kann das Werkzeug mit einer „offenen Welt“ externer Entitäten interagieren                                                |
+
+<div id="example-usage">
+  ### Beispielverwendung
+</div>
+
+So definieren Sie Werkzeuge mit Anmerkungen für verschiedene Szenarien:
+
+```typescript
+// Ein schreibgeschütztes Suchwerkzeug
+{
+  name: "web_search",
+  description: "Durchsuche das Web nach Informationen",
+  inputSchema: {
+    type: "object",
+    properties: {
+      query: { type: "string" }
+    },
+    required: ["query"]
+  },
+  annotations: {
+    title: "Websuche",
+    readOnlyHint: true,
+    openWorldHint: true
+  }
+}
+
+// Ein destruktives Werkzeug zum Löschen von Dateien
+{
+  name: "delete_file",
+  description: "Lösche eine Datei aus dem Dateisystem",
+  inputSchema: {
+    type: "object",
+    properties: {
+      path: { type: "string" }
+    },
+    required: ["path"]
+  },
+  annotations: {
+    title: "Datei löschen",
+    readOnlyHint: false,
+    destructiveHint: true,
+    idempotentHint: true,
+    openWorldHint: false
+  }
+}
+
+// Ein nicht-destruktives Werkzeug zum Erstellen von Datenbankeinträgen
+{
+  name: "create_record",
+  description: "Erstelle einen neuen Datensatz in der Datenbank",
+  inputSchema: {
+    type: "object",
+    properties: {
+      table: { type: "string" },
+      data: { type: "object" }
+    },
+    required: ["table", "data"]
+  },
+  annotations: {
+    title: "Datenbankeintrag erstellen",
+    readOnlyHint: false,
+    destructiveHint: false,
+    idempotentHint: false,
+    openWorldHint: false
+  }
+}
+```
+
+<div id="integrating-annotations-in-server-implementation">
+  ### Einbindung von Anmerkungen in die Serverimplementierung
+</div>
+
+<CodeGroup>
+  ```typescript TypeScript
+  server.setRequestHandler(ListToolsRequestSchema, async () => {
+    return {
+      tools: [
+        {
+          name: "calculate_sum",
+          description: "Add two numbers together",
+          inputSchema: {
+            type: "object",
+            properties: {
+              a: { type: "number" },
+              b: { type: "number" },
+            },
+            required: ["a", "b"],
+          },
+          annotations: {
+            title: "Calculate Sum",
+            readOnlyHint: true,
+            openWorldHint: false,
+          },
+        },
+      ],
+    };
+  });
+  ```
+
+  ```python Python
+  from mcp.server.fastmcp import FastMCP
+
+  mcp = FastMCP("example-server")
+
+  @mcp.tool(
+      annotations={
+          "title": "Calculate Sum",
+          "readOnlyHint": True,
+          "openWorldHint": False
+      }
+  )
+  async def calculate_sum(a: float, b: float) -> str:
+      """Add two numbers together.
+
+      Args:
+          a: First number to add
+          b: Second number to add
+      """
+      result = a + b
+      return str(result)
+  ```
+</CodeGroup>
+
+<div id="best-practices-for-tool-annotations">
+  ### Best Practices für Tool-Anmerkungen
+</div>
+
+1. **Seien Sie präzise bei Nebenwirkungen**: Geben Sie klar an, ob ein Werkzeug seine Umgebung verändert und ob diese Änderungen destruktiv sind.
+
+2. **Verwenden Sie aussagekräftige Titel**: Verwenden Sie verständliche Titel, die den Zweck des Werkzeugs klar beschreiben.
+
+3. **Idempotenz korrekt kennzeichnen**: Markieren Sie Werkzeuge nur als idempotent, wenn wiederholte Aufrufe mit denselben Argumenten tatsächlich keinen zusätzlichen Effekt haben.
+
+4. **Passende Hinweise zur offenen/geschlossenen Welt setzen**: Geben Sie an, ob ein Werkzeug mit einem geschlossenen System (z. B. einer Datenbank) oder einem offenen System (z. B. dem Web) interagiert.
+
+5. **Denken Sie daran, dass Anmerkungen Hinweise sind**: Alle Eigenschaften in Tool-Anmerkungen sind Hinweise und garantieren keine genaue Beschreibung des Werkzeugverhaltens. Clients sollten niemals sicherheitskritische Entscheidungen ausschließlich auf Grundlage von Anmerkungen treffen.
+
+<div id="testing-tools">
+  ## Testen von Werkzeugen
+</div>
+
+Eine umfassende Teststrategie für MCP-Werkzeuge sollte Folgendes abdecken:
+
+* **Funktionstests**: Prüfen, dass Werkzeuge mit gültigen Eingaben korrekt ausgeführt werden und ungültige Eingaben angemessen behandeln
+* **Integrationstests**: Testen der Interaktion von Werkzeugen mit externen Systemen unter Verwendung realer und simulierter Abhängigkeiten
+* **Sicherheitstests**: Validieren von Authentifizierung, Autorisierung, Eingabevalidierung und Ratenbegrenzung
+* **Leistungstests**: Prüfen des Verhaltens unter Last, der Timeout-Behandlung und der Ressourcenbereinigung
+* **Fehlerbehandlung**: Sicherstellen, dass Werkzeuge Fehler ordnungsgemäß über das MCP-Protokoll melden und Ressourcen bereinigen

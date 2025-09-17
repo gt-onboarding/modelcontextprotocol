@@ -1,0 +1,259 @@
+---
+title: Sampling
+---
+
+<div id="enable-section-numbers" />
+
+<Info>**Protokollrevision**: Entwurf</Info>
+
+Das Model Context Protocol (MCP) bietet eine standardisierte Möglichkeit für Server, über Clients LLM-Sampling („Completions“ oder „Generations“) von Sprachmodellen anzufordern. Dieser Ablauf ermöglicht es Clients, die Kontrolle über den Modellzugriff, die Modellauswahl und die Berechtigungen zu behalten, während Server KI-Funktionen nutzen können—ohne dass Server-API-Schlüssel erforderlich sind. Server können text-, audio- oder bildbasierte Interaktionen anfordern und optional Kontext von MCP-Servern in ihre Prompts einbeziehen.
+
+<div id="user-interaction-model">
+  ## Modell der Benutzerinteraktion
+</div>
+
+Sampling im MCP ermöglicht es Servern, agentische Verhaltensweisen zu implementieren, indem LLM-Aufrufe *verschachtelt* innerhalb anderer MCP-Serverfunktionen stattfinden können.
+
+Implementierungen können Sampling über jedes Schnittstellenmuster bereitstellen, das ihren Anforderungen entspricht—das Protokoll selbst schreibt kein spezifisches Modell der Benutzerinteraktion vor.
+
+<Warning>
+  Aus Gründen von Trust &amp; Safety sowie Sicherheit **SOLLTE** immer ein Mensch eingebunden sein, der Sampling-Anfragen ablehnen kann.
+
+  Anwendungen **SOLLEN**:
+
+  * Eine UI bereitstellen, die die Überprüfung von Sampling-Anfragen einfach und intuitiv macht
+  * Nutzenden erlauben, Prompts vor dem Senden anzusehen und zu bearbeiten
+  * Generierte Antworten vor der Auslieferung zur Überprüfung präsentieren
+</Warning>
+
+<div id="capabilities">
+  ## Fähigkeiten
+</div>
+
+Clients, die Sampling unterstützen, **MÜSSEN** während der
+[Initialisierung](/de/specification/draft/basic/lifecycle#initialization) die Fähigkeit `sampling` deklarieren:
+
+```json
+{
+  "capabilities": {
+    "sampling": {}
+  }
+}
+```
+
+<div id="protocol-messages">
+  ## Protokollnachrichten
+</div>
+
+<div id="creating-messages">
+  ### Erstellen von Nachrichten
+</div>
+
+Um eine Generierung durch ein Sprachmodell anzufordern, senden Server eine Anfrage `sampling/createMessage`:
+
+**Anfrage:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "sampling/createMessage",
+  "params": {
+    "messages": [
+      {
+        "role": "user",
+        "content": {
+          "type": "text",
+          "text": "What is the capital of France?"
+        }
+      }
+    ],
+    "modelPreferences": {
+      "hints": [
+        {
+          "name": "claude-3-sonnet"
+        }
+      ],
+      "intelligencePriority": 0.8,
+      "speedPriority": 0.5
+    },
+    "systemPrompt": "You are a helpful assistant.",
+    "maxTokens": 100
+  }
+}
+```
+
+**Antwort:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "role": "assistant",
+    "content": {
+      "type": "text",
+      "text": "The capital of France is Paris."
+    },
+    "model": "claude-3-sonnet-20240307",
+    "stopReason": "endTurn"
+  }
+}
+```
+
+<div id="message-flow">
+  ## Nachrichtenfluss
+</div>
+
+```mermaid
+sequenceDiagram
+    participant Server
+    participant Client
+    participant User
+    participant LLM
+
+    Note over Server,Client: Server initiiert Sampling
+    Server->>Client: sampling/createMessage
+
+    Note over Client,User: Mensch-in-der-Schleife-Überprüfung
+    Client->>User: Anfrage zur Freigabe vorlegen
+    User-->>Client: Prüfen und freigeben/ändern
+
+    Note over Client,LLM: Modellinteraktion
+    Client->>LLM: Freigegebene Anfrage weiterleiten
+    LLM-->>Client: Ausgabe zurückgeben
+
+    Note over Client,User: Antwortüberprüfung
+    Client->>User: Antwort zur Freigabe vorlegen
+    User-->>Client: Prüfen und freigeben/ändern
+
+    Note over Server,Client: Anfrage abschließen
+    Client-->>Server: Freigegebene Antwort zurückgeben
+```
+
+<div id="data-types">
+  ## Datentypen
+</div>
+
+<div id="messages">
+  ### Nachrichten
+</div>
+
+Sampling-Nachrichten können enthalten:
+
+<div id="text-content">
+  #### Textinhalt
+</div>
+
+```json
+{
+  "type": "text",
+  "text": "Der Nachrichtentext"
+}
+```
+
+<div id="image-content">
+  #### Bildinhalt
+</div>
+
+```json
+{
+  "type": "image",
+  "data": "base64-encoded-image-data",
+  "mimeType": "image/jpeg"
+}
+```
+
+<div id="audio-content">
+  #### Audioinhalt
+</div>
+
+```json
+{
+  "type": "audio",
+  "data": "base64-codierte-audiodaten",
+  "mimeType": "audio/wav"
+}
+```
+
+<div id="model-preferences">
+  ### Modellpräferenzen
+</div>
+
+Die Modellauswahl in MCP erfordert eine sorgfältige Abstraktion, da Server und Clients
+unterschiedliche KI-Anbieter mit jeweils eigenen Modellportfolios nutzen können. Ein Server kann
+nicht einfach ein bestimmtes Modell beim Namen anfordern, da der Client möglicherweise keinen Zugriff auf
+genau dieses Modell hat oder es vorzieht, ein gleichwertiges Modell eines anderen Anbieters zu verwenden.
+
+Um dies zu lösen, implementiert MCP ein Präferenzsystem, das abstrakte Prioritäten für Fähigkeiten
+mit optionalen Modellhinweisen kombiniert:
+
+<div id="capability-priorities">
+  #### Fähigkeitsprioritäten
+</div>
+
+Server geben ihre Anforderungen über drei normalisierte Prioritätswerte (0–1) an:
+
+* `costPriority`: Wie wichtig ist die Kostensenkung? Höhere Werte bevorzugen günstigere Modelle.
+* `speedPriority`: Wie wichtig ist eine niedrige Latenz? Höhere Werte bevorzugen schnellere Modelle.
+* `intelligencePriority`: Wie wichtig sind fortgeschrittene Fähigkeiten? Höhere Werte bevorzugen
+  leistungsfähigere Modelle.
+
+<div id="model-hints">
+  #### Modellhinweise
+</div>
+
+Während Prioritäten helfen, Modelle anhand ihrer Eigenschaften auszuwählen, ermöglichen `hints` Servern,
+konkret bestimmte Modelle oder Modellfamilien vorzuschlagen:
+
+* Hinweise werden als Teilstrings behandelt, die flexibel mit Modellnamen übereinstimmen können
+* Mehrere Hinweise werden in der Reihenfolge ihrer Präferenz ausgewertet
+* Clients **DÜRFEN** Hinweise auf gleichwertige Modelle anderer Anbieter abbilden
+* Hinweise sind unverbindlich—die endgültige Modellauswahl trifft der Client
+
+Zum Beispiel:
+
+```json
+{
+  "hints": [
+    { "name": "claude-3-sonnet" }, // Modelle der Sonnet-Klasse bevorzugen
+    { "name": "claude" } // Andernfalls auf ein beliebiges Claude-Modell zurückfallen
+  ],
+  "costPriority": 0.3, // Kosten sind weniger wichtig
+  "speedPriority": 0.8, // Geschwindigkeit ist sehr wichtig
+  "intelligencePriority": 0.5 // Mittlerer Fähigkeitsbedarf
+}
+```
+
+Der Client verarbeitet diese Präferenzen, um ein geeignetes Modell aus seinen verfügbaren
+Optionen auszuwählen. Wenn der Client beispielsweise keinen Zugriff auf Claude-Modelle, wohl aber auf Gemini hat,
+könnte er den Sonnet-Hinweis aufgrund ähnlicher Fähigkeiten auf `gemini-1.5-pro` abbilden.
+
+<div id="error-handling">
+  ## Fehlerbehandlung
+</div>
+
+Clients **SOLLEN** bei häufigen Fehlersituationen Fehler zurückgeben:
+
+Beispiel für einen Fehler:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "error": {
+    "code": -1,
+    "message": "User rejected sampling request"
+  }
+}
+```
+
+<div id="security-considerations">
+  ## Sicherheitserwägungen
+</div>
+
+1. Clients **SOLLTEN** Benutzerfreigaben implementieren
+2. Beide Parteien **SOLLTEN** Nachrichteninhalte validieren
+3. Clients **SOLLTEN** Hinweise zur Modellpräferenz berücksichtigen
+4. Clients **SOLLTEN** Rate Limiting implementieren
+5. Beide Parteien **MÜSSEN** sensible Daten angemessen behandeln

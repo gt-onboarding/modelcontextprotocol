@@ -1,0 +1,287 @@
+---
+title: "Ressourcen"
+description: "Stellen Sie Daten und Inhalte von Ihren Servern für LLMs bereit"
+---
+
+Ressourcen sind ein zentrales Grundelement im Model Context Protocol (MCP), das es Servern ermöglicht, Daten und Inhalte bereitzustellen, die von Clients gelesen und als Kontext für LLM-Interaktionen genutzt werden können.
+
+<Note>
+  Ressourcen sind **anwendungsgesteuert** konzipiert, das heißt, die Client-Anwendung kann entscheiden, wie und wann sie genutzt werden.
+  Verschiedene MCP-Clients können mit Ressourcen unterschiedlich umgehen. Zum Beispiel:
+
+  * Claude Desktop erfordert derzeit, dass Nutzer Ressourcen ausdrücklich auswählen, bevor sie verwendet werden können
+  * Andere Clients könnten Ressourcen automatisch anhand von Heuristiken auswählen
+  * Manche Implementierungen können sogar dem KI-Modell selbst erlauben zu bestimmen, welche Ressourcen verwendet werden
+
+  Server-Autoren sollten darauf vorbereitet sein, jede dieser Interaktionsformen zu unterstützen, wenn sie Unterstützung für Ressourcen implementieren. Um Daten automatisch für Modelle bereitzustellen, sollten Server-Autoren ein **modellgesteuertes** Grundelement wie [Werkzeuge](de/./tools) verwenden.
+</Note>
+
+<div id="overview">
+  ## Übersicht
+</div>
+
+Ressourcen sind beliebige Daten, die ein MCP-Server einem MCP-Client zur Verfügung stellen möchte. Dazu können gehören:
+
+* Dateiinhalte
+* Datensätze aus Datenbanken
+* API-Antworten
+* Live-Systemdaten
+* Screenshots und Bilder
+* Protokolldateien
+* und mehr
+
+Jede Ressource wird durch eine eindeutige URI identifiziert und kann entweder Text- oder Binärdaten enthalten.
+
+<div id="resource-uris">
+  ## Ressourcen-URIs
+</div>
+
+Ressourcen werden anhand von URIs identifiziert, die diesem Format folgen:
+
+```
+[protocol]://[host]/[path]
+```
+
+Zum Beispiel:
+
+* `file:///home/user/documents/report.pdf`
+* `postgres://database/customers/schema`
+* `screen://localhost/display1`
+
+Das Protokoll und die Pfadstruktur werden von der MCP-Server-Implementierung festgelegt. Server können eigene, benutzerdefinierte URI-Schemata verwenden.
+
+<div id="resource-types">
+  ## Ressourcentypen
+</div>
+
+Ressourcen können zwei Arten von Inhalt enthalten:
+
+<div id="text-resources">
+  ### Textressourcen
+</div>
+
+Textressourcen enthalten UTF-8-kodierte Textdaten. Diese eignen sich für:
+
+* Quellcode
+* Konfigurationsdateien
+* Protokolldateien
+* JSON/XML-Daten
+* Nur-Text
+
+<div id="binary-resources">
+  ### Binäre Ressourcen
+</div>
+
+Binäre Ressourcen enthalten rohe Binärdaten, die in Base64 kodiert sind. Diese eignen sich für:
+
+* Bilder
+* PDFs
+* Audiodateien
+* Videodateien
+* Andere nichttextuelle Formate
+
+<div id="resource-discovery">
+  ## Ressourcenermittlung
+</div>
+
+Clients können verfügbare Ressourcen auf zwei Hauptwegen ermitteln:
+
+<div id="direct-resources">
+  ### Direkte Ressourcen
+</div>
+
+Server stellen über die Anfrage `resources/list` eine Liste von Ressourcen bereit. Jede Ressource umfasst:
+
+```typescript
+{
+  uri: string;           // Eindeutiger Bezeichner der Ressource
+  name: string;          // Klar lesbarer Name
+  description?: string;  // Optionale Beschreibung
+  mimeType?: string;     // Optionaler MIME-Typ
+  size?: number;         // Optionale Größe in Bytes
+}
+```
+
+<div id="resource-templates">
+  ### Ressourcenvorlagen
+</div>
+
+Für dynamische Ressourcen können Server [URI-Vorlagen](https://datatracker.ietf.org/doc/html/rfc6570) bereitstellen, die Clients verwenden können, um gültige Ressourcen-URIs zu erstellen:
+
+```typescript
+{
+  uriTemplate: string;   // URI-Vorlage gemäß RFC 6570
+  name: string;          // Verständlicher Name für diesen Typ
+  description?: string;  // Optionale Beschreibung
+  mimeType?: string;     // Optionaler MIME-Typ für alle übereinstimmenden Ressourcen
+}
+```
+
+<div id="reading-resources">
+  ## Ressourcen lesen
+</div>
+
+Um eine Ressource zu lesen, senden Clients eine `resources/read`-Anfrage mit der Ressourcen-URI.
+
+Der Server antwortet mit einer Liste von Ressourceninhalten:
+
+```typescript
+{
+  contents: [
+    {
+      uri: string;        // Die URI der Ressource
+      mimeType?: string;  // Optionaler MIME-Typ
+
+      // Eines von:
+      text?: string;      // Für Textressourcen
+      blob?: string;      // Für binäre Ressourcen (Base64-codiert)
+    }
+  ]
+}
+```
+
+<Tip>
+  Server können mehrere Ressourcen als Antwort auf eine `resources/read`-Anfrage zurückgeben. Dies kann beispielsweise verwendet werden, um beim Lesen eines Verzeichnisses eine Liste der darin enthaltenen Dateien zurückzugeben.
+</Tip>
+
+<div id="resource-updates">
+  ## Aktualisierungen von Ressourcen
+</div>
+
+MCP unterstützt Echtzeitaktualisierungen von Ressourcen über zwei Mechanismen:
+
+<div id="list-changes">
+  ### Änderungen an Listen
+</div>
+
+Server können Clients über die Benachrichtigung `notifications/resources/list_changed` informieren, wenn sich ihre Liste verfügbarer Ressourcen ändert.
+
+<div id="content-changes">
+  ### Inhaltsänderungen
+</div>
+
+Clients können Updates für bestimmte Ressourcen abonnieren:
+
+1. Der Client sendet `resources/subscribe` mit der Ressourcen-URI
+2. Der Server sendet `notifications/resources/updated`, wenn sich die Ressource ändert
+3. Der Client kann den neuesten Inhalt mit `resources/read` abrufen
+4. Der Client kann mit `resources/unsubscribe` das Abonnement beenden
+
+<div id="example-implementation">
+  ## Beispielimplementierung
+</div>
+
+Hier ist ein einfaches Beispiel dafür, wie die Unterstützung für Ressourcen in einem MCP-Server implementiert wird:
+
+<CodeGroup>
+  ```typescript TypeScript
+  const server = new Server(
+    {
+      name: "example-server",
+      version: "1.0.0",
+    },
+    {
+      capabilities: {
+        resources: {},
+      },
+    },
+  );
+
+  // Verfügbare Ressourcen auflisten
+  server.setRequestHandler(ListResourcesRequestSchema, async () => {
+    return {
+      resources: [
+        {
+          uri: "file:///logs/app.log",
+          name: "Application Logs",
+          mimeType: "text/plain",
+        },
+      ],
+    };
+  });
+
+  // Ressourceninhalt lesen
+  server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+    const uri = request.params.uri;
+
+    if (uri === "file:///logs/app.log") {
+      const logContents = await readLogFile();
+      return {
+        contents: [
+          {
+            uri,
+            mimeType: "text/plain",
+            text: logContents,
+          },
+        ],
+      };
+    }
+
+    throw new Error("Resource not found");
+  });
+  ```
+
+  ```python Python
+  app = Server("example-server")
+
+  @app.list_resources()
+  async def list_resources() -> list[types.Resource]:
+      return [
+          types.Resource(
+              uri="file:///logs/app.log",
+              name="Application Logs",
+              mimeType="text/plain"
+          )
+      ]
+
+  @app.read_resource()
+  async def read_resource(uri: AnyUrl) -> str:
+      if str(uri) == "file:///logs/app.log":
+          log_contents = await read_log_file()
+          return log_contents
+
+      raise ValueError("Resource not found")
+
+  # Server starten
+  async with stdio_server() as streams:
+      await app.run(
+          streams[0],
+          streams[1],
+          app.create_initialization_options()
+      )
+  ```
+</CodeGroup>
+
+<div id="best-practices">
+  ## Bewährte Praktiken
+</div>
+
+Bei der Implementierung der Unterstützung für Ressourcen:
+
+1. Verwenden Sie klare, aussagekräftige Ressourcennamen und URIs
+2. Fügen Sie hilfreiche Beschreibungen hinzu, um das Verständnis von LLMs zu verbessern
+3. Setzen Sie geeignete MIME-Typen, wenn diese bekannt sind
+4. Implementieren Sie Ressourcentemplates für dynamische Inhalte
+5. Verwenden Sie Abonnements für häufig aktualisierte Ressourcen
+6. Behandeln Sie Fehler robust und geben Sie klare Fehlermeldungen aus
+7. Erwägen Sie die Paginierung für große Ressourcenlisten
+8. Cachen Sie Ressourceninhalte, wenn dies sinnvoll ist
+9. Validieren Sie URIs vor der Verarbeitung
+10. Dokumentieren Sie Ihre benutzerdefinierten URI-Schemata
+
+<div id="security-considerations">
+  ## Sicherheitsaspekte
+</div>
+
+Beim Bereitstellen von Ressourcen:
+
+* Alle Ressourcen-URIs validieren
+* Angemessene Zugriffskontrollen implementieren
+* Dateipfade bereinigen, um Directory-Traversal zu verhindern
+* Vorsicht beim Umgang mit Binärdaten
+* Ratenbegrenzung für Ressourcenlesevorgänge in Betracht ziehen
+* Ressourcenzugriffe protokollieren und prüfen
+* Sensible Daten während der Übertragung verschlüsseln
+* MIME-Typen validieren
+* Timeouts für lang andauernde Lesevorgänge implementieren
+* Ressourcen ordnungsgemäß bereinigen

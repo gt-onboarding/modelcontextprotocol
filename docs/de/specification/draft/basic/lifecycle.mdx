@@ -1,0 +1,275 @@
+---
+title: Lebenszyklus
+---
+
+<div id="enable-section-numbers" />
+
+<Info>**Protokollrevision**: Entwurf</Info>
+
+Das Model Context Protocol (MCP) definiert einen rigorosen Lebenszyklus für Client-Server-Verbindungen, der eine ordnungsgemäße Fähigkeitsaushandlung und Zustandsverwaltung sicherstellt.
+
+1. **Initialisierung**: Fähigkeitsaushandlung und Vereinbarung der Protokollversion
+2. **Betrieb**: Normale Protokollkommunikation
+3. **Beendigung**: Ordnungsgemäße Beendigung der Verbindung
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Server
+
+    Note over Client,Server: Initialisierungsphase
+    activate Client
+    Client->>+Server: initialize request
+    Server-->>Client: initialize response
+    Client--)Server: initialized notification
+
+    Note over Client,Server: Betriebsphase
+    rect rgb(200, 220, 250)
+        note over Client,Server: Normale Protokollabläufe
+    end
+
+    Note over Client,Server: Beendigung
+    Client--)-Server: Trennen der Verbindung
+    deactivate Server
+    Note over Client,Server: Verbindung geschlossen
+```
+
+<div id="lifecycle-phases">
+  ## Phasen des Lebenszyklus
+</div>
+
+<div id="initialization">
+  ### Initialisierung
+</div>
+
+Die Initialisierungsphase **MUSS** die erste Interaktion zwischen Client und Server sein.
+Während dieser Phase stellen Client und Server:
+
+* die Protokollversionskompatibilität fest,
+* ihre Fähigkeiten vor und handeln sie aus,
+* Implementierungsdetails bereit.
+
+Der Client **MUSS** diese Phase einleiten, indem er eine `initialize`-Anfrage sendet, die Folgendes enthält:
+
+* unterstützte Protokollversion
+* Client-Fähigkeiten
+* Informationen zur Client-Implementierung
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "initialize",
+  "params": {
+    "protocolVersion": "2024-11-05",
+    "capabilities": {
+      "roots": {
+        "listChanged": true
+      },
+      "sampling": {},
+      "elicitation": {}
+    },
+    "clientInfo": {
+      "name": "ExampleClient",
+      "title": "Example Client Display Name",
+      "version": "1.0.0",
+      "icons": [
+        {
+          "src": "https://example.com/icon.png",
+          "mimeType": "image/png",
+          "sizes": "48x48"
+        }
+      ],
+      "websiteUrl": "https://example.com"
+    }
+  }
+}
+```
+
+Der Server **MUSS** mit seinen eigenen Fähigkeiten und Informationen antworten:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "protocolVersion": "2024-11-05",
+    "capabilities": {
+      "logging": {},
+      "prompts": {
+        "listChanged": true
+      },
+      "resources": {
+        "subscribe": true,
+        "listChanged": true
+      },
+      "tools": {
+        "listChanged": true
+      }
+    },
+    "serverInfo": {
+      "name": "ExampleServer",
+      "title": "Example Server Display Name",
+      "version": "1.0.0",
+      "icons": [
+        {
+          "src": "https://example.com/server-icon.svg",
+          "mimeType": "image/svg+xml",
+          "sizes": "any"
+        }
+      ],
+      "websiteUrl": "https://example.com/server"
+    },
+    "instructions": "Optionale Anweisungen für den Client"
+  }
+}
+```
+
+Nach erfolgreicher Initialisierung **MUSS** der Client eine `initialized`-Benachrichtigung senden,
+um anzuzeigen, dass er bereit ist, den Normalbetrieb zu beginnen:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/initialized"
+}
+```
+
+* Der Client **SOLLTE KEINE** anderen Anfragen senden als
+  [Pings](/de/specification/draft/basic/utilities/ping), bevor der Server auf die
+  `initialize`-Anfrage geantwortet hat.
+* Der Server **SOLLTE KEINE** anderen Anfragen senden als
+  [Pings](/de/specification/draft/basic/utilities/ping) und
+  [Logging](/de/specification/draft/server/utilities/logging), bevor die `initialized`-
+  Benachrichtigung empfangen wurde.
+
+<div id="version-negotiation">
+  #### Versionsaushandlung
+</div>
+
+Im `initialize`-Request MUSS der Client eine von ihm unterstützte Protokollversion senden.
+Dies SOLLTE die neueste vom Client unterstützte Version sein.
+
+Wenn der Server die angeforderte Protokollversion unterstützt, MUSS er mit derselben
+Version antworten. Andernfalls MUSS der Server mit einer anderen von ihm
+unterstützten Protokollversion antworten. Dies SOLLTE die neueste vom Server unterstützte Version sein.
+
+Wenn der Client die Version in der Antwort des Servers nicht unterstützt, SOLLTE er
+die Verbindung trennen.
+
+<Note>
+  Bei Verwendung von HTTP MUSS der Client den HTTP-Header `MCP-Protocol-Version: <protocol-version>` in allen nachfolgenden Requests an den MCP-Server
+  einfügen.
+  Details finden Sie im Abschnitt [„Protocol Version Header“ in Transports](/de/specification/draft/basic/transports#protocol-version-header).
+</Note>
+
+<div id="capability-negotiation">
+  #### Fähigkeitsaushandlung
+</div>
+
+Die Fähigkeiten von Client und Server legen fest, welche optionalen Protokollfunktionen während der Sitzung verfügbar sind.
+
+Wichtige Fähigkeiten sind:
+
+| Kategorie | Fähigkeit      | Beschreibung                                                                          |
+| --------- | -------------- | ------------------------------------------------------------------------------------- |
+| Client    | `roots`        | Fähigkeit, Dateisystem-[Wurzeln](/de/specification/draft/client/roots) bereitzustellen  |
+| Client    | `sampling`     | Unterstützung für LLM-[Sampling](/de/specification/draft/client/sampling)-Anfragen       |
+| Client    | `elicitation`  | Unterstützung für Server-[Elicitation](/de/specification/draft/client/elicitation)-Anfragen |
+| Client    | `experimental` | Beschreibt die Unterstützung für nicht standardisierte experimentelle Funktionen     |
+| Server    | `prompts`      | Bietet [Prompts](/de/specification/draft/server/prompts)                                 |
+| Server    | `resources`    | Stellt lesbare [Ressourcen](/de/specification/draft/server/resources) bereit             |
+| Server    | `tools`        | Stellt aufrufbare [Werkzeuge](/de/specification/draft/server/tools) bereit               |
+| Server    | `logging`      | Gibt strukturierte [Protokollmeldungen](/de/specification/draft/server/utilities/logging) aus |
+| Server    | `completions`  | Unterstützt Argument-[Autovervollständigung](/de/specification/draft/server/utilities/completion) |
+| Server    | `experimental` | Beschreibt die Unterstützung für nicht standardisierte experimentelle Funktionen     |
+
+Fähigkeitsobjekte können Unterfähigkeiten beschreiben wie:
+
+* `listChanged`: Unterstützung für Benachrichtigungen über Listenänderungen (für Prompts, Ressourcen und Werkzeuge)
+* `subscribe`: Unterstützung für das Abonnieren von Änderungen einzelner Elemente (nur Ressourcen)
+
+<div id="operation">
+  ### Betrieb
+</div>
+
+Während der Betriebsphase tauschen Client und Server Nachrichten entsprechend den
+ausgehandelten Fähigkeiten aus.
+
+Beide Parteien **MÜSSEN**:
+
+* Die ausgehandelte Protokollversion einhalten
+* Nur Fähigkeiten verwenden, die erfolgreich ausgehandelt wurden
+
+<div id="shutdown">
+  ### Herunterfahren
+</div>
+
+Während der Herunterfahrphase beendet eine Seite (in der Regel der Client) die Protokollverbindung sauber. Es sind keine spezifischen Herunterfahr-Nachrichten definiert – stattdessen sollte der zugrunde liegende Transportmechanismus verwendet werden, um die Beendigung der Verbindung zu signalisieren:
+
+<div id="stdio">
+  #### stdio
+</div>
+
+Für den STDIO-Transport ([transport](/de/specification/draft/basic/transports)) SOLLTE der Client die
+Beendigung wie folgt einleiten:
+
+1. Zuerst den Eingabestream zum Kindprozess (dem Server) schließen
+2. Auf das Beenden des Servers warten oder `SIGTERM` senden, falls der Server nicht
+   innerhalb einer angemessenen Zeit beendet wird
+3. `SIGKILL` senden, falls der Server nicht innerhalb einer angemessenen Zeit nach `SIGTERM` beendet wird
+
+Der Server DARF die Beendigung einleiten, indem er seinen Ausgabestream zum Client schließt und
+sich beendet.
+
+<div id="http">
+  #### HTTP
+</div>
+
+Bei HTTP-[Transporten](/de/specification/draft/basic/transports) wird das Herunterfahren durch das Schließen der zugehörigen HTTP-Verbindung(en) signalisiert.
+
+<div id="timeouts">
+  ## Timeouts
+</div>
+
+Implementierungen **SOLLTEN** Timeouts für alle gesendeten Anfragen festlegen, um hängende
+Verbindungen und Ressourcenerschöpfung zu verhindern. Wenn innerhalb des Timeout-Zeitraums
+keine Erfolgs- oder Fehlermeldung eingegangen ist, **SOLLTE** der Absender eine
+[Abbruchbenachrichtigung](/de/specification/draft/basic/utilities/cancellation) für diese Anfrage
+senden und aufhören, auf eine Antwort zu warten.
+
+SDKs und andere Middleware **SOLLTEN** ermöglichen, diese Timeouts pro Anfrage zu
+konfigurieren.
+
+Implementierungen **KÖNNEN** den Timeout-Zähler zurücksetzen, wenn sie eine zur Anfrage
+gehörige [Fortschrittsbenachrichtigung](/de/specification/draft/basic/utilities/progress) erhalten, da dies
+impliziert, dass tatsächlich Arbeit stattfindet. Implementierungen **SOLLTEN** jedoch stets
+ein maximales Timeout erzwingen – unabhängig von Fortschrittsbenachrichtigungen –, um die
+Auswirkungen eines fehlverhaltenden Clients oder Servers zu begrenzen.
+
+<div id="error-handling">
+  ## Fehlerbehandlung
+</div>
+
+Implementierungen SOLLTEN auf folgende Fehlerfälle vorbereitet sein:
+
+* Protokollversionsinkompatibilität
+* Fehlgeschlagene Aushandlung erforderlicher Fähigkeiten
+* Anfrage-[Timeouts](#timeouts)
+
+Beispiel für einen Initialisierungsfehler:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "error": {
+    "code": -32602,
+    "message": "Unsupported protocol version",
+    "data": {
+      "supported": ["2024-11-05"],
+      "requested": "1.0.0"
+    }
+  }
+}
+```

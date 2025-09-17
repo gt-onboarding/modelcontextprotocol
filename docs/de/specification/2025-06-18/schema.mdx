@@ -1,0 +1,586 @@
+---
+title: Schema-Referenz
+---
+
+<div id="schema-reference" />
+
+<div id="common-types">
+  ## Allgemeine Typen
+</div>
+
+<div id="annotations">
+  ### `Anmerkungen`
+</div>
+
+<div id="audiocontent">
+  ### `AudioContent`
+</div>
+
+<div class="tsd-comment tsd-typography"><p>Der MIME-Typ der Audiodaten. Unterschiedliche Anbieter können unterschiedliche Audiotypen unterstützen.</p> </div>
+
+<div id="blobresourcecontents">
+  ### `BlobResourceContents`
+</div>
+
+<aside class="tsd-sources"><p>Abgeleitet von <a href="#resourcecontents">ResourceContents</a>.<a href="#resourcecontents-uri">uri</a></p></aside>
+
+<div id="booleanschema">
+  ### `BooleanSchema`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">BooleanSchema</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#">default</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">description</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">title</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">type</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">&quot;boolean&quot;</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div>
+
+<div id="clientcapabilities">
+  ### `ClientCapabilities`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">ClientCapabilities</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#clientcapabilities-elicitation">Elicitation</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">object</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#clientcapabilities-experimental">experimental</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">object</span> <span class="tsd-signature-symbol">&#125;</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#clientcapabilities-roots">roots</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">listChanged</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span> <span class="tsd-signature-symbol">&#125;</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#clientcapabilities-sampling">sampling</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">object</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>Fähigkeiten, die ein Client unterstützen kann. Bekannte Fähigkeiten sind hier in diesem Schema definiert, aber dies ist keine abgeschlossene Menge: Jeder Client kann eigene zusätzliche Fähigkeiten definieren.</p> </div><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="clientcapabilities-elicitation"><code class="tsd-tag">Optional</code><span>Elicitation</span><a href="#clientcapabilities-elicitation" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">Elicitation</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">object</span></div><div class="tsd-comment tsd-typography"><p>Vorhanden, wenn der Client Elicitation vom Server unterstützt.</p> </div><div class="tsd-comment tsd-typography" /></section><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="clientcapabilities-experimental"><code class="tsd-tag">Optional</code><span>experimental</span><a href="#clientcapabilities-experimental" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">experimental</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">object</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>Experimentelle, nicht standardisierte Fähigkeiten, die der Client unterstützt.</p> </div><div class="tsd-comment tsd-typography" /></section><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="clientcapabilities-roots"><code class="tsd-tag">Optional</code><span>roots</span><a href="#clientcapabilities-roots" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">roots</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">listChanged</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>Vorhanden, wenn der Client das Auflisten von Wurzeln unterstützt.</p> </div><div class="tsd-type-declaration"><div data-typedoc-h="4">Typdeklaration</div><ul class="tsd-parameters"><li class="tsd-parameter"><div data-typedoc-h="5"><code class="tsd-tag">Optional</code><span class="tsd-kind-property">listChanged</span><span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">boolean</span></div><div class="tsd-comment tsd-typography"><p>Ob der Client Benachrichtigungen über Änderungen an der Wurzelliste unterstützt.</p> </div><div class="tsd-comment tsd-typography" /></li></ul></div><div class="tsd-comment tsd-typography" /></section><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="clientcapabilities-sampling"><code class="tsd-tag">Optional</code><span>sampling</span><a href="#clientcapabilities-sampling" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">sampling</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">object</span></div><div class="tsd-comment tsd-typography"><p>Vorhanden, wenn der Client Sampling von einem LLM unterstützt.</p> </div><div class="tsd-comment tsd-typography" /></section>
+
+<div id="contentblock">
+  ### `ContentBlock`
+</div>
+
+<div class="tsd-signature"><span class="tsd-kind-type-alias">ContentBlock</span><span class="tsd-signature-symbol">:</span><br />  <span class="tsd-signature-symbol">|</span> <a href="#textcontent" class="tsd-signature-type tsd-kind-interface">TextContent</a><br />  <span class="tsd-signature-symbol">|</span> <a href="#imagecontent" class="tsd-signature-type tsd-kind-interface">ImageContent</a><br />  <span class="tsd-signature-symbol">|</span> <a href="#audiocontent" class="tsd-signature-type tsd-kind-interface">AudioContent</a><br />  <span class="tsd-signature-symbol">|</span> <a href="#resourcelink" class="tsd-signature-type tsd-kind-interface">ResourceLink</a><br />  <span class="tsd-signature-symbol">|</span> <a href="#embeddedresource" class="tsd-signature-type tsd-kind-interface">EmbeddedResource</a></div>
+
+<div id="cursor">
+  ### `Cursor`
+</div>
+
+<div class="tsd-signature"><span class="tsd-kind-type-alias">Cursor</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div><div class="tsd-comment tsd-typography"><p>Ein inhaltsneutraler Token, der einen Cursor für die Paginierung repräsentiert.</p> </div><div class="tsd-comment tsd-typography" />
+
+<div id="embeddedresource">
+  ### `EmbeddedResource`
+</div>
+
+<div id="emptyresult">
+  ### `EmptyResult`
+</div>
+
+<div class="tsd-signature"><span class="tsd-kind-type-alias">EmptyResult</span><span class="tsd-signature-symbol">:</span> <a href="#result" class="tsd-signature-type tsd-kind-interface">Result</a></div><div class="tsd-comment tsd-typography"><p>Eine Antwort, die einen erfolgreichen Abschluss signalisiert, aber keine Daten enthält.</p> </div><div class="tsd-comment tsd-typography" />
+
+<div id="enumschema">
+  ### `EnumSchema`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">EnumSchema</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#">description</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">enum</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">enumNames</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">title</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">type</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">&quot;string&quot;</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div>
+
+<div id="imagecontent">
+  ### `ImageContent`
+</div>
+
+<div class="tsd-comment tsd-typography"><p>Der MIME-Typ des Bildes. Verschiedene Anbieter unterstützen möglicherweise unterschiedliche Bildtypen.</p> </div>
+
+<div id="implementation">
+  ### `Implementation`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">Implementation</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#implementation-name">name</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#implementation-title">title</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">version</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>Beschreibt den Namen und die Version einer MCP-Implementierung, mit einem optionalen Titel für die Darstellung in der UI.</p> </div><section class="tsd-panel tsd-member tsd-is-inherited"><div data-typedoc-h="3" class="tsd-anchor-link" id="implementation-name"><span>name</span><a href="#implementation-name" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">name</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div><div class="tsd-comment tsd-typography"><p>Vorgesehen für programmatische bzw. logische Verwendung, wurde jedoch in früheren Spezifikationen oder als Fallback (wenn kein Titel vorhanden ist) als Anzeigename genutzt.</p> </div><div class="tsd-comment tsd-typography" /><aside class="tsd-sources"><p>Geerbt von BaseMetadata.name</p></aside></section><section class="tsd-panel tsd-member tsd-is-inherited"><div data-typedoc-h="3" class="tsd-anchor-link" id="implementation-title"><code class="tsd-tag">Optional</code><span>title</span><a href="#implementation-title" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">title</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span></div><div class="tsd-comment tsd-typography"><p>Vorgesehen für UI- und Endnutzerkontexte — optimiert, um gut lesbar und leicht verständlich zu sein, selbst für Personen ohne Kenntnisse domänenspezifischer Terminologie.</p> <p>Wenn nicht angegeben, sollte der Name zur Anzeige verwendet werden (außer bei Werkzeugen, wo <code>annotations.title</code> gegenüber <code>name</code> Vorrang haben sollte, sofern vorhanden).</p> </div><div class="tsd-comment tsd-typography" /><aside class="tsd-sources"><p>Geerbt von BaseMetadata.title</p></aside></section>
+
+<div id="jsonrpcerror">
+  ### `JSONRPCError`
+</div>
+
+<div class="tsd-comment tsd-typography"><p>Eine kurze Beschreibung des Fehlers. Die Nachricht SOLLTE auf einen prägnanten Einzelsatz beschränkt sein.</p> </div>
+
+<div id="jsonrpcnotification">
+  ### `JSONRPCNotification`
+</div>
+
+<div class="tsd-comment tsd-typography"><p>Eine Benachrichtigung, die keine Antwort erwartet.</p> </div><section class="tsd-panel tsd-member tsd-is-inherited"><div data-typedoc-h="3" class="tsd-anchor-link" id="jsonrpcnotification-params"><code class="tsd-tag">Optional</code><span>params</span><a href="#jsonrpcnotification-params" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-type-declaration"><div data-typedoc-h="4">Typdeklaration</div><ul class="tsd-parameters"><li class="tsd-parameter-index-signature"><div data-typedoc-h="5"><span class="tsd-signature-symbol">[</span><span class="tsd-kind-parameter">key</span>: <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span></div></li><li class="tsd-parameter"><div data-typedoc-h="5"><code class="tsd-tag">Optional</code><span class="tsd-kind-property">&#95;meta</span><span class="tsd-signature-symbol">?: </span><span class="tsd-signature-symbol">&#123;</span> <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>Siehe <a href="/de/specification/2025-06-18/basic/index#meta">Allgemeine Felder: <code>&#95;meta</code></a> für Hinweise zur Verwendung von <code>&#95;meta</code>.</p> </div><div class="tsd-comment tsd-typography" /></li></ul></div><aside class="tsd-sources"><p>Geerbt von Notification.params</p></aside></section>
+
+<div id="jsonrpcrequest">
+  ### `JSONRPCRequest`
+</div>
+
+<div id="jsonrpcresponse">
+  ### `JSONRPCResponse`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">JSONRPCResponse</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#">id</a><span class="tsd-signature-symbol">:</span> <a href="#requestid" class="tsd-signature-type tsd-kind-type-alias">RequestId</a><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">jsonrpc</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">&quot;2.0&quot;</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">result</a><span class="tsd-signature-symbol">:</span> <a href="#result" class="tsd-signature-type tsd-kind-interface">Result</a><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>Eine erfolgreiche (fehlerfreie) Antwort auf eine Anfrage.</p> </div>
+
+<div id="logginglevel">
+  ### `LoggingLevel`
+</div>
+
+<div class="tsd-signature"><span class="tsd-kind-type-alias">LoggingLevel</span><span class="tsd-signature-symbol">:</span><br />  <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">&quot;debug&quot;</span><br />  <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">&quot;info&quot;</span><br />  <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">&quot;notice&quot;</span><br />  <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">&quot;warning&quot;</span><br />  <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">&quot;error&quot;</span><br />  <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">&quot;critical&quot;</span><br />  <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">&quot;alert&quot;</span><br />  <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">&quot;emergency&quot;</span></div><div class="tsd-comment tsd-typography"><p>Der Schweregrad einer Protokollmeldung.</p> <p>Diese entsprechen den Syslog-Schweregraden gemäß RFC 5424: <a href="https://datatracker.ietf.org/doc/html/rfc5424#section-6.2.1">https://datatracker.ietf.org/doc/html/rfc5424#section-6.2.1</a></p> </div><div class="tsd-comment tsd-typography" />
+
+<div id="modelhint">
+  ### `ModelHint`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">ModelHint</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#modelhint-name">name</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>Hinweise für die Modellauswahl.</p> <p>Hier nicht deklarierte Schlüssel sind in der Spezifikation derzeit nicht festgelegt und werden vom Client interpretiert.</p> </div><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="modelhint-name"><code class="tsd-tag">Optional</code><span>name</span><a href="#modelhint-name" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">name</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span></div><div class="tsd-comment tsd-typography"><p>Ein Hinweis auf einen Modellnamen.</p> <p>Der Client SOLLTE dies als Teilzeichenfolge eines Modellnamens behandeln; zum Beispiel:</p> <ul> <li><code>claude-3-5-sonnet</code> sollte <code>claude-3-5-sonnet-20241022</code> matchen</li> <li><code>sonnet</code> sollte <code>claude-3-5-sonnet-20241022</code>, <code>claude-3-sonnet-20240229</code> usw. matchen</li> <li><code>claude</code> sollte auf jedes Claude-Modell matchen</li> </ul> <p>Der Client DARF die Zeichenfolge auch einem Modellnamen eines anderen Anbieters oder einer anderen Modellfamilie zuordnen, solange sie eine ähnliche Rolle erfüllt; zum Beispiel:</p> <ul> <li><code>gemini-1.5-flash</code> könnte <code>claude-3-haiku-20240307</code> matchen</li> </ul> </div><div class="tsd-comment tsd-typography" /></section>
+
+<div id="modelpreferences">
+  ### `ModelPreferences`
+</div>
+
+<div id="numberschema">
+  ### `NumberSchema`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">NumberSchema</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#">description</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">maximum</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">minimum</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">title</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">type</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">&quot;number&quot;</span> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">&quot;integer&quot;</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div>
+
+<div id="primitiveschemadefinition">
+  ### `PrimitiveSchemaDefinition`
+</div>
+
+<div class="tsd-signature"><span class="tsd-kind-type-alias">PrimitiveSchemaDefinition</span><span class="tsd-signature-symbol">:</span><br />  <span class="tsd-signature-symbol">|</span> <a href="#stringschema" class="tsd-signature-type tsd-kind-interface">StringSchema</a><br />  <span class="tsd-signature-symbol">|</span> <a href="#numberschema" class="tsd-signature-type tsd-kind-interface">NumberSchema</a><br />  <span class="tsd-signature-symbol">|</span> <a href="#booleanschema" class="tsd-signature-type tsd-kind-interface">BooleanSchema</a><br />  <span class="tsd-signature-symbol">|</span> <a href="#enumschema" class="tsd-signature-type tsd-kind-interface">EnumSchema</a></div><div class="tsd-comment tsd-typography"><p>Eingeschränkte Schemadefinitionen, die nur primitive Typen zulassen,
+ohne verschachtelte Objekte oder Arrays.</p> </div><div class="tsd-comment tsd-typography" />
+
+<div id="progresstoken">
+  ### `ProgressToken`
+</div>
+
+<div class="tsd-signature"><span class="tsd-kind-type-alias">ProgressToken</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">number</span></div><div class="tsd-comment tsd-typography"><p>Ein Fortschrittstoken, das verwendet wird, um Benachrichtigungen zum Fortschritt der ursprünglichen Anforderung zuzuordnen.</p> </div><div class="tsd-comment tsd-typography" />
+
+<div id="prompt">
+  ### `Prompt`
+</div>
+
+<div id="promptargument">
+  ### `PromptArgument`
+</div>
+
+<div id="promptmessage">
+  ### `PromptMessage`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">PromptMessage</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#">content</a><span class="tsd-signature-symbol">:</span> <a href="#contentblock" class="tsd-signature-type tsd-kind-type-alias">ContentBlock</a><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">role</a><span class="tsd-signature-symbol">:</span> <a href="#role" class="tsd-signature-type tsd-kind-type-alias">Role</a><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>Beschreibung einer Nachricht, die als Teil eines Prompts zurückgegeben wird.</p> <p>Dies ist ähnlich zu <code>SamplingMessage</code>, unterstützt jedoch zusätzlich das Einbetten von
+Ressourcen vom MCP-Server.</p> </div>
+
+<div id="promptreference">
+  ### `PromptReference`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">PromptReference</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#promptreference-name">name</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#promptreference-title">title</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">type</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">&quot;ref/prompt&quot;</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>Identifiziert ein Prompt.</p> </div><section class="tsd-panel tsd-member tsd-is-inherited"><div data-typedoc-h="3" class="tsd-anchor-link" id="promptreference-name"><span>name</span><a href="#promptreference-name" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">name</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div><div class="tsd-comment tsd-typography"><p>Vorgesehen für programmatische oder logische Verwendung; in früheren Spezifikationen jedoch auch als Anzeigename genutzt bzw. als Fallback, wenn kein <code>title</code> vorhanden ist.</p> </div><div class="tsd-comment tsd-typography" /><aside class="tsd-sources"><p>Geerbt von BaseMetadata.name</p></aside></section><section class="tsd-panel tsd-member tsd-is-inherited"><div data-typedoc-h="3" class="tsd-anchor-link" id="promptreference-title"><code class="tsd-tag">Optional</code><span>title</span><a href="#promptreference-title" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">title</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span></div><div class="tsd-comment tsd-typography"><p>Vorgesehen für UI- und Endnutzerkontexte — so formuliert, dass es gut lesbar und leicht verständlich ist, selbst für Personen ohne Kenntnisse domänenspezifischer Terminologie.</p> <p>Wenn nicht angegeben, sollte für die Anzeige der <code>name</code> verwendet werden (Ausnahme: Tool; dort hat <code>annotations.title</code>, sofern vorhanden, Vorrang vor <code>name</code>).</p> </div><div class="tsd-comment tsd-typography" /><aside class="tsd-sources"><p>Geerbt von BaseMetadata.title</p></aside></section>
+
+<div id="requestid">
+  ### `RequestId`
+</div>
+
+<div class="tsd-signature"><span class="tsd-kind-type-alias">RequestId</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">number</span></div><div class="tsd-comment tsd-typography"><p>Eine eindeutig identifizierende ID für eine Anfrage in JSON-RPC.</p> </div><div class="tsd-comment tsd-typography" />
+
+<div id="resource">
+  ### `Ressource`
+</div>
+
+<div id="resourcecontents">
+  ### `ResourceContents`
+</div>
+
+<div class="tsd-comment tsd-typography"><p>Die URI dieser Ressource.</p> </div>
+
+<div id="resourcelink">
+  ### `ResourceLink`
+</div>
+
+Abgeleitet von <a href="#resource">Resource</a>.<a href="#resource-uri">uri</a>
+auch für Personen, die mit domänenspezifischer Terminologie nicht vertraut sind.
+wo <code>annotations.title</code> Vorrang vor der Verwendung von <code>name</code> haben sollte,
+falls vorhanden).
+
+<div id="resourcetemplate">
+  ### `Ressourcen-Template`
+</div>
+
+Für UI- und Endnutzerkontexte vorgesehen — darauf optimiert, gut lesbar und leicht verständlich zu sein,
+Eine URI-Vorlage (gemäß RFC 6570), die zum Konstruieren von Ressourcen-URIs verwendet werden kann.
+wo <code>annotations.title</code> Vorrang vor <code>name</code> haben sollte,
+falls vorhanden).
+
+<div id="resourcetemplatereference">
+  ### `ResourceTemplateReference`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">ResourceTemplateReference</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#">type</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">&quot;ref/resource&quot;</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#resourcetemplatereference-uri">uri</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>Ein Verweis auf eine Ressourcen- oder Ressourcentemplate-Definition.</p> </div><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="resourcetemplatereference-uri"><span>uri</span><a href="#resourcetemplatereference-uri" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">uri</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div><div class="tsd-comment tsd-typography"><p>Die URI oder URI-Vorlage der Ressource.</p> </div><div class="tsd-comment tsd-typography" /></section>
+
+<div id="result">
+  ### `Result`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">Result</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#result-_meta">&#95;meta</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span> <span class="tsd-signature-symbol">&#125;</span><span class="tsd-signature-symbol">;</span><br />  <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="result-_meta"><code class="tsd-tag">Optional</code><span>&#95;<wbr />meta</span><a href="#result-_meta" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">&#95;meta</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>Siehe <a href="/de/specification/2025-06-18/basic/index#meta">Allgemeine Felder: <code>&#95;meta</code></a> für Hinweise zur Nutzung von <code>&#95;meta</code>.</p> </div><div class="tsd-comment tsd-typography" /></section>
+
+<div id="role">
+  ### `Rolle`
+</div>
+
+<div class="tsd-signature"><span class="tsd-kind-type-alias">Rolle</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">&quot;user&quot;</span> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">&quot;assistant&quot;</span></div><div class="tsd-comment tsd-typography"><p>Der Sender oder Empfänger von Nachrichten und Daten in einer Unterhaltung.</p> </div><div class="tsd-comment tsd-typography" />
+
+<div id="root">
+  ### `Wurzeln`
+</div>
+
+<div id="samplingmessage">
+  ### `SamplingMessage`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">SamplingMessage</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#">content</a><span class="tsd-signature-symbol">:</span> <a href="#textcontent" class="tsd-signature-type tsd-kind-interface">TextContent</a> <span class="tsd-signature-symbol">|</span> <a href="#imagecontent" class="tsd-signature-type tsd-kind-interface">ImageContent</a> <span class="tsd-signature-symbol">|</span> <a href="#audiocontent" class="tsd-signature-type tsd-kind-interface">AudioContent</a><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">role</a><span class="tsd-signature-symbol">:</span> <a href="#role" class="tsd-signature-type tsd-kind-type-alias">Role</a><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>Beschreibt eine Nachricht, die an eine LLM-API gesendet oder von ihr empfangen wird.</p> </div>
+
+<div id="servercapabilities">
+  ### `ServerCapabilities`
+</div>
+
+<div class="tsd-comment tsd-typography"><p>Fähigkeiten, die ein Server unterstützen kann. Bekannte Fähigkeiten sind hier in diesem Schema definiert, aber dies ist keine abgeschlossene Menge: Jeder Server kann eigene zusätzliche Fähigkeiten definieren.</p> </div><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="servercapabilities-completions"><code class="tsd-tag">Optional</code><span>completions</span><a href="#servercapabilities-completions" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">completions</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">object</span></div><div class="tsd-comment tsd-typography"><p>Vorhanden, wenn der Server Vorschläge zur Argument-Autovervollständigung unterstützt.</p> </div><div class="tsd-comment tsd-typography" /></section><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="servercapabilities-experimental"><code class="tsd-tag">Optional</code><span>experimental</span><a href="#servercapabilities-experimental" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">experimental</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">object</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>Experimentelle, nicht standardisierte Fähigkeiten, die der Server unterstützt.</p> </div><div class="tsd-comment tsd-typography" /></section><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="servercapabilities-logging"><code class="tsd-tag">Optional</code><span>logging</span><a href="#servercapabilities-logging" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">logging</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">object</span></div><div class="tsd-comment tsd-typography"><p>Vorhanden, wenn der Server Protokollmeldungen an den Client senden kann.</p> </div><div class="tsd-comment tsd-typography" /></section><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="servercapabilities-prompts"><code class="tsd-tag">Optional</code><span>prompts</span><a href="#servercapabilities-prompts" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">prompts</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">listChanged</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>Vorhanden, wenn der Server Prompt-Vorlagen anbietet.</p> </div><div class="tsd-type-declaration"><div data-typedoc-h="4">Typdeklaration</div><ul class="tsd-parameters"><li class="tsd-parameter"><div data-typedoc-h="5"><code class="tsd-tag">Optional</code><span class="tsd-kind-property">listChanged</span><span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">boolean</span></div><div class="tsd-comment tsd-typography"><p>Ob dieser Server Benachrichtigungen über Änderungen an der Promptliste unterstützt.</p> </div><div class="tsd-comment tsd-typography" /></li></ul></div><div class="tsd-comment tsd-typography" /></section><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="servercapabilities-resources"><code class="tsd-tag">Optional</code><span>resources</span><a href="#servercapabilities-resources" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">resources</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">listChanged</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">;</span> <span class="tsd-kind-property">subscribe</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>Vorhanden, wenn der Server Ressourcen zum Lesen anbietet.</p> </div><div class="tsd-type-declaration"><div data-typedoc-h="4">Typdeklaration</div><ul class="tsd-parameters"><li class="tsd-parameter"><div data-typedoc-h="5"><code class="tsd-tag">Optional</code><span class="tsd-kind-property">listChanged</span><span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">boolean</span></div><div class="tsd-comment tsd-typography"><p>Ob dieser Server Benachrichtigungen über Änderungen an der Ressourcenliste unterstützt.</p> </div><div class="tsd-comment tsd-typography" /></li><li class="tsd-parameter"><div data-typedoc-h="5"><code class="tsd-tag">Optional</code><span class="tsd-kind-property">subscribe</span><span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">boolean</span></div><div class="tsd-comment tsd-typography"><p>Ob dieser Server das Abonnieren von Ressourcen-Updates unterstützt.</p> </div><div class="tsd-comment tsd-typography" /></li></ul></div><div class="tsd-comment tsd-typography" /></section><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="servercapabilities-tools"><code class="tsd-tag">Optional</code><span>tools</span><a href="#servercapabilities-tools" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">tools</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">listChanged</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>Vorhanden, wenn der Server Werkzeuge zum Aufrufen anbietet.</p> </div><div class="tsd-type-declaration"><div data-typedoc-h="4">Typdeklaration</div><ul class="tsd-parameters"><li class="tsd-parameter"><div data-typedoc-h="5"><code class="tsd-tag">Optional</code><span class="tsd-kind-property">listChanged</span><span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">boolean</span></div><div class="tsd-comment tsd-typography"><p>Ob dieser Server Benachrichtigungen über Änderungen an der Werkzeugliste unterstützt.</p> </div><div class="tsd-comment tsd-typography" /></li></ul></div><div class="tsd-comment tsd-typography" /></section>
+
+<div id="stringschema">
+  ### `StringSchema`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">StringSchema</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#">description</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">format</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">&quot;uri&quot;</span> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">&quot;email&quot;</span> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">&quot;date&quot;</span> <span class="tsd-signature-symbol">|</span> <span class="tsd-signature-type">&quot;date-time&quot;</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">maxLength</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">minLength</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">title</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">type</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">&quot;string&quot;</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div>
+
+<div id="textcontent">
+  ### `Textinhalt`
+</div>
+
+<div class="tsd-comment tsd-typography"><p>Der Textinhalt der Nachricht.</p> </div>
+
+<div id="textresourcecontents">
+  ### `TextResourceContents`
+</div>
+
+<aside class="tsd-sources"><p>Geerbt von <a href="#resourcecontents">ResourceContents</a>.<a href="#resourcecontents-uri">uri</a></p></aside>
+
+<div id="tool">
+  ### `Werkzeug`
+</div>
+
+<div class="tsd-comment tsd-typography"><p>Definition für ein Werkzeug, das der Client aufrufen kann.</p> </div><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="tool-_meta"><code class="tsd-tag">Optional</code><span>&#95;<wbr />meta</span><a href="#tool-_meta" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">&#95;meta</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>Siehe <a href="/de/specification/2025-06-18/basic/index#meta">Allgemeine Felder: <code>&#95;meta</code></a> für Hinweise zur Verwendung von <code>&#95;meta</code>.</p> </div><div class="tsd-comment tsd-typography" /></section><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="tool-annotations"><code class="tsd-tag">Optional</code><span>annotations</span><a href="#tool-annotations" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">annotations</span><span class="tsd-signature-symbol">?:</span> <a href="#toolannotations" class="tsd-signature-type tsd-kind-interface">ToolAnnotations</a></div><div class="tsd-comment tsd-typography"><p>Optionale zusätzliche Werkzeuginformationen.</p> <p>Reihenfolge der Anzeigepräferenz: title, annotations.title, dann name.</p> </div><div class="tsd-comment tsd-typography" /></section><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="tool-description"><code class="tsd-tag">Optional</code><span>description</span><a href="#tool-description" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">description</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span></div><div class="tsd-comment tsd-typography"><p>Eine menschenlesbare Beschreibung des Werkzeugs.</p> <p>Kann von Clients verwendet werden, um das Verständnis des LLM für verfügbare Werkzeuge zu verbessern. Dies kann als „Hinweis“ für das Modell verstanden werden.</p> </div><div class="tsd-comment tsd-typography" /></section><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="tool-inputschema"><span>input<wbr />Schema</span><a href="#tool-inputschema" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">inputSchema</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">&#123;</span><br />  <span class="tsd-kind-property">properties</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">object</span> <span class="tsd-signature-symbol">&#125;</span><span class="tsd-signature-symbol">;</span><br />  <span class="tsd-kind-property">required</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">;</span><br />  <span class="tsd-kind-property">type</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">&quot;object&quot;</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>Ein JSON-Schema-Objekt, das die erwarteten Parameter für das Werkzeug definiert.</p> </div><div class="tsd-comment tsd-typography" /></section><section class="tsd-panel tsd-member tsd-is-inherited"><div data-typedoc-h="3" class="tsd-anchor-link" id="tool-name"><span>name</span><a href="#tool-name" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">name</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div><div class="tsd-comment tsd-typography"><p>Vorgesehen für programmatische oder logische Verwendung; in früheren Spezifikationen oder als Fallback (wenn title nicht vorhanden ist) jedoch auch als Anzeigename genutzt.</p> </div><div class="tsd-comment tsd-typography" /><aside class="tsd-sources"><p>Inherited from BaseMetadata.name</p></aside></section><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="tool-outputschema"><code class="tsd-tag">Optional</code><span>output<wbr />Schema</span><a href="#tool-outputschema" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">outputSchema</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span><br />  <span class="tsd-kind-property">properties</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">object</span> <span class="tsd-signature-symbol">&#125;</span><span class="tsd-signature-symbol">;</span><br />  <span class="tsd-kind-property">required</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">;</span><br />  <span class="tsd-kind-property">type</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">&quot;object&quot;</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>Ein optionales JSON-Schema-Objekt, das die Struktur der Werkzeugausgabe definiert, die im Feld
+structuredContent eines CallToolResult zurückgegeben wird.</p> </div><div class="tsd-comment tsd-typography" /></section><section class="tsd-panel tsd-member tsd-is-inherited"><div data-typedoc-h="3" class="tsd-anchor-link" id="tool-title"><code class="tsd-tag">Optional</code><span>title</span><a href="#tool-title" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">title</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span></div><div class="tsd-comment tsd-typography"><p>Vorgesehen für UI- und Endnutzerkontexte — optimiert für gute Lesbarkeit und einfache Verständlichkeit,
+auch für Personen ohne domänenspezifische Fachbegriffe.</p> <p>Falls nicht angegeben, sollte der name für die Anzeige verwendet werden (außer bei Tool,
+wo <code>annotations.title</code> Vorrang vor der Verwendung von <code>name</code> haben sollte,
+falls vorhanden).</p> </div><div class="tsd-comment tsd-typography" /><aside class="tsd-sources"><p>Inherited from BaseMetadata.title</p></aside></section>
+
+<div id="toolannotations">
+  ### `Werkzeuganmerkungen`
+</div>
+
+<div class="tsd-comment tsd-typography"><p>Zusätzliche Eigenschaften, die ein Werkzeug für Clients beschreiben.</p> <p>HINWEIS: Alle Eigenschaften in Werkzeuganmerkungen sind <strong>Hinweise</strong>.
+Sie garantieren keine zutreffende Beschreibung des
+Werkzeugverhaltens (einschließlich beschreibender Eigenschaften wie <code>title</code>).</p> <p>Clients sollten niemals Entscheidungen zur Werkzeugnutzung auf Grundlage von Werkzeuganmerkungen treffen,
+die von nicht vertrauenswürdigen Servern stammen.</p> </div><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="toolannotations-destructivehint"><code class="tsd-tag">Optional</code><span>destructive<wbr />Hint</span><a href="#toolannotations-destructivehint" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">destructiveHint</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span></div><div class="tsd-comment tsd-typography"><p>Wenn true, kann das Werkzeug destruktive Änderungen an seiner Umgebung vornehmen.
+Wenn false, nimmt das Werkzeug nur additive Änderungen vor.</p> <p>(Diese Eigenschaft ist nur aussagekräftig, wenn <code>readOnlyHint == false</code>)</p> <p>Standard: true</p> </div><div class="tsd-comment tsd-typography" /></section><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="toolannotations-idempotenthint"><code class="tsd-tag">Optional</code><span>idempotent<wbr />Hint</span><a href="#toolannotations-idempotenthint" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">idempotentHint</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span></div><div class="tsd-comment tsd-typography"><p>Wenn true, hat das wiederholte Aufrufen des Werkzeugs mit denselben Argumenten
+keine zusätzlichen Auswirkungen auf seine Umgebung.</p> <p>(Diese Eigenschaft ist nur aussagekräftig, wenn <code>readOnlyHint == false</code>)</p> <p>Standard: false</p> </div><div class="tsd-comment tsd-typography" /></section><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="toolannotations-openworldhint"><code class="tsd-tag">Optional</code><span>open<wbr />World<wbr />Hint</span><a href="#toolannotations-openworldhint" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">openWorldHint</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span></div><div class="tsd-comment tsd-typography"><p>Wenn true, kann dieses Werkzeug mit einer „offenen Welt“ externer
+Entitäten interagieren. Wenn false, ist der Interaktionsbereich des Werkzeugs geschlossen.
+Zum Beispiel ist die Welt eines Web-Suchwerkzeugs offen, wohingegen die
+eines Speicherwerkzeugs nicht offen ist.</p> <p>Standard: true</p> </div><div class="tsd-comment tsd-typography" /></section><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="toolannotations-readonlyhint"><code class="tsd-tag">Optional</code><span>read<wbr />Only<wbr />Hint</span><a href="#toolannotations-readonlyhint" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">readOnlyHint</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span></div><div class="tsd-comment tsd-typography"><p>Wenn true, verändert das Werkzeug seine Umgebung nicht.</p> <p>Standard: false</p> </div><div class="tsd-comment tsd-typography" /></section><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="toolannotations-title"><code class="tsd-tag">Optional</code><span>title</span><a href="#toolannotations-title" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">title</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span></div><div class="tsd-comment tsd-typography"><p>Ein menschenlesbarer Titel für das Werkzeug.</p> </div><div class="tsd-comment tsd-typography" /></section>
+
+<div id="completioncomplete">
+  ## `completion/complete`
+</div>
+
+<div id="completerequest">
+  ### `CompleteRequest`
+</div>
+
+<aside class="tsd-sources"><p>Überschreibt Request.params</p></aside>
+
+<div id="completeresult">
+  ### `CompleteResult`
+</div>
+
+<div class="tsd-comment tsd-typography"><p>Ein Array von Completion-Werten. Darf 100 Einträge nicht überschreiten.</p> </div>
+
+<div id="elicitationcreate">
+  ## `elicitation/create`
+</div>
+
+<div id="elicitrequest">
+  ### `ElicitRequest`
+</div>
+
+Eine Anforderung des Servers, über den Client zusätzliche Informationen vom Benutzer einzuholen.
+Es sind nur Eigenschaften auf oberster Ebene erlaubt, ohne Verschachtelung.
+
+<div id="elicitresult">
+  ### `ElicitResult`
+</div>
+
+Optional
+Enthält Werte, die dem angeforderten Schema entsprechen.
+
+<div id="initialize">
+  ## `initialize`
+</div>
+
+<div id="initializerequest">
+  ### `InitializeRequest`
+</div>
+
+<aside class="tsd-sources"><p>Überschreibt Request.params</p></aside>
+
+<div id="initializeresult">
+  ### `InitializeResult`
+</div>
+
+<div class="tsd-comment tsd-typography"><p>Die Version des Model Context Protocol (MCP), die der Server verwenden möchte. Diese muss nicht mit der vom Client angeforderten Version übereinstimmen. Falls der Client diese Version nicht unterstützen kann, MUSS er die Verbindung trennen.</p> </div>
+
+<div id="loggingsetlevel">
+  ## `logging/setLevel`
+</div>
+
+<div id="setlevelrequest">
+  ### `SetLevelRequest`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">SetLevelRequest</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#">method</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">&quot;logging/setLevel&quot;</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#setlevelrequest-params">params</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">level</span><span class="tsd-signature-symbol">:</span> <a href="#logginglevel" class="tsd-signature-type tsd-kind-type-alias">LoggingLevel</a> <span class="tsd-signature-symbol">&#125;</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>Eine Anfrage des Clients an den Server, um das Logging zu aktivieren oder anzupassen.</p> </div><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="setlevelrequest-params"><span>params</span><a href="#setlevelrequest-params" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">params</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">level</span><span class="tsd-signature-symbol">:</span> <a href="#logginglevel" class="tsd-signature-type tsd-kind-type-alias">LoggingLevel</a> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-type-declaration"><div data-typedoc-h="4">Typdeklaration</div><ul class="tsd-parameters"><li class="tsd-parameter"><div data-typedoc-h="5"><span class="tsd-kind-property">level</span><span class="tsd-signature-symbol">: </span><a href="#logginglevel" class="tsd-signature-type tsd-kind-type-alias">LoggingLevel</a></div><div class="tsd-comment tsd-typography"><p>Die Protokollierungsstufe, die der Client vom Server erhalten möchte. Der Server sollte alle Logs auf dieser Stufe und höheren (d. h. gravierenderen) als Benachrichtigungen/Nachrichten an den Client senden.</p> </div><div class="tsd-comment tsd-typography" /></li></ul></div><aside class="tsd-sources"><p>Überschreibt Request.params</p></aside></section>
+
+<div id="notificationscancelled">
+  ## `notifications/cancelled`
+</div>
+
+<div id="cancellednotification">
+  ### `CancelledNotification`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">CancelledNotification</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#">method</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">&quot;notifications/cancelled&quot;</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#cancellednotification-params">params</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">reason</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span> <span class="tsd-kind-property">requestId</span><span class="tsd-signature-symbol">:</span> <a href="#requestid" class="tsd-signature-type tsd-kind-type-alias">RequestId</a> <span class="tsd-signature-symbol">&#125;</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>Diese Benachrichtigung kann von beiden Seiten gesendet werden, um anzuzeigen, dass eine zuvor gestellte Anfrage abgebrochen wird.</p> <p>Die Anfrage SOLLTE sich noch in Bearbeitung befinden; aufgrund von Kommunikationslatenz ist es jedoch immer möglich, dass diese Benachrichtigung erst NACH Abschluss der Anfrage eintrifft.</p> <p>Diese Benachrichtigung zeigt an, dass das Ergebnis nicht verwendet wird, daher SOLLTE jegliche zugehörige Verarbeitung eingestellt werden.</p> <p>Ein Client DARF NICHT versuchen, seine <code>initialize</code>-Anfrage abzubrechen.</p> </div><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="cancellednotification-params"><span>params</span><a href="#cancellednotification-params" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">params</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">reason</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span> <span class="tsd-kind-property">requestId</span><span class="tsd-signature-symbol">:</span> <a href="#requestid" class="tsd-signature-type tsd-kind-type-alias">RequestId</a> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-type-declaration"><div data-typedoc-h="4">Typdeklaration</div><ul class="tsd-parameters"><li class="tsd-parameter"><div data-typedoc-h="5"><code class="tsd-tag">Optional</code><span class="tsd-kind-property">reason</span><span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">string</span></div><div class="tsd-comment tsd-typography"><p>Eine optionale Zeichenkette, die den Grund für den Abbruch beschreibt. Diese KANN protokolliert oder dem Benutzer angezeigt werden.</p> </div><div class="tsd-comment tsd-typography" /></li><li class="tsd-parameter"><div data-typedoc-h="5"><span class="tsd-kind-property">requestId</span><span class="tsd-signature-symbol">: </span><a href="#requestid" class="tsd-signature-type tsd-kind-type-alias">RequestId</a></div><div class="tsd-comment tsd-typography"><p>Die ID der abzubrechenden Anfrage.</p> <p>Diese MUSS der ID einer zuvor in derselben Richtung gestellten Anfrage entsprechen.</p> </div><div class="tsd-comment tsd-typography" /></li></ul></div><aside class="tsd-sources"><p>Überschreibt Notification.params</p></aside></section>
+
+<div id="notificationsinitialized">
+  ## `notifications/initialized`
+</div>
+
+<div id="initializednotification">
+  ### `InitializedNotification`
+</div>
+
+<div class="tsd-comment tsd-typography"><p>Diese Benachrichtigung wird vom Client an den Server gesendet, nachdem die Initialisierung abgeschlossen wurde.</p> </div><section class="tsd-panel tsd-member tsd-is-inherited"><div data-typedoc-h="3" class="tsd-anchor-link" id="initializednotification-params"><code class="tsd-tag">Optional</code><span>Parameter</span><a href="#initializednotification-params" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-type-declaration"><div data-typedoc-h="4">Typdeklaration</div><ul class="tsd-parameters"><li class="tsd-parameter-index-signature"><div data-typedoc-h="5"><span class="tsd-signature-symbol">[</span><span class="tsd-kind-parameter">Schlüssel</span>: <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span></div></li><li class="tsd-parameter"><div data-typedoc-h="5"><code class="tsd-tag">Optional</code><span class="tsd-kind-property">&#95;meta</span><span class="tsd-signature-symbol">?: </span><span class="tsd-signature-symbol">&#123;</span> <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">Schlüssel</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>Siehe <a href="/de/specification/2025-06-18/basic/index#meta">Allgemeine Felder: <code>&#95;meta</code></a> für Hinweise zur Verwendung von <code>&#95;meta</code>.</p> </div><div class="tsd-comment tsd-typography" /></li></ul></div><aside class="tsd-sources"><p>Geerbt von Notification.params</p></aside></section>
+
+<div id="notificationsmessage">
+  ## `notifications/message`
+</div>
+
+<div id="loggingmessagenotification">
+  ### `LoggingMessageNotification`
+</div>
+
+<aside class="tsd-sources"><p>Überschreibt Notification.params</p></aside>
+
+<div id="notificationsprogress">
+  ## `notifications/progress`
+</div>
+
+<div id="progressnotification">
+  ### `ProgressNotification`
+</div>
+
+<div class="tsd-comment tsd-typography"><p>Eine Out-of-Band-Benachrichtigung, die den Empfänger über eine Fortschrittsaktualisierung für eine lang laufende Anforderung informiert.</p> </div><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="progressnotification-params"><span>Parameter</span><a href="#progressnotification-params" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">params</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">&#123;</span><br />  <span class="tsd-kind-property">message</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br />  <span class="tsd-kind-property">progress</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">;</span><br />  <span class="tsd-kind-property">progressToken</span><span class="tsd-signature-symbol">:</span> <a href="#progresstoken" class="tsd-signature-type tsd-kind-type-alias">ProgressToken</a><span class="tsd-signature-symbol">;</span><br />  <span class="tsd-kind-property">total</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-type-declaration"><div data-typedoc-h="4">Typdeklaration</div><ul class="tsd-parameters"><li class="tsd-parameter"><div data-typedoc-h="5"><code class="tsd-tag">Optional</code><span class="tsd-kind-property">message</span><span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">string</span></div><div class="tsd-comment tsd-typography"><p>Eine optionale Nachricht, die den aktuellen Fortschritt beschreibt.</p> </div><div class="tsd-comment tsd-typography" /></li><li class="tsd-parameter"><div data-typedoc-h="5"><span class="tsd-kind-property">progress</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span></div><div class="tsd-comment tsd-typography"><p>Der bisherige Fortschritt. Dieser sollte jedes Mal steigen, wenn Fortschritte gemacht werden, selbst wenn das Total unbekannt ist.</p> </div><div class="tsd-comment tsd-typography"><div class="tsd-tag-TJS-type"><div data-typedoc-h="4" class="tsd-anchor-link" id="tjs-type">TJS-Typ<a href="#tjs-type" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><p>Zahl</p> </div></div></li><li class="tsd-parameter"><div data-typedoc-h="5"><span class="tsd-kind-property">progressToken</span><span class="tsd-signature-symbol">: </span><a href="#progresstoken" class="tsd-signature-type tsd-kind-type-alias">ProgressToken</a></div><div class="tsd-comment tsd-typography"><p>Das Fortschrittstoken, das in der initialen Anforderung angegeben wurde, um diese Benachrichtigung der laufenden Anforderung zuzuordnen.</p> </div><div class="tsd-comment tsd-typography" /></li><li class="tsd-parameter"><div data-typedoc-h="5"><code class="tsd-tag">Optional</code><span class="tsd-kind-property">total</span><span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">number</span></div><div class="tsd-comment tsd-typography"><p>Gesamtzahl der zu verarbeitenden Elemente (oder insgesamt erforderlicher Fortschritt), falls bekannt.</p> </div><div class="tsd-comment tsd-typography"><div class="tsd-tag-TJS-type"><div data-typedoc-h="4" class="tsd-anchor-link" id="tjs-type-1">TJS-Typ<a href="#tjs-type-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><p>Zahl</p> </div></div></li></ul></div><aside class="tsd-sources"><p>Überschreibt Notification.params</p></aside></section>
+
+<div id="notificationspromptslist_changed">
+  ## `benachrichtigungen/prompts/liste_geaendert`
+</div>
+
+<div id="promptlistchangednotification">
+  ### `PromptListChangedNotification`
+</div>
+
+<aside class="tsd-sources"><p>Geerbt von Notification.params</p></aside>
+
+<div id="notificationsresourceslist_changed">
+  ## `benachrichtigungen/ressourcen/list_changed`
+</div>
+
+<div id="resourcelistchangednotification">
+  ### `ResourceListChangedNotification`
+</div>
+
+<div class="tsd-comment tsd-typography"><p>Eine optionale Benachrichtigung vom Server an den Client, die ihn darüber informiert, dass sich die Liste der Ressourcen, auf die er lesend zugreifen kann, geändert hat. Diese kann vom Server auch ohne vorherige Anmeldung/Subscription des Clients gesendet werden.</p> </div><section class="tsd-panel tsd-member tsd-is-inherited"><div data-typedoc-h="3" class="tsd-anchor-link" id="resourcelistchangednotification-params"><code class="tsd-tag">Optional</code><span>Parameter</span><a href="#resourcelistchangednotification-params" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-type-declaration"><div data-typedoc-h="4">Typdeklaration</div><ul class="tsd-parameters"><li class="tsd-parameter-index-signature"><div data-typedoc-h="5"><span class="tsd-signature-symbol">[</span><span class="tsd-kind-parameter">key</span>: <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span></div></li><li class="tsd-parameter"><div data-typedoc-h="5"><code class="tsd-tag">Optional</code><span class="tsd-kind-property">&#95;meta</span><span class="tsd-signature-symbol">?: </span><span class="tsd-signature-symbol">&#123;</span> <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>Siehe <a href="/de/specification/2025-06-18/basic/index#meta">Allgemeine Felder: <code>&#95;meta</code></a> für Hinweise zur Verwendung von <code>&#95;meta</code>.</p> </div><div class="tsd-comment tsd-typography" /></li></ul></div><aside class="tsd-sources"><p>Geerbt von Notification.params</p></aside></section>
+
+<div id="notificationsresourcesupdated">
+  ## `notifications/resources/updated`
+</div>
+
+<div id="resourceupdatednotification">
+  ### `ResourceUpdatedNotification`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">ResourceUpdatedNotification</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#">method</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">&quot;notifications/resources/updated&quot;</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#resourceupdatednotification-params">params</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">uri</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">&#125;</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>Eine Benachrichtigung vom Server an den Client, die informiert, dass sich eine Ressource geändert hat und möglicherweise erneut gelesen werden muss. Dies sollte nur gesendet werden, wenn der Client zuvor eine resources/subscribe-Anforderung gesendet hat.</p> </div><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="resourceupdatednotification-params"><span>params</span><a href="#resourceupdatednotification-params" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">params</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">uri</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-type-declaration"><div data-typedoc-h="4">Typdeklaration</div><ul class="tsd-parameters"><li class="tsd-parameter"><div data-typedoc-h="5"><span class="tsd-kind-property">uri</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span></div><div class="tsd-comment tsd-typography"><p>Die URI der Ressource, die aktualisiert wurde. Dies kann eine Unterressource der Ressource sein, auf die der Client tatsächlich abonniert hat.</p> </div><div class="tsd-comment tsd-typography" /></li></ul></div><aside class="tsd-sources"><p>Überschreibt Notification.params</p></aside></section>
+
+<div id="notificationsrootslist_changed">
+  ## `notifications/roots/list_changed`
+</div>
+
+<div id="rootslistchangednotification">
+  ### `RootsListChangedNotification`
+</div>
+
+Geerbt von Notification.params
+Diese Benachrichtigung sollte immer dann gesendet werden, wenn der Client eine Wurzel hinzufügt, entfernt oder bearbeitet.
+Der Server sollte anschließend mithilfe von ListRootsRequest eine aktualisierte Liste der Wurzeln anfordern.
+
+<div id="notificationstoolslist_changed">
+  ## `notifications/tools/list_changed`
+</div>
+
+<div id="toollistchangednotification">
+  ### `ToolListChangedNotification`
+</div>
+
+<div class="tsd-comment tsd-typography"><p>Eine optionale Benachrichtigung vom Server an den Client, die ihn darüber informiert, dass sich die Liste der angebotenen Werkzeuge geändert hat. Dies kann von Servern ohne vorherige Anmeldung/Subscription durch den Client gesendet werden.</p> </div><section class="tsd-panel tsd-member tsd-is-inherited"><div data-typedoc-h="3" class="tsd-anchor-link" id="toollistchangednotification-params"><code class="tsd-tag">Optional</code><span>Parameter</span><a href="#toollistchangednotification-params" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-type-declaration"><div data-typedoc-h="4">Typdeklaration</div><ul class="tsd-parameters"><li class="tsd-parameter-index-signature"><div data-typedoc-h="5"><span class="tsd-signature-symbol">[</span><span class="tsd-kind-parameter">key</span>: <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span></div></li><li class="tsd-parameter"><div data-typedoc-h="5"><code class="tsd-tag">Optional</code><span class="tsd-kind-property">&#95;meta</span><span class="tsd-signature-symbol">?: </span><span class="tsd-signature-symbol">&#123;</span> <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>Siehe <a href="/de/specification/2025-06-18/basic/index#meta">Allgemeine Felder: <code>&#95;meta</code></a> für Hinweise zur Verwendung von <code>&#95;meta</code>.</p> </div><div class="tsd-comment tsd-typography" /></li></ul></div><aside class="tsd-sources"><p>Geerbt von Notification.params</p></aside></section>
+
+<div id="ping">
+  ## `ping`
+</div>
+
+<div id="pingrequest">
+  ### `PingRequest`
+</div>
+
+<aside class="tsd-sources"><p>Geerbt von Request.params</p></aside>
+
+<div id="promptsget">
+  ## `prompts/get`
+</div>
+
+<div id="getpromptrequest">
+  ### `GetPromptRequest`
+</div>
+
+<aside class="tsd-sources"><p>Überschreibt Request.params</p></aside>
+
+<div id="getpromptresult">
+  ### `GetPromptResult`
+</div>
+
+<div id="promptslist">
+  ## `prompts/list`
+</div>
+
+<div id="listpromptsrequest">
+  ### `ListPromptsRequest`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">ListPromptsRequest</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#">method</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">&quot;prompts/list&quot;</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#listpromptsrequest-params">params</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">cursor</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">&#125;</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>Vom Client gesendet, um eine Liste von Prompts und Prompt-Vorlagen anzufordern, die der Server bereitstellt.</p> </div><section class="tsd-panel tsd-member tsd-is-inherited"><div data-typedoc-h="3" class="tsd-anchor-link" id="listpromptsrequest-params"><code class="tsd-tag">Optional</code><span>params</span><a href="#listpromptsrequest-params" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">params</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">cursor</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-type-declaration"><div data-typedoc-h="4">Type declaration</div><ul class="tsd-parameters"><li class="tsd-parameter"><div data-typedoc-h="5"><code class="tsd-tag">Optional</code><span class="tsd-kind-property">cursor</span><span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">string</span></div><div class="tsd-comment tsd-typography"><p>Ein undurchsichtiger Token, der die aktuelle Position der Paginierung angibt.
+Wenn angegeben, sollte der Server Ergebnisse zurückgeben, die nach diesem Cursor beginnen.</p> </div><div class="tsd-comment tsd-typography" /></li></ul></div><aside class="tsd-sources"><p>Geerbt von PaginatedRequest.params</p></aside></section>
+
+<div id="listpromptsresult">
+  ### `ListPromptsResult`
+</div>
+
+<div id="resourceslist">
+  ## `resources/list`
+</div>
+
+<div id="listresourcesrequest">
+  ### `ListResourcesRequest`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">ListResourcesRequest</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#">method</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">&quot;resources/list&quot;</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#listresourcesrequest-params">params</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">cursor</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">&#125;</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>Vom Client gesendet, um eine Liste der Ressourcen anzufordern, die der Server bereitstellt.</p> </div><section class="tsd-panel tsd-member tsd-is-inherited"><div data-typedoc-h="3" class="tsd-anchor-link" id="listresourcesrequest-params"><code class="tsd-tag">Optional</code><span>params</span><a href="#listresourcesrequest-params" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">params</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">cursor</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-type-declaration"><div data-typedoc-h="4">Typdeklaration</div><ul class="tsd-parameters"><li class="tsd-parameter"><div data-typedoc-h="5"><code class="tsd-tag">Optional</code><span class="tsd-kind-property">cursor</span><span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">string</span></div><div class="tsd-comment tsd-typography"><p>Ein opaker Token, der die aktuelle Position der Paginierung repräsentiert.
+Falls angegeben, soll der Server Ergebnisse zurückgeben, die direkt nach diesem Cursor beginnen.</p> </div><div class="tsd-comment tsd-typography" /></li></ul></div><aside class="tsd-sources"><p>Geerbt von PaginatedRequest.params</p></aside></section>
+
+<div id="listresourcesresult">
+  ### `ListResourcesResult`
+</div>
+
+<div id="resourcesread">
+  ## `resources/read`
+</div>
+
+<div id="readresourcerequest">
+  ### `ReadResourceRequest`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">ReadResourceRequest</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#">method</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">&quot;resources/read&quot;</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#readresourcerequest-params">params</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">uri</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">&#125;</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>Vom Client an den Server gesendet, um eine bestimmte Ressourcen-URI zu lesen.</p> </div><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="readresourcerequest-params"><span>params</span><a href="#readresourcerequest-params" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">params</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">uri</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-type-declaration"><div data-typedoc-h="4">Typdeklaration</div><ul class="tsd-parameters"><li class="tsd-parameter"><div data-typedoc-h="5"><span class="tsd-kind-property">uri</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span></div><div class="tsd-comment tsd-typography"><p>Die URI der zu lesenden Ressource. Die URI kann jedes Protokoll verwenden; die Interpretation obliegt dem Server.</p> </div><div class="tsd-comment tsd-typography" /></li></ul></div><aside class="tsd-sources"><p>Überschreibt Request.params</p></aside></section>
+
+<div id="readresourceresult">
+  ### `ReadResourceResult`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">ReadResourceResult</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#readresourceresult-_meta">&#95;meta</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span> <span class="tsd-signature-symbol">&#125;</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">contents</a><span class="tsd-signature-symbol">:</span> (<a href="#textresourcecontents" class="tsd-signature-type tsd-kind-interface">TextResourceContents</a> <span class="tsd-signature-symbol">|</span> <a href="#blobresourcecontents" class="tsd-signature-type tsd-kind-interface">BlobResourceContents</a>)<span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">;</span><br />  <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>Die Serverantwort auf eine <code>resources/read</code>-Anfrage des Clients.</p> </div><section class="tsd-panel tsd-member tsd-is-inherited"><div data-typedoc-h="3" class="tsd-anchor-link" id="readresourceresult-_meta"><code class="tsd-tag">Optional</code><span>&#95;<wbr />meta</span><a href="#readresourceresult-_meta" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">&#95;meta</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>Siehe <a href="/de/specification/2025-06-18/basic/index#meta">Allgemeine Felder: <code>&#95;meta</code></a> für Hinweise zur Verwendung von <code>&#95;meta</code>.</p> </div><div class="tsd-comment tsd-typography" /><aside class="tsd-sources"><p>Abgeleitet von <a href="#result">Result</a>.<a href="#result-_meta">&#95;meta</a></p></aside></section>
+
+<div id="resourcessubscribe">
+  ## `resources/subscribe`
+</div>
+
+<div id="subscriberequest">
+  ### `SubscribeRequest`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">SubscribeRequest</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#">method</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">&quot;resources/subscribe&quot;</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#subscriberequest-params">params</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">uri</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">&#125;</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>Vom Client gesendet, um resources/updated-Benachrichtigungen vom Server anzufordern, sobald sich eine bestimmte Ressource ändert.</p> </div><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="subscriberequest-params"><span>params</span><a href="#subscriberequest-params" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">params</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">uri</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-type-declaration"><div data-typedoc-h="4">Type declaration</div><ul class="tsd-parameters"><li class="tsd-parameter"><div data-typedoc-h="5"><span class="tsd-kind-property">uri</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span></div><div class="tsd-comment tsd-typography"><p>Die URI der Ressource, auf die abonniert werden soll. Die URI kann jedes Protokoll verwenden; die Interpretation liegt beim Server.</p> </div><div class="tsd-comment tsd-typography" /></li></ul></div><aside class="tsd-sources"><p>Überschreibt Request.params</p></aside></section>
+
+<div id="resourcestemplateslist">
+  ## `resources/templates/list`
+</div>
+
+<div id="listresourcetemplatesrequest">
+  ### `ListResourceTemplatesRequest`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">ListResourceTemplatesRequest</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#">method</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">&quot;resources/templates/list&quot;</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#listresourcetemplatesrequest-params">params</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">cursor</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">&#125;</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>Vom Client gesendet, um eine Liste der Ressourcen-Vorlagen anzufordern, die der Server bereitstellt.</p> </div><section class="tsd-panel tsd-member tsd-is-inherited"><div data-typedoc-h="3" class="tsd-anchor-link" id="listresourcetemplatesrequest-params"><code class="tsd-tag">Optional</code><span>params</span><a href="#listresourcetemplatesrequest-params" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">params</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">cursor</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-type-declaration"><div data-typedoc-h="4">Typdeklaration</div><ul class="tsd-parameters"><li class="tsd-parameter"><div data-typedoc-h="5"><code class="tsd-tag">Optional</code><span class="tsd-kind-property">cursor</span><span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">string</span></div><div class="tsd-comment tsd-typography"><p>Ein undurchsichtiger Token, der die aktuelle Position der Paginierung repräsentiert.
+Falls angegeben, sollte der Server Ergebnisse liefern, die nach diesem Cursor beginnen.</p> </div><div class="tsd-comment tsd-typography" /></li></ul></div><aside class="tsd-sources"><p>Geerbt von PaginatedRequest.params</p></aside></section>
+
+<div id="listresourcetemplatesresult">
+  ### `ListResourceTemplatesResult`
+</div>
+
+Geerbt von PaginatedResult.&#95;meta
+Geerbt von PaginatedResult.nextCursor
+
+<div id="resourcesunsubscribe">
+  ## `resources/unsubscribe`
+</div>
+
+<div id="unsubscriberequest">
+  ### `UnsubscribeRequest`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">UnsubscribeRequest</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#">method</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">&quot;resources/unsubscribe&quot;</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#unsubscriberequest-params">params</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">uri</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">&#125;</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>Vom Client gesendet, um die Abmeldung von resources/updated-Benachrichtigungen vom Server anzufordern. Dies sollte auf eine vorherige resources/subscribe-Anfrage folgen.</p> </div><section class="tsd-panel tsd-member"><div data-typedoc-h="3" class="tsd-anchor-link" id="unsubscriberequest-params"><span>params</span><a href="#unsubscriberequest-params" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">params</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">uri</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-type-declaration"><div data-typedoc-h="4">Typdeklaration</div><ul class="tsd-parameters"><li class="tsd-parameter"><div data-typedoc-h="5"><span class="tsd-kind-property">uri</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span></div><div class="tsd-comment tsd-typography"><p>Die URI der Ressource, von der abgemeldet werden soll.</p> </div><div class="tsd-comment tsd-typography" /></li></ul></div><aside class="tsd-sources"><p>Überschreibt Request.params</p></aside></section>
+
+<div id="rootslist">
+  ## `roots/list`
+</div>
+
+<div id="listrootsrequest">
+  ### `ListRootsRequest`
+</div>
+
+<div id="listrootsresult">
+  ### `ListRootsResult`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">ListRootsResult</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#listrootsresult-_meta">&#95;meta</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span> <span class="tsd-signature-symbol">&#125;</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">roots</a><span class="tsd-signature-symbol">:</span> <a href="#root" class="tsd-signature-type tsd-kind-interface">Root</a><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">;</span><br />  <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>Die Antwort des Clients auf eine roots/list-Anfrage des Servers.
+Dieses Ergebnis enthält ein Array von Root-Objekten; jedes steht für ein Wurzelverzeichnis
+oder eine Datei, auf die der Server zugreifen kann.</p> </div><section class="tsd-panel tsd-member tsd-is-inherited"><div data-typedoc-h="3" class="tsd-anchor-link" id="listrootsresult-_meta"><code class="tsd-tag">Optional</code><span>&#95;<wbr />meta</span><a href="#listrootsresult-_meta" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">&#95;meta</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>Siehe <a href="/de/specification/2025-06-18/basic/index#meta">Allgemeine Felder: <code>&#95;meta</code></a> für Hinweise zur Verwendung von <code>&#95;meta</code>.</p> </div><div class="tsd-comment tsd-typography" /><aside class="tsd-sources"><p>Geerbt von <a href="#result">Result</a>.<a href="#result-_meta">&#95;meta</a></p></aside></section>
+
+<div id="samplingcreatemessage">
+  ## `sampling/createMessage`
+</div>
+
+<div id="createmessagerequest">
+  ### `CreateMessageRequest`
+</div>
+
+<aside class="tsd-sources"><p>Überschreibt Request.params</p></aside>
+
+<div id="createmessageresult">
+  ### `CreateMessageResult`
+</div>
+
+<div class="tsd-comment tsd-typography"><p>Der Grund, warum das Sampling beendet wurde, falls bekannt.</p> </div>
+
+<div id="toolscall">
+  ## `tools/call`
+</div>
+
+<div id="calltoolrequest">
+  ### `CallToolRequest`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">CallToolRequest</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#">method</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">&quot;tools/call&quot;</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#">params</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">arguments</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">key</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <span class="tsd-signature-type">unknown</span> <span class="tsd-signature-symbol">&#125;</span><span class="tsd-signature-symbol">;</span> <span class="tsd-kind-property">name</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">&#125;</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>Wird vom Client verwendet, um ein vom Server bereitgestelltes Werkzeug auszuführen.</p> </div>
+
+<div id="calltoolresult">
+  ### `CallToolResult`
+</div>
+
+<div id="toolslist">
+  ## `tools/list`
+</div>
+
+<div id="listtoolsrequest">
+  ### `ListToolsRequest`
+</div>
+
+<div class="tsd-signature"><span class="tsd-signature-keyword">Schnittstelle</span> <span class="tsd-kind-interface">ListToolsRequest</span> <span class="tsd-signature-symbol">&#123;</span><br />  <a class="tsd-kind-property" href="#">method</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">&quot;tools/list&quot;</span><span class="tsd-signature-symbol">;</span><br />  <a class="tsd-kind-property" href="#listtoolsrequest-params">params</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">cursor</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">&#125;</span><span class="tsd-signature-symbol">;</span><br /><span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-comment tsd-typography"><p>Vom Client gesendet, um eine Liste der verfügbaren Werkzeuge des Servers anzufordern.</p> </div><section class="tsd-panel tsd-member tsd-is-inherited"><div data-typedoc-h="3" class="tsd-anchor-link" id="listtoolsrequest-params"><code class="tsd-tag">Optional</code><span>params</span><a href="#listtoolsrequest-params" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="de/assets/icons.svg#icon-anchor" /></svg></a></div><div class="tsd-signature"><span class="tsd-kind-property">params</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">&#123;</span> <span class="tsd-kind-property">cursor</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">&#125;</span></div><div class="tsd-type-declaration"><div data-typedoc-h="4">Typdeklaration</div><ul class="tsd-parameters"><li class="tsd-parameter"><div data-typedoc-h="5"><code class="tsd-tag">Optional</code><span class="tsd-kind-property">cursor</span><span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">string</span></div><div class="tsd-comment tsd-typography"><p>Ein undurchsichtiger Token, der die aktuelle Position der Paginierung darstellt.
+Wenn angegeben, sollte der Server Ergebnisse zurückgeben, die auf diesen Cursor folgen.</p> </div><div class="tsd-comment tsd-typography" /></li></ul></div><aside class="tsd-sources"><p>Geerbt von PaginatedRequest.params</p></aside></section>
+
+<div id="listtoolsresult">
+  ### `ListToolsResult`
+</div>

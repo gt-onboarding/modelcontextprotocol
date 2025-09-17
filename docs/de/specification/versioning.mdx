@@ -1,0 +1,39 @@
+---
+title: Versionierung
+type: docs
+weight: 10
+---
+
+Das Model Context Protocol (MCP) verwendet zeichenbasierte Versionskennungen im Format
+`YYYY-MM-DD`, um das Datum der letzten rückwärts inkompatiblen Änderungen anzuzeigen.
+
+<Info>
+  Die Protokollversion wird *nicht* erhöht, wenn das
+  Protokoll aktualisiert wird, solange die Änderungen die Rückwärtskompatibilität wahren. Dies ermöglicht
+  schrittweise Verbesserungen bei gleichzeitiger Wahrung der Interoperabilität.
+</Info>
+
+<div id="revisions">
+  ## Überarbeitungen
+</div>
+
+Überarbeitungen können wie folgt gekennzeichnet sein:
+
+* **Entwurf**: Spezifikationen in Bearbeitung, noch nicht zur Verwendung bestimmt.
+* **Aktuell**: die aktuelle Protokollversion, die einsatzbereit ist und weiterhin
+  rückwärtskompatible Änderungen erhalten kann.
+* **Final**: frühere, abgeschlossene Spezifikationen, die nicht mehr geändert werden.
+
+Die **aktuelle** Protokollversion ist [**2025-06-18**](/de/specification/2025-06-18/).
+
+<div id="negotiation">
+  ## Aushandlung
+</div>
+
+Die Versionaushandlung erfolgt während der
+[Initialisierung](/de/specification/2025-06-18/basic/lifecycle#initialization). Clients und
+Server **KÖNNEN** mehrere Protokollversionen gleichzeitig unterstützen, **MÜSSEN** sich jedoch
+auf eine einzelne Version einigen, die für die Sitzung verwendet wird.
+
+Das Protokoll bietet eine angemessene Fehlerbehandlung, falls die Versionaushandlung fehlschlägt, sodass
+Clients Verbindungen kontrolliert beenden können, wenn sie keine mit dem Server kompatible Version finden.

@@ -1,0 +1,167 @@
+---
+title: MCP-Inspector
+description: Ausführliche Anleitung zur Verwendung des MCP-Inspectors zum Testen und Debuggen von Model Context Protocol-Servern
+---
+
+Der [MCP-Inspector](https://github.com/modelcontextprotocol/inspector) ist ein interaktives Entwickler-Tool zum Testen und Debuggen von MCP-Servern. Während der [Debugging-Leitfaden](/de/legacy/tools/debugging) den Inspector als Teil des gesamten Debugging-Toolkits behandelt, bietet dieses Dokument eine detaillierte Darstellung der Funktionen und Fähigkeiten des Inspectors.
+
+<div id="getting-started">
+  ## Erste Schritte
+</div>
+
+<div id="installation-and-basic-usage">
+  ### Installation und grundlegende Verwendung
+</div>
+
+Der Inspector lässt sich direkt über `npx` ausführen, ohne dass eine Installation erforderlich ist:
+
+```bash
+npx @modelcontextprotocol/inspector <command>
+```
+
+```bash
+npx @modelcontextprotocol/inspector <command> <arg1> <arg2>
+```
+
+<div id="inspecting-servers-from-npm-or-pypi">
+  #### Server aus NPM oder PyPi inspizieren
+</div>
+
+Eine gängige Methode, Server-Pakete von [NPM](https://npmjs.com) oder [PyPi](https://pypi.org) zu starten.
+
+<Tabs>
+  <Tab title="NPM package">
+    ```bash
+    npx -y @modelcontextprotocol/inspector npx <package-name> <args>
+    # Zum Beispiel
+    npx -y @modelcontextprotocol/inspector npx @modelcontextprotocol/server-filesystem /Users/username/Desktop
+    ```
+  </Tab>
+
+  <Tab title="PyPi package">
+    ```bash
+    npx @modelcontextprotocol/inspector uvx <package-name> <args>
+    # Zum Beispiel
+    npx @modelcontextprotocol/inspector uvx mcp-server-git --repository ~/code/mcp/servers.git
+    ```
+  </Tab>
+</Tabs>
+
+<div id="inspecting-locally-developed-servers">
+  #### Lokal entwickelte Server inspizieren
+</div>
+
+Um lokal entwickelte oder als Repository heruntergeladene Server zu inspizieren, ist der gängigste
+Weg:
+
+<Tabs>
+  <Tab title="TypeScript">
+    ```bash
+    npx @modelcontextprotocol/inspector node path/to/server/index.js args...
+    ```
+  </Tab>
+
+  <Tab title="Python">
+    ```bash
+    npx @modelcontextprotocol/inspector \
+      uv \
+      --directory path/to/server \
+      run \
+      package-name \
+      args...
+    ```
+  </Tab>
+</Tabs>
+
+Bitte lesen Sie die beigefügte README sorgfältig durch, um die präzisesten Anweisungen zu erhalten.
+
+<div id="feature-overview">
+  ## Funktionsübersicht
+</div>
+
+<Frame caption="Die MCP-Inspector-Oberfläche">
+  <img src="/images/mcp-inspector.png" />
+</Frame>
+
+Der Inspector stellt mehrere Funktionen zur Interaktion mit Ihrem MCP-Server bereit:
+
+<div id="server-connection-pane">
+  ### Bereich für Serververbindungen
+</div>
+
+* Ermöglicht die Auswahl des [Transports](/de/legacy/concepts/transports) für die Verbindung zum Server
+* Bei lokalen Servern können Befehlszeilenargumente und Umgebungsvariablen angepasst werden
+
+<div id="resources-tab">
+  ### Ressourcen-Tab
+</div>
+
+* Listet alle verfügbaren Ressourcen auf
+* Zeigt Metadaten von Ressourcen (MIME-Typen, Beschreibungen)
+* Ermöglicht die Einsicht in Ressourceninhalte
+* Unterstützt das Testen von Abonnements
+
+<div id="prompts-tab">
+  ### Prompts-Tab
+</div>
+
+* Zeigt verfügbare Prompt-Vorlagen
+* Zeigt Prompt-Argumente und Beschreibungen
+* Ermöglicht das Testen von Prompts mit benutzerdefinierten Argumenten
+* Zeigt eine Vorschau der generierten Nachrichten
+
+<div id="tools-tab">
+  ### Tools-Tab
+</div>
+
+* Listet verfügbare Tools
+* Zeigt Tool-Schemata und Beschreibungen
+* Ermöglicht das Testen von Tools mit benutzerdefinierten Eingaben
+* Zeigt Ergebnisse von Tool-Ausführungen an
+
+<div id="notifications-pane">
+  ### Bereich „Benachrichtigungen“
+</div>
+
+* Zeigt alle vom Server protokollierten Logs
+* Zeigt Benachrichtigungen an, die vom Server empfangen wurden
+
+<div id="best-practices">
+  ## Bewährte Verfahren
+</div>
+
+<div id="development-workflow">
+  ### Entwicklungsworkflow
+</div>
+
+1. Entwicklung starten
+   * MCP-Inspector mit Ihrem Server starten
+   * Grundlegende Konnektivität überprüfen
+   * Fähigkeitsaushandlung überprüfen
+
+2. Iteratives Testen
+   * Änderungen am Server vornehmen
+   * Server neu bauen
+   * MCP-Inspector erneut verbinden
+   * Betroffene Funktionen testen
+   * Nachrichten überwachen
+
+3. Randfälle testen
+   * Ungültige Eingaben
+   * Fehlende Prompt-Argumente
+   * Gleichzeitige Operationen
+   * Fehlerbehandlung und Fehlerantworten überprüfen
+
+<div id="next-steps">
+  ## Nächste Schritte
+</div>
+
+<CardGroup cols={2}>
+  <Card title="Inspector-Repository" icon="github" href="https://github.com/modelcontextprotocol/inspector">
+    Sehen Sie sich den Quellcode des MCP-Inspectors an
+  </Card>
+
+  <Card title="Leitfaden zur Fehlersuche" icon="bug" href="/de/legacy/tools/debugging">
+    Erfahren Sie mehr über weiterführende Strategien zur Fehlersuche
+  </Card>
+</CardGroup>
