@@ -1,0 +1,326 @@
+---
+title: Debugging
+description: Ein umfassender Leitfaden zum Debugging von Model Context Protocol (MCP)-Integrationen
+---
+
+Effektives Debugging ist entscheidend bei der Entwicklung von MCP-Servern oder bei deren Integration in Anwendungen. Dieser Leitfaden behandelt die im MCP-Ökosystem verfügbaren Debugging-Werkzeuge und -Vorgehensweisen.
+
+<Info>
+  Dieser Leitfaden richtet sich an macOS-Nutzer. Leitfäden für andere Plattformen folgen in Kürze.
+</Info>
+
+<div id="debugging-tools-overview">
+  ## Überblick über Debugging-Werkzeuge
+</div>
+
+MCP stellt mehrere Werkzeuge zum Debugging auf unterschiedlichen Ebenen bereit:
+
+1. **MCP-Inspector**
+   * Interaktive Debugging-Oberfläche
+   * Direktes Testen von Servern
+   * Siehe den [Inspector-Leitfaden](/de/legacy/tools/inspector) für Details
+
+2. **Claude Desktop Developer Tools**
+   * Integrationstests
+   * Protokollerfassung
+   * Chrome-DevTools-Integration
+
+3. **Serverprotokollierung**
+   * Benutzerdefinierte Protokollierungsimplementierungen
+   * Fehlerverfolgung
+   * Leistungsüberwachung
+
+<div id="debugging-in-claude-desktop">
+  ## Debugging in Claude Desktop
+</div>
+
+<div id="checking-server-status">
+  ### Serverstatus prüfen
+</div>
+
+Die Claude.app-Oberfläche zeigt grundlegende Informationen zum Serverstatus an:
+
+1. Klicken Sie auf das Symbol <img src="/images/claude-desktop-mcp-plug-icon.svg" style={{display: "inline", margin: 0, height: "1.3em"}} />, um Folgendes anzuzeigen:
+   * Verbundene Server
+   * Verfügbare Prompts und Ressourcen
+
+2. Klicken Sie auf das Symbol „Search and tools“ <img src="/images/claude-desktop-mcp-slider.svg" style={{display: "inline", margin: 0, height: "1.3em"}} />, um Folgendes anzuzeigen:
+   * Dem Modell verfügbare Werkzeuge
+
+<div id="viewing-logs">
+  ### Protokolle anzeigen
+</div>
+
+Zeigen Sie detaillierte MCP-Protokolle aus Claude Desktop an:
+
+```bash
+# Protokolle in Echtzeit verfolgen
+tail -n 20 -F ~/Library/Logs/Claude/mcp*.log
+```
+
+Die Protokolle enthalten:
+
+* Ereignisse zur Serververbindung
+* Konfigurationsprobleme
+* Laufzeitfehler
+* Nachrichtenaustausch
+
+<div id="using-chrome-devtools">
+  ### Verwendung der Chrome DevTools
+</div>
+
+Greifen Sie in Claude Desktop auf die Chrome-Entwicklertools zu, um clientseitige Fehler zu untersuchen:
+
+1. Erstellen Sie die Datei `developer_settings.json` und setzen Sie `allowDevTools` auf true:
+
+```bash
+echo '{"allowDevTools": true}' > ~/Library/Application\ Support/Claude/developer_settings.json
+```
+
+2. Öffnen Sie die DevTools: `Command-Option-Shift-I`
+
+Hinweis: Es werden zwei DevTools-Fenster angezeigt:
+
+* Hauptinhaltsfenster
+* Fenster der App-Titelleiste
+
+Verwenden Sie das Panel Console, um clientseitige Fehler zu prüfen.
+
+Verwenden Sie das Panel Network, um Folgendes zu prüfen:
+
+* Nachrichten-Payloads
+* Verbindungszeiten
+
+<div id="common-issues">
+  ## Häufige Probleme
+</div>
+
+<div id="working-directory">
+  ### Arbeitsverzeichnis
+</div>
+
+Bei der Verwendung von MCP-Servern mit Claude Desktop:
+
+* Das Arbeitsverzeichnis für Server, die über `claude_desktop_config.json` gestartet werden, kann nicht definiert sein (etwa `/` unter macOS), da Claude Desktop von überall gestartet werden kann
+* Verwenden Sie in Ihrer Konfiguration und in `.env`-Dateien stets absolute Pfade, um einen zuverlässigen Betrieb sicherzustellen
+* Beim Testen von Servern direkt über die Kommandozeile ist das Arbeitsverzeichnis der Ort, an dem Sie den Befehl ausführen
+
+Verwenden Sie zum Beispiel in `claude_desktop_config.json`:
+
+```json
+{
+  "command": "npx",
+  "args": [
+    "-y",
+    "@modelcontextprotocol/server-filesystem",
+    "/Users/username/data"
+  ]
+}
+```
+
+Anstelle von relativen Pfaden wie `./data`
+
+<div id="environment-variables">
+  ### Umgebungsvariablen
+</div>
+
+MCP-Server erben automatisch nur eine Teilmenge der Umgebungsvariablen, zum Beispiel `USER`, `HOME` und `PATH`.
+
+Um die Standardvariablen zu überschreiben oder eigene bereitzustellen, können Sie in `claude_desktop_config.json` einen `env`-Schlüssel angeben:
+
+```json
+{
+  "myserver": {
+    "command": "mcp-server-myapp",
+    "env": {
+      "MYAPP_API_KEY": "some_key"
+    }
+  }
+}
+```
+
+<div id="server-initialization">
+  ### Serverinitialisierung
+</div>
+
+Häufige Probleme bei der Initialisierung:
+
+1. **Pfadprobleme**
+   * Falscher Pfad zur Server-Executable
+   * Fehlende erforderliche Dateien
+   * Berechtigungsprobleme
+   * Verwenden Sie nach Möglichkeit einen absoluten Pfad für `command`
+
+2. **Konfigurationsfehler**
+   * Ungültige JSON-Syntax
+   * Fehlende Pflichtfelder
+   * Typinkompatibilitäten
+
+3. **Umgebungsprobleme**
+   * Fehlende Umgebungsvariablen
+   * Falsche Werte für Variablen
+   * Berechtigungseinschränkungen
+
+<div id="connection-problems">
+  ### Verbindungsprobleme
+</div>
+
+Wenn Server keine Verbindung herstellen:
+
+1. Claude-Desktop-Logs prüfen
+2. Prüfen, ob der Serverprozess läuft
+3. Eigenständig mit dem [Inspector](/de/legacy/tools/inspector) testen
+4. Protokollkompatibilität prüfen
+
+<div id="implementing-logging">
+  ## Protokollierung implementieren
+</div>
+
+<div id="server-side-logging">
+  ### Serverseitiges Logging
+</div>
+
+Wenn Sie einen Server erstellen, der den lokalen STDIO-[Transport](/de/legacy/concepts/transports) verwendet, werden alle an stderr (Standardfehler) ausgegebenen Nachrichten automatisch von der Host-Anwendung (z. B. Claude Desktop) erfasst.
+
+<Warning>
+  Lokale MCP-Server sollten keine Nachrichten an stdout (Standardausgabe) schreiben, da dies den Betrieb des Protokolls stört.
+</Warning>
+
+Für alle [Transporte](/de/legacy/concepts/transports) können Sie dem Client außerdem Protokolle bereitstellen, indem Sie eine Benachrichtigung mit einer Protokollnachricht senden:
+
+<CodeGroup>
+  ```python Python
+  server.request_context.session.send_log_message(
+    level="info",
+    data="Server started successfully",
+  )
+  ```
+
+  ```typescript TypeScript
+  server.sendLoggingMessage({
+    level: "info",
+    data: "Server started successfully",
+  });
+  ```
+</CodeGroup>
+
+Wichtige Ereignisse zum Protokollieren:
+
+* Initialisierungsschritte
+* Ressourcen-Zugriff
+* Werkzeugausführung
+* Fehlerfälle
+* Leistungskennzahlen
+
+<div id="client-side-logging">
+  ### Clientseitiges Logging
+</div>
+
+In Client-Anwendungen:
+
+1. Debug-Logging aktivieren
+2. Netzwerkverkehr überwachen
+3. Nachrichtenaustausch nachverfolgen
+4. Fehlerzustände protokollieren
+
+<div id="debugging-workflow">
+  ## Debugging-Workflow
+</div>
+
+<div id="development-cycle">
+  ### Entwicklungszyklus
+</div>
+
+1. Initiale Entwicklung
+   * Verwende den [Inspector](/de/legacy/tools/inspector) für grundlegende Tests
+   * Implementiere die Kernfunktionalität
+   * Füge Logging-Punkte hinzu
+
+2. Integrationstests
+   * Teste in Claude Desktop
+   * Protokolle überwachen
+   * Fehlerbehandlung prüfen
+
+<div id="testing-changes">
+  ### Änderungen testen
+</div>
+
+Um Änderungen effizient zu testen:
+
+* **Konfigurationsänderungen**: Claude Desktop neu starten
+* **Änderungen am Servercode**: Mit Command-R neu laden
+* **Schnelle Iterationen**: Während der Entwicklung den [Inspector](/de/legacy/tools/inspector) verwenden
+
+<div id="best-practices">
+  ## Bewährte Praktiken
+</div>
+
+<div id="logging-strategy">
+  ### Protokollierungsstrategie
+</div>
+
+1. **Strukturierte Protokollierung**
+   * Einheitliche Formate verwenden
+   * Kontext hinzufügen
+   * Zeitstempel hinzufügen
+   * Anforderungs-IDs nachverfolgen
+
+2. **Fehlerbehandlung**
+   * Stacktraces protokollieren
+   * Fehlerkontext hinzufügen
+   * Fehlermuster nachverfolgen
+   * Wiederherstellung überwachen
+
+3. **Leistungsüberwachung**
+   * Ausführungszeiten protokollieren
+   * Ressourcennutzung überwachen
+   * Nachrichtengrößen nachverfolgen
+   * Latenz messen
+
+<div id="security-considerations">
+  ### Sicherheitsaspekte
+</div>
+
+Beim Debuggen:
+
+1. **Vertrauliche Daten**
+   * Protokolle bereinigen
+   * Zugangsdaten schützen
+   * Personenbezogene Informationen maskieren
+
+2. **Zugriffskontrolle**
+   * Berechtigungen verifizieren
+   * Authentifizierung prüfen
+   * Zugriffsmuster überwachen
+
+<div id="getting-help">
+  ## Hilfe erhalten
+</div>
+
+Bei Problemen:
+
+1. **Erste Schritte**
+   * Serverprotokolle prüfen
+   * Mit dem [Inspector](/de/legacy/tools/inspector) testen
+   * Konfiguration überprüfen
+   * Umgebung überprüfen
+
+2. **Support-Kanäle**
+   * GitHub-Issues
+   * GitHub-Diskussionen
+
+3. **Bereitstellung von Informationen**
+   * Protokollauszüge
+   * Konfigurationsdateien
+   * Schritte zur Reproduktion
+   * Details zur Umgebung
+
+<div id="next-steps">
+  ## Nächste Schritte
+</div>
+
+<CardGroup cols={2}>
+  <Card title="MCP-Inspector" icon="magnifying-glass" href="/de/legacy/tools/inspector">
+    Lernen Sie, den MCP-Inspector zu nutzen
+  </Card>
+</CardGroup>

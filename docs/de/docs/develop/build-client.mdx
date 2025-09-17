@@ -1,0 +1,1620 @@
+---
+title: "Einen MCP-Client erstellen"
+description: "Erstellen Sie Ihren eigenen Client, der sich in alle MCP-Server integrieren kann."
+---
+
+In diesem Tutorial lernen Sie, wie Sie einen LLM-gestützten Chatbot-Client erstellen, der eine Verbindung zu MCP-Servern herstellt.
+
+Bevor Sie beginnen, empfiehlt es sich, unser Tutorial [Einen MCP-Server erstellen](/de/docs/develop/build-server) durchzugehen, damit Sie verstehen, wie Clients und Server kommunizieren.
+
+<Tabs>
+  <Tab title="Python">
+    [Den vollständigen Code zu diesem Tutorial finden Sie hier.](https://github.com/modelcontextprotocol/quickstart-resources/tree/main/mcp-client-python)
+
+    ## Systemanforderungen
+
+    Bevor Sie beginnen, vergewissern Sie sich, dass Ihr System diese Anforderungen erfüllt:
+
+    * Mac- oder Windows-Computer
+    * Neueste Python-Version installiert
+    * Neueste Version von `uv` installiert
+
+    ## Einrichten der Umgebung
+
+    Erstellen Sie zunächst ein neues Python-Projekt mit `uv`:
+
+    ```bash
+    # Projektverzeichnis erstellen
+    uv init mcp-client
+    cd mcp-client
+
+    # Virtuelle Umgebung erstellen
+    uv venv
+
+    # Virtuelle Umgebung aktivieren
+    # Unter Windows:
+    .venv\Scripts\activate
+    # Unter Unix oder macOS:
+    source .venv/bin/activate
+
+    # Benötigte Pakete installieren
+    uv add mcp anthropic python-dotenv
+
+    # Vorlagendateien entfernen
+    # Unter Windows:
+    del main.py
+    # Unter Unix oder macOS:
+    rm main.py
+
+    # Hauptdatei erstellen
+    touch client.py
+    ```
+
+    ## Einrichten des API-Schlüssels
+
+    Sie benötigen einen Anthropic-API-Schlüssel aus der [Anthropic-Konsole](https://console.anthropic.com/settings/keys).
+
+    Erstellen Sie eine Datei `.env`, um sie zu speichern:
+
+    ```bash
+    # .env-Datei erstellen
+    touch .env
+    ```
+
+    Fügen Sie Ihren Schlüssel zur Datei `.env` hinzu:
+
+    ```bash
+    ANTHROPIC_API_KEY=<dein Schlüssel hier>
+    ```
+
+    Fügen Sie `.env` zu Ihrer `.gitignore` hinzu:
+
+    ```bash
+    echo ".env" >> .gitignore
+    ```
+
+    <Warning>
+      Achten Sie darauf, Ihren `ANTHROPIC_API_KEY` sicher aufzubewahren!
+    </Warning>
+
+    ## Den Client erstellen
+
+    ### Grundstruktur des Clients
+
+    Zuerst richten wir die Importe ein und erstellen die grundlegende Client-Klasse:
+
+    ```python
+    import asyncio
+    from typing import Optional
+    from contextlib import AsyncExitStack
+
+    from mcp import ClientSession, StdioServerParameters
+    from mcp.client.stdio import stdio_client
+
+    from anthropic import Anthropic
+    from dotenv import load_dotenv
+
+    load_dotenv()  # Umgebungsvariablen aus .env laden
+
+    class MCPClient:
+        def __init__(self):
+            # Sitzung und Client-Objekte initialisieren
+            self.session: Optional[ClientSession] = None
+            self.exit_stack = AsyncExitStack()
+            self.anthropic = Anthropic()
+        # Methoden werden hier hinzugefügt
+    ```
+
+    ### Verwaltung von Server-Verbindungen
+
+    Als Nächstes implementieren wir die Methode zum Herstellen einer Verbindung zu einem MCP-Server:
+
+    ```python
+    async def connect_to_server(self, server_script_path: str):
+        """Verbindung zu einem MCP-Server herstellen
+
+        Args:
+            server_script_path: Pfad zum Serverskript (.py oder .js)
+        """
+        is_python = server_script_path.endswith('.py')
+        is_js = server_script_path.endswith('.js')
+        if not (is_python or is_js):
+            raise ValueError("Server-Skript muss eine .py- oder .js-Datei sein")
+
+        command = "python" if is_python else "node"
+        server_params = StdioServerParameters(
+            command=command,
+            args=[server_script_path],
+            env=None
+        )
+
+        stdio_transport = await self.exit_stack.enter_async_context(stdio_client(server_params))
+        self.stdio, self.write = stdio_transport
+        self.session = await self.exit_stack.enter_async_context(ClientSession(self.stdio, self.write))
+
+        await self.session.initialize()
+
+        # Verfügbare Werkzeuge auflisten
+        response = await self.session.list_tools()
+        tools = response.tools
+        print("\nMit Server verbunden. Verfügbare Werkzeuge:", [tool.name for tool in tools])
+    ```
+
+    ### Logik der Abfrageverarbeitung
+
+    Fügen wir nun die Kernfunktionalität zum Verarbeiten von Abfragen und zum Handhaben von Werkzeugaufrufen hinzu:
+
+    ```python
+    async def process_query(self, query: str) -> str:
+        """Eine Anfrage mit Claude und den verfügbaren Werkzeugen verarbeiten"""
+        messages = [
+            {
+                "role": "user",
+                "content": query
+            }
+        ]
+
+        response = await self.session.list_tools()
+        available_tools = [{
+            "name": tool.name,
+            "description": tool.description,
+            "input_schema": tool.inputSchema
+        } for tool in response.tools]
+
+        # Erste Anfrage an die Claude-API
+        response = self.anthropic.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=1000,
+            messages=messages,
+            tools=available_tools
+        )
+
+        # Antwort verarbeiten und Tool-Aufrufe behandeln
+        final_text = []
+
+        assistant_message_content = []
+        for content in response.content:
+            if content.type == 'text':
+                final_text.append(content.text)
+                assistant_message_content.append(content)
+            elif content.type == 'tool_use':
+                tool_name = content.name
+                tool_args = content.input
+
+                # Tool-Aufruf ausführen
+                result = await self.session.call_tool(tool_name, tool_args)
+                final_text.append(f"[Rufe Tool {tool_name} mit Argumenten {tool_args} auf]")
+
+                assistant_message_content.append(content)
+                messages.append({
+                    "role": "assistant",
+                    "content": assistant_message_content
+                })
+                messages.append({
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "tool_result",
+                            "tool_use_id": content.id,
+                            "content": result.content
+                        }
+                    ]
+                })
+
+                # Nächste Antwort von Claude abrufen
+                response = self.anthropic.messages.create(
+                    model="claude-3-5-sonnet-20241022",
+                    max_tokens=1000,
+                    messages=messages,
+                    tools=available_tools
+                )
+
+                final_text.append(response.content[0].text)
+
+        return "\n".join(final_text)
+    ```
+
+    ### Interaktive Chatoberfläche
+
+    Jetzt fügen wir die Chat-Schleife und die Aufräumlogik hinzu:
+
+    ```python
+    async def chat_loop(self):
+        """Einen interaktiven Chat-Durchlauf starten"""
+        print("\nMCP-Client gestartet!")
+        print("Gib deine Eingaben ein oder 'quit' zum Beenden.")
+
+        while True:
+            try:
+                query = input("\nEingabe: ").strip()
+
+                if query.lower() == 'quit':
+                    break
+
+                response = await self.process_query(query)
+                print("\n" + response)
+
+            except Exception as e:
+                print(f"\nFehler: {str(e)}")
+
+    async def cleanup(self):
+        """Ressourcen aufräumen"""
+        await self.exit_stack.aclose()
+    ```
+
+    ### Zentrale Einstiegstelle
+
+    Zum Schluss fügen wir die Hauptausführungslogik hinzu:
+
+    ```python
+    async def main():
+        if len(sys.argv) < 2:
+            print("Aufruf: python client.py <Pfad_zum_Server-Skript>")
+            sys.exit(1)
+
+        client = MCPClient()
+        try:
+            await client.connect_to_server(sys.argv[1])
+            await client.chat_loop()
+        finally:
+            await client.cleanup()
+
+    if __name__ == "__main__":
+        import sys
+        asyncio.run(main())
+    ```
+
+    Sie finden die vollständige Datei `client.py` [hier.](https://gist.github.com/zckly/f3f28ea731e096e53b39b47bf0a2d4b1)
+
+    ## Erläuterung der Kernkomponenten
+
+    ### 1. Clientinitialisierung
+
+    * Die Klasse `MCPClient` wird mit Sitzungsverwaltung und API-Clients initialisiert
+    * Verwendet `AsyncExitStack` für eine korrekte Ressourcenverwaltung
+    * Konfiguriert den Anthropic-Client für Interaktionen mit Claude
+
+    ### 2. Serververbindung
+
+    * Unterstützt sowohl Python- als auch Node.js-Server
+    * Validiert den Skripttyp des Servers
+    * Stellt ordnungsgemäße Kommunikationskanäle her
+    * Initialisiert die Sitzung und listet verfügbare Werkzeuge auf
+
+    ### 3. Abfrageverarbeitung
+
+    * Erhält den Gesprächskontext
+    * Verarbeitet Claudes Antworten und Werkzeugaufrufe
+    * Verwaltet den Nachrichtenfluss zwischen Claude und Werkzeugen
+    * Fasst Ergebnisse zu einer kohärenten Antwort zusammen
+
+    ### 4. Interaktive Benutzeroberfläche
+
+    * Stellt eine einfache Befehlszeilenschnittstelle bereit
+    * Verarbeitet Benutzereingaben und zeigt Antworten an
+    * Beinhaltet grundlegende Fehlerbehandlung
+    * Ermöglicht einen sauberen Abschluss
+
+    ### 5. Ressourcenmanagement
+
+    * Ordnungsgemäße Freigabe von Ressourcen
+    * Fehlerbehandlung bei Verbindungsstörungen
+    * Geordnete Herunterfahrverfahren
+
+    ## Häufige Anpassungspunkte
+
+    1. **Umgang mit Werkzeugen**
+       * `process_query()` anpassen, um bestimmte Werkzeugtypen zu verarbeiten
+       * Benutzerdefinierte Fehlerbehandlung für Werkzeugaufrufe hinzufügen
+       * Werkzeugspezifische Antwortformatierung implementieren
+
+    2. **Verarbeitungslogik für Antworten**
+       * Anpassen, wie Werkzeug-Ergebnisse formatiert werden
+       * Antwortfilterung oder -transformation hinzufügen
+       * Benutzerdefiniertes Logging implementieren
+
+    3. **Benutzeroberfläche**
+       * Fügen Sie eine GUI- oder Weboberfläche hinzu
+       * Implementieren Sie eine erweiterte Konsolenausgabe
+       * Fügen Sie eine Befehlschronik oder Autovervollständigung hinzu
+
+    ## Den Client ausführen
+
+    So führen Sie Ihren MCP-Client mit einem beliebigen MCP-Server aus:
+
+    ```bash
+    uv run client.py path/to/server.py # Python-Server
+    uv run client.py path/to/build/index.js # Node.js-Server
+    ```
+
+    <Note>
+      Wenn Sie das Wetter-Tutorial aus dem Server-Quickstart fortführen, könnte Ihr Befehl etwa so aussehen: `python client.py .../quickstart-resources/weather-server-python/weather.py`
+    </Note>
+
+    Der Client wird Folgendes tun:
+
+    1. Mit dem angegebenen Server verbinden
+    2. Verfügbare Werkzeuge anzeigen
+    3. Starten Sie eine interaktive Chat-Sitzung, in der Sie Folgendes können:
+       * Anfragen eingeben
+       * Werkzeugausführungen anzeigen
+       * Antworten von Claude erhalten
+
+    Hier ist ein Beispiel dafür, wie es aussehen sollte, wenn es mit dem Wetterserver aus dem Server-Quickstart verbunden ist:
+
+    <Frame>
+      <img src="/images/client-claude-cli-python.png" />
+    </Frame>
+
+    ## So funktioniert’s
+
+    Wenn Sie eine Anfrage stellen:
+
+    1. Der Client erhält vom Server die Liste der verfügbaren Werkzeuge
+    2. Ihre Anfrage wird zusammen mit Werkzeugbeschreibungen an Claude übermittelt
+    3. Claude entscheidet, welche Werkzeuge (falls überhaupt) verwendet werden
+    4. Der Client führt alle angeforderten Werkzeugaufrufe über den Server aus
+    5. Ergebnisse werden an Claude zurückgeschickt
+    6. Claude liefert eine Antwort in natürlicher Sprache
+    7. Die Antwort wird dir angezeigt
+
+    ## Best Practices
+
+    1. **Fehlerbehandlung**
+       * Tool-Aufrufe immer in try-catch-Blöcke einschließen
+       * Aussagekräftige Fehlermeldungen liefern
+       * Verbindungsprobleme robust und benutzerfreundlich behandeln
+
+    2. **Ressourcen-Management**
+       * Verwenden Sie `AsyncExitStack` für eine saubere Aufräumung
+       * Verbindungen nach Abschluss schließen
+       * Servertrennungen behandeln
+
+    3. **Sicherheit**
+       * API-Schlüssel sicher in `.env` speichern
+       * Serverantworten prüfen
+       * Mit Werkzeugberechtigungen vorsichtig umgehen
+
+    ## Problembehandlung
+
+    ### Probleme mit Server-Pfaden
+
+    * Prüfen Sie, ob der Pfad zu Ihrem Server-Skript korrekt ist
+    * Verwenden Sie den absoluten Pfad, wenn der relative Pfad nicht funktioniert.
+    * Für Windows-Nutzende: Achten Sie darauf, im Pfad Vorwärtsschrägstriche (/) oder maskierte Backslashes (\) zu verwenden.
+    * Verifizieren Sie, dass die Serverdatei die richtige Erweiterung hat (.py für Python oder .js für Node.js)
+
+    Beispiel für die korrekte Verwendung eines Pfads:
+
+    ```bash
+    # Relativer Pfad
+    uv run client.py ./server/weather.py
+
+    # Absoluter Pfad
+    uv run client.py /Users/username/projects/mcp-server/weather.py
+
+    # Windows-Pfad (beide Formate funktionieren)
+    uv run client.py C:/projects/mcp-server/weather.py
+    uv run client.py C:\\projects\\mcp-server\\weather.py
+    ```
+
+    ### Antwort-Timing
+
+    * Die erste Antwort kann bis zu 30 Sekunden benötigen
+    * Das ist normal und tritt auf während:
+      * Der Server wird gestartet
+      * Claude verarbeitet die Anfrage
+      * Werkzeuge werden ausgeführt
+    * Spätere Antworten sind in der Regel schneller
+    * Unterbrechen Sie den Prozess nicht während dieser anfänglichen Wartezeit
+
+    ### Häufige Fehlermeldungen
+
+    Wenn Sie Folgendes sehen:
+
+    * `FileNotFoundError`: Prüfen Sie Ihren Serverpfad
+    * `Connection refused`: Stellen Sie sicher, dass der Server läuft und der Pfad korrekt ist
+    * `Tool execution failed`: Überprüfen Sie, ob die für das Werkzeug erforderlichen Umgebungsvariablen gesetzt sind
+    * `Timeout error`: Erwägen Sie, das Timeout in Ihrer Client-Konfiguration zu erhöhen
+  </Tab>
+
+  <Tab title="Node">
+    [Den vollständigen Code zu diesem Tutorial finden Sie hier.](https://github.com/modelcontextprotocol/quickstart-resources/tree/main/mcp-client-typescript)
+
+    ## Systemanforderungen
+
+    Bevor Sie beginnen, vergewissern Sie sich, dass Ihr System diese Anforderungen erfüllt:
+
+    * Mac- oder Windows-Computer
+    * Node.js 17 oder höher installiert
+    * Neueste Version von `npm` installiert
+    * Anthropic-API-Schlüssel (Claude)
+
+    ## Einrichten der Umgebung
+
+    Zuerst erstellen und richten wir unser Projekt ein:
+
+    <CodeGroup>
+      ```bash macOS/Linux
+      # Projektverzeichnis erstellen
+      mkdir mcp-client-typescript
+      cd mcp-client-typescript
+
+      # npm-Projekt initialisieren
+      npm init -y
+
+      # Abhängigkeiten installieren
+      npm install @anthropic-ai/sdk @modelcontextprotocol/sdk dotenv
+
+      # Entwicklungsabhängigkeiten installieren
+      npm install -D @types/node typescript
+
+      # Quelldatei erstellen
+      touch index.ts
+      ```
+
+      ```powershell Windows
+      # Projektverzeichnis erstellen
+      md mcp-client-typescript
+      cd mcp-client-typescript
+
+      # npm-Projekt initialisieren
+      npm init -y
+
+      # Abhängigkeiten installieren
+      npm install @anthropic-ai/sdk @modelcontextprotocol/sdk dotenv
+
+      # Entwicklungsabhängigkeiten installieren
+      npm install -D @types/node typescript
+
+      # Quelldatei erstellen
+      new-item index.ts
+      ```
+    </CodeGroup>
+
+    Aktualisieren Sie Ihre `package.json`, um `type: "module"` festzulegen und ein Buildskript hinzuzufügen:
+
+    ```json package.json
+    {
+      "type": "module",
+      "scripts": {
+        "build": "tsc && chmod 755 build/index.js"
+      }
+    }
+    ```
+
+    Erstellen Sie eine Datei namens `tsconfig.json` im Wurzelverzeichnis Ihres Projekts:
+
+    ```json tsconfig.json
+    {
+      "compilerOptions": {
+        "target": "ES2022",
+        "module": "Node16",
+        "moduleResolution": "Node16",
+        "outDir": "./build",
+        "rootDir": "./",
+        "strict": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true
+      },
+      "include": ["index.ts"],
+      "exclude": ["node_modules"]
+    }
+    ```
+
+    ## Einrichten Ihres API-Schlüssels
+
+    Sie benötigen einen Anthropic-API-Schlüssel aus der [Anthropic-Konsole](https://console.anthropic.com/settings/keys).
+
+    Erstellen Sie eine `.env`-Datei, um sie zu speichern:
+
+    ```bash
+    echo "ANTHROPIC_API_KEY=<Ihr Schlüssel hier>" > .env
+    ```
+
+    Fügen Sie `.env` zu Ihrer `.gitignore` hinzu:
+
+    ```bash
+    echo ".env" >> .gitignore
+    ```
+
+    <Warning>
+      Achten Sie darauf, Ihren `ANTHROPIC_API_KEY` sicher aufzubewahren!
+    </Warning>
+
+    ## Den Client erstellen
+
+    ### Grundstruktur des Clients
+
+    Zuerst richten wir unsere Importe ein und erstellen die grundlegende Client-Klasse in `index.ts`:
+
+    ```typescript
+    import { Anthropic } from "@anthropic-ai/sdk";
+    import {
+      MessageParam,
+      Tool,
+    } from "@anthropic-ai/sdk/resources/messages/messages.mjs";
+    import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+    import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+    import readline from "readline/promises";
+    import dotenv from "dotenv";
+
+    dotenv.config();
+
+    const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+    if (!ANTHROPIC_API_KEY) {
+      throw new Error("ANTHROPIC_API_KEY ist nicht gesetzt");
+    }
+
+    class MCPClient {
+      private mcp: Client;
+      private anthropic: Anthropic;
+      private transport: StdioClientTransport | null = null;
+      private tools: Tool[] = [];
+
+      constructor() {
+        this.anthropic = new Anthropic({
+          apiKey: ANTHROPIC_API_KEY,
+        });
+        this.mcp = new Client({ name: "mcp-client-cli", version: "1.0.0" });
+        this.mcp = new Client({ name: "mcp-client-cli", version: "1.0.0" });
+      // methods will go here
+    }
+    ```
+
+    ### Verwaltung der Serververbindung
+
+    Als Nächstes implementieren wir die Methode, um eine Verbindung zu einem MCP-Server herzustellen:
+
+    ```typescript
+    async connectToServer(serverScriptPath: string) {
+      try {
+        const isJs = serverScriptPath.endsWith(".js");
+        const isPy = serverScriptPath.endsWith(".py");
+        if (!isJs && !isPy) {
+          throw new Error("Serverskript muss eine .js- oder .py-Datei sein");
+        }
+        const command = isPy
+          ? process.platform === "win32"
+            ? "python"
+            : "python3"
+          : process.execPath;
+
+        this.transport = new StdioClientTransport({
+          command,
+          args: [serverScriptPath],
+        });
+        await this.mcp.connect(this.transport);
+
+        const toolsResult = await this.mcp.listTools();
+        this.tools = toolsResult.tools.map((tool) => {
+          return {
+            name: tool.name,
+            description: tool.description,
+            input_schema: tool.inputSchema,
+          };
+        });
+        console.log(
+          "Mit Server verbunden. Verfügbare Werkzeuge:",
+          this.tools.map(({ name }) => name)
+        );
+      } catch (e) {
+        console.log("Fehler beim Verbinden mit dem MCP-Server: ", e);
+        throw e;
+      }
+    }
+    ```
+
+    ### Logik der Abfrageverarbeitung
+
+    Fügen wir nun die Kernfunktionalität für die Verarbeitung von Abfragen und die Behandlung von Werkzeugaufrufen hinzu:
+
+    ```typescript
+    async processQuery(query: string) {
+      const messages: MessageParam[] = [
+        {
+          role: "user",
+          content: query,
+        },
+      ];
+
+      const response = await this.anthropic.messages.create({
+        model: "claude-3-5-sonnet-20241022",
+        max_tokens: 1000,
+        messages,
+        tools: this.tools,
+      });
+
+      const finalText = [];
+
+      for (const content of response.content) {
+        if (content.type === "text") {
+          finalText.push(content.text);
+        } else if (content.type === "tool_use") {
+          const toolName = content.name;
+          const toolArgs = content.input as { [x: string]: unknown } | undefined;
+
+          const result = await this.mcp.callTool({
+            name: toolName,
+            arguments: toolArgs,
+          });
+          finalText.push(
+            `[Rufe Werkzeug ${toolName} mit Argumenten ${JSON.stringify(toolArgs)} auf]`
+          );
+
+          messages.push({
+            role: "user",
+            content: result.content as string,
+          });
+
+          const response = await this.anthropic.messages.create({
+            model: "claude-3-5-sonnet-20241022",
+            max_tokens: 1000,
+            messages,
+          });
+
+          finalText.push(
+            response.content[0].type === "text" ? response.content[0].text : ""
+          );
+        }
+      }
+
+      return finalText.join("\n");
+    }
+    ```
+
+    ### Interaktive Chat-Oberfläche
+
+    Nun fügen wir die Chat-Schleife und die Bereinigungsfunktionen hinzu:
+
+    ```typescript
+    async chatLoop() {
+      const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout,
+      });
+
+      try {
+        console.log("\nMCP-Client gestartet!");
+        console.log("Geben Sie Ihre Anfrage ein oder „quit“ zum Beenden.");
+
+        while (true) {
+          const message = await rl.question("\nEingabe: ");
+          if (message.toLowerCase() === "quit") {
+            break;
+          }
+          const response = await this.processQuery(message);
+          console.log("\n" + response);
+        }
+      } finally {
+        rl.close();
+      }
+    }
+
+    async cleanup() {
+      await this.mcp.close();
+    }
+    ```
+
+    ### Haupteinstiegspunkt
+
+    Zum Schluss fügen wir die Hauptausführungslogik hinzu:
+
+    ```typescript
+    async function main() {
+      if (process.argv.length < 3) {
+        console.log("Verwendung: node index.ts <Pfad_zum_Serverskript>");
+        return;
+      }
+      const mcpClient = new MCPClient();
+      try {
+        await mcpClient.connectToServer(process.argv[2]);
+        await mcpClient.chatLoop();
+      } finally {
+        await mcpClient.cleanup();
+        process.exit(0);
+      }
+    }
+
+    main();
+    ```
+
+    ## Den Client ausführen
+
+    So starten Sie Ihren Client mit einem beliebigen MCP-Server:
+
+    ```bash
+    # TypeScript bauen
+    npm run build
+
+    # Client ausführen
+    node build/index.js path/to/server.py # Python-Server
+    node build/index.js path/to/build/index.js # Node-Server
+    ```
+
+    <Note>
+      Wenn Sie das Wetter-Tutorial aus dem Server-Quickstart weiterführen, könnte Ihr Befehl etwa so aussehen: `node build/index.js .../quickstart-resources/weather-server-typescript/build/index.js`
+      ---MDX&#95;CONTENTEND---
+    </Note>
+
+    **Der Client wird Folgendes tun:**
+
+    1. Mit dem angegebenen Server verbinden
+    2. Verfügbare Werkzeuge anzeigen
+    3. Starten Sie eine interaktive Chat‑Sitzung, in der Sie Folgendes tun können:
+       * Anfragen eingeben
+       * Werkzeugausführungen ansehen
+       * Antworten von Claude erhalten
+
+    ## So funktioniert’s
+
+    Wenn Sie eine Abfrage übermitteln:
+
+    1. Der Client erhält vom Server die Liste der verfügbaren Werkzeuge.
+    2. Ihre Anfrage wird zusammen mit Beschreibungen der Werkzeuge an Claude gesendet
+    3. Claude entscheidet, welche Werkzeuge (falls zutreffend) verwendet werden
+    4. Der Client führt alle angeforderten Tool-Aufrufe über den Server aus
+    5. Ergebnisse werden an Claude zurückgesendet.
+    6. Claude gibt eine Antwort in natürlicher Sprache
+    7. Die Antwort wird Ihnen angezeigt
+
+    ## Bewährte Vorgehensweisen
+
+    1. **Fehlerbehandlung**
+       * Nutzen Sie das Typsystem von TypeScript für eine bessere Fehlererkennung
+       * Fassen Sie Werkzeugaufrufe in try-catch-Blöcke
+       * Geben Sie aussagekräftige Fehlermeldungen aus
+       * Gehen Sie mit Verbindungsproblemen umsichtig um
+
+    2. **Sicherheit**
+       * API-Schlüssel sicher in `.env` speichern
+       * Serverantworten prüfen
+       * Vorsichtig mit Werkzeugberechtigungen umgehen
+
+    ## Problembehandlung
+
+    ### Probleme mit Serverpfaden
+
+    * Prüfen Sie noch einmal, ob der Pfad zu Ihrem Serverskript korrekt ist
+    * Verwenden Sie den absoluten Pfad, wenn der relative Pfad nicht funktioniert.
+    * Für Windows-Nutzer stellen Sie sicher, dass Sie Vorwärtsschrägstriche (/) oder escapte Backslashes (\) im Pfad verwenden
+    * Stellen Sie sicher, dass die Serverdatei die richtige Dateierweiterung hat (.js für Node.js oder .py für Python)
+
+    Beispiel für die korrekte Verwendung von Pfaden:
+
+    ```bash
+    # Relativer Pfad
+    node build/index.js ./server/build/index.js
+
+    # Absoluter Pfad
+    node build/index.js /Users/username/projects/mcp-server/build/index.js
+
+    # Windows-Pfad (beide Formate funktionieren)
+    node build/index.js C:/projects/mcp-server/build/index.js
+    node build/index.js C:\\projects\\mcp-server\\build\\index.js
+    ```
+
+    ### Antworttiming
+
+    * Die erste Antwort kann bis zu 30 Sekunden dauern.
+    * Das ist normal und tritt auf, während:
+      * Der Server wird initialisiert
+      * Claude verarbeitet die Anfrage
+      * Werkzeuge werden ausgeführt
+    * Spätere Antworten sind in der Regel schneller
+    * Unterbrechen Sie den Vorgang in dieser anfänglichen Wartezeit nicht
+
+    ### Häufige Fehlermeldungen
+
+    Wenn Sie Folgendes sehen:
+
+    * `Error: Cannot find module`: Überprüfen Sie Ihren Build-Ordner und stellen Sie sicher, dass die TypeScript-Kompilierung erfolgreich abgeschlossen wurde
+    * `Connection refused`: Stellen Sie sicher, dass der Server ausgeführt wird und der Pfad korrekt ist
+    * `Tool execution failed`: Prüfen Sie, ob die für das Werkzeug erforderlichen Umgebungsvariablen gesetzt sind
+    * `ANTHROPIC_API_KEY is not set`: Überprüfen Sie Ihre .env-Datei und die Umgebungsvariablen
+    * `TypeError`: Stellen Sie sicher, dass Sie die richtigen Typen für Werkzeug-Argumente verwenden
+  </Tab>
+
+  <Tab title="Java">
+    <Note>
+      Dies ist eine Quickstart-Demo auf Basis der Spring-AI-MCP-Autokonfiguration und Boot-Startern.
+      Um zu erfahren, wie man synchrone und asynchrone MCP-Clients manuell erstellt, siehe die Dokumentation zum [Java SDK Client](/de/sdk/java/mcp-client).
+    </Note>
+
+    Dieses Beispiel zeigt, wie Sie einen interaktiven Chatbot erstellen, der das Model Context Protocol (MCP) von Spring AI mit dem [Brave Search MCP-Server](https://github.com/modelcontextprotocol/servers-archived/tree/main/src/brave-search) kombiniert. Die Anwendung stellt eine Konversationsschnittstelle bereit, die vom Claude-Modell von Anthropic betrieben wird und Internetsuchen über Brave Search ausführen kann – so sind natürliche Sprachinteraktionen mit Webdaten in Echtzeit möglich.
+    [Den vollständigen Code für dieses Tutorial finden Sie hier.](https://github.com/spring-projects/spring-ai-examples/tree/main/model-context-protocol/web-search/brave-chatbot)
+
+    ## Systemanforderungen
+
+    Bevor Sie beginnen, stellen Sie sicher, dass Ihr System die folgenden Anforderungen erfüllt:
+
+    * Java 17 oder höher
+    * Maven 3.6+
+    * npx-Paket-Manager
+    * Anthropic API-Schlüssel (Claude)
+    * Brave Search-API-Schlüssel
+
+    ## Einrichten Ihrer Umgebung
+
+    1. Installiere npx (Node Package eXecute):
+       Stelle zunächst sicher, dass [npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) installiert ist
+       und führe dann Folgendes aus:
+
+       ```bash
+       npm install -g npx
+       ```
+
+    2. Repository klonen:
+
+       ```bash
+       git clone https://github.com/spring-projects/spring-ai-examples.git
+       cd model-context-protocol/brave-chatbot
+       ```
+
+    3. Richten Sie Ihre API-Schlüssel ein:
+
+       ```bash
+       export ANTHROPIC_API_KEY='dein-anthropic-api-schlüssel-hier'
+       export BRAVE_API_KEY='dein-brave-api-schlüssel-hier'
+       ```
+
+    4. Die Anwendung bauen:
+
+       ```bash
+       ./mvnw clean install
+       ```
+
+    5. Führen Sie die Anwendung mit Maven aus:
+       ```bash
+       ./mvnw spring-boot:run
+       ```
+
+    <Warning>
+      Stellen Sie sicher, dass Sie Ihre Schlüssel `ANTHROPIC_API_KEY` und `BRAVE_API_KEY` sicher aufbewahren!
+    </Warning>
+
+    ## So funktioniert&#39;s
+
+    Die Anwendung integriert Spring AI mithilfe mehrerer Komponenten mit dem Brave-Search-MCP-Server:
+
+    ### MCP-Client-Konfiguration
+
+    1. Erforderliche Abhängigkeiten in der pom.xml:
+
+    ```xml
+    <dependency>
+        <groupId>org.springframework.ai</groupId>
+        <artifactId>spring-ai-starter-mcp-client</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.ai</groupId>
+        <artifactId>spring-ai-starter-model-anthropic</artifactId>
+    </dependency>
+    ```
+
+    2. Anwendungseinstellungen (application.yml):
+
+    ```yml
+    spring:
+      ai:
+        mcp:
+          client:
+            enabled: true
+            name: brave-search-client
+            version: 1.0.0
+            type: SYNC
+            request-timeout: 20s
+            stdio:
+              root-change-notification: true
+              servers-configuration: classpath:/mcp-servers-config.json
+            toolcallback:
+              enabled: true
+        anthropic:
+          api-key: ${ANTHROPIC_API_KEY}
+    ```
+
+    Dies aktiviert den `spring-ai-starter-mcp-client`, der auf Basis der bereitgestellten Serverkonfiguration einen oder mehrere `McpClient`-Instanzen erstellt.
+    Die Eigenschaft `spring.ai.mcp.client.toolcallback.enabled=true` aktiviert den Tool-Callback-Mechanismus, der automatisch alle MCP-Werkzeuge als Spring-AI‑Werkzeuge registriert.
+    Standardmäßig ist er deaktiviert.
+
+    3. MCP-Server-Konfiguration („mcp-servers-config.json“):
+
+    ```json
+    {
+      "mcpServers": {
+        "brave-search": {
+          "command": "npx",
+          "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+          "env": {
+            "BRAVE_API_KEY": "<BRAVE-API-SCHLÜSSEL EINGEBEN>"
+          }
+        }
+      }
+    }
+    ```
+
+    ### Chat-Implementierung
+
+    Der Chatbot wird mit dem ChatClient von Spring AI und integrierten MCP-Werkzeugen implementiert:
+
+    ```java
+    var chatClient = chatClientBuilder
+        .defaultSystem("Du bist ein hilfreicher Assistent und Experte für KI und Java.")
+        .defaultToolCallbacks((Object[]) mcpToolAdapter.toolCallbacks())
+        .defaultAdvisors(new MessageChatMemoryAdvisor(new InMemoryChatMemory()))
+        .build();
+    ```
+
+    Zentrale Funktionen:
+
+    * Verwendet das Claude-KI-Modell für natürliches Sprachverständnis
+    * Integriert Brave Search über MCP, um Echtzeit-Websuche zu ermöglichen
+    * Verwaltet Gesprächsspeicher mit InMemoryChatMemory
+    * Läuft als interaktive Befehlszeilenanwendung
+
+    ### Build und Ausführung
+
+    ```bash
+    ./mvnw clean install
+    java -jar ./target/ai-mcp-brave-chatbot-0.0.1-SNAPSHOT.jar
+    ```
+
+    oder
+
+    ```bash
+    ./mvnw spring-boot:run
+    ```
+
+    Die Anwendung startet eine interaktive Chat-Sitzung, in der Sie Fragen stellen können. Der Chatbot nutzt bei Bedarf Brave Search, um Informationen aus dem Internet zu finden und Ihre Anfragen zu beantworten.
+
+    Der Chatbot kann:
+
+    * Fragen mithilfe des integrierten Wissens beantworten
+    * Bei Bedarf Websuchen mit Brave Search durchführen
+    * Kontext aus vorherigen Nachrichten im Gespräch merken
+    * Informationen aus mehreren Quellen kombinieren, um umfassende Antworten bereitzustellen
+
+    ### Erweiterte Konfiguration
+
+    Der MCP-Client unterstützt zusätzliche Konfigurationsoptionen:
+
+    * Client-Anpassung durch `McpSyncClientCustomizer` oder `McpAsyncClientCustomizer`
+    * Mehrere Clients mit mehreren Transporttypen: `STDIO` und `SSE` (Server-Sent Events)
+    * Integration in das Tool-Ausführungsframework von Spring AI
+    * Automatische Initialisierung und Verwaltung des Client-Lebenszyklus
+
+    Für WebFlux-basierte Anwendungen können Sie stattdessen den WebFlux Starter verwenden:
+
+    ```xml
+    <dependency>
+        <groupId>org.springframework.ai</groupId>
+        <artifactId>spring-ai-mcp-client-webflux-spring-boot-starter</artifactId>
+    </dependency>
+    ```
+
+    Dies bietet ähnliche Funktionen, verwendet jedoch eine auf WebFlux basierende SSE-Transportimplementierung und wird für den Produktionseinsatz empfohlen.
+  </Tab>
+
+  <Tab title="Kotlin">
+    [Den vollständigen Code zu diesem Tutorial finden Sie hier.](https://github.com/modelcontextprotocol/kotlin-sdk/tree/main/samples/kotlin-mcp-client)
+
+    ## Systemanforderungen
+
+    Bevor Sie beginnen, stellen Sie sicher, dass Ihr System die folgenden Anforderungen erfüllt:
+
+    * Java 17 oder höher
+    * Anthropic-API-Schlüssel (Claude)
+
+    ## Einrichten der Umgebung
+
+    Installieren wir zunächst `java` und `gradle`, falls noch nicht geschehen.
+    Sie können `java` von der [offiziellen Oracle-JDK-Website](https://www.oracle.com/java/technologies/downloads/) herunterladen.
+    Überprüfen Sie Ihre `java`-Installation:
+
+    ```bash
+    java --version
+    ```
+
+    Legen wir nun dein Projekt an und richten es ein:
+
+    <CodeGroup>
+      ```bash macOS/Linux
+      # Erstellen Sie ein neues Verzeichnis für unser Projekt
+      mkdir kotlin-mcp-client
+      cd kotlin-mcp-client
+
+      # Initialisieren Sie ein neues Kotlin-Projekt
+      gradle init
+      ```
+
+      ```powershell Windows
+      # Erstellen Sie ein neues Verzeichnis für unser Projekt
+      md kotlin-mcp-client
+      cd kotlin-mcp-client
+      # Initialisieren Sie ein neues Kotlin-Projekt
+      gradle init
+      ```
+    </CodeGroup>
+
+    Nach dem Ausführen von `gradle init` werden Ihnen Optionen zur Erstellung Ihres Projekts angezeigt.
+    Wählen Sie **Application** als Projekttyp, **Kotlin** als Programmiersprache und **Java 17** als Java-Version.
+
+    Alternativ können Sie eine Kotlin-Anwendung mit dem [IntelliJ-IDEA-Projektassistenten](https://kotlinlang.org/docs/jvm-get-started.html) erstellen.
+
+    Nachdem Sie das Projekt erstellt haben, fügen Sie die folgenden Abhängigkeiten hinzu:
+
+    <CodeGroup>
+      ```kotlin build.gradle.kts
+      val mcpVersion = "0.4.0"
+      val slf4jVersion = "2.0.9"
+      val anthropicVersion = "0.8.0"
+
+      dependencies {
+          implementation("io.modelcontextprotocol:kotlin-sdk:$mcpVersion")
+          implementation("org.slf4j:slf4j-nop:$slf4jVersion")
+          implementation("com.anthropic:anthropic-java:$anthropicVersion")
+      }
+      ```
+
+      ```groovy build.gradle
+      def mcpVersion = '0.3.0'
+      def slf4jVersion = '2.0.9'
+      def anthropicVersion = '0.8.0'
+      dependencies {
+          implementation "io.modelcontextprotocol:kotlin-sdk:$mcpVersion"
+          implementation "org.slf4j:slf4j-nop:$slf4jVersion"
+          implementation "com.anthropic:anthropic-java:$anthropicVersion"
+      }
+      ```
+    </CodeGroup>
+
+    Fügen Sie außerdem die folgenden Plugins zu Ihrem Build-Skript hinzu:
+
+    <CodeGroup>
+      ```kotlin build.gradle.kts
+      plugins {
+          id("com.github.johnrengelman.shadow") version "8.1.1"
+      }
+      ```
+
+      ```groovy build.gradle
+      plugins {
+          id 'com.github.johnrengelman.shadow' version '8.1.1'
+      }
+      ```
+    </CodeGroup>
+
+    ## Ihren API-Schlüssel einrichten
+
+    Sie benötigen einen Anthropic-API-Schlüssel von der [Anthropic Console](https://console.anthropic.com/settings/keys).
+
+    Richten Sie Ihren API-Schlüssel ein:
+
+    ```bash
+    export ANTHROPIC_API_KEY='dein-anthropic-api-schlüssel-hier'
+    ```
+
+    <Warning>
+      Stellen Sie sicher, dass Sie Ihren `ANTHROPIC_API_KEY` geheim halten!
+    </Warning>
+
+    ## Den Client erstellen
+
+    ### Grundstruktur des Clients
+
+    Erstellen wir zunächst die grundlegende Client-Klasse:
+
+    ```kotlin
+    class MCPClient : AutoCloseable {
+        private val anthropic = AnthropicOkHttpClient.fromEnv()
+        private val mcp: Client = Client(clientInfo = Implementation(name = "mcp-client-cli", version = "1.0.0"))
+        private lateinit var tools: List<ToolUnion>
+
+        // Methoden kommen hier hin
+
+        override fun close() {
+            runBlocking {
+                mcp.close()
+                anthropic.close()
+            }
+        }
+    ```
+
+    ### Verwaltung der Serververbindung
+
+    Als Nächstes implementieren wir die Methode, um eine Verbindung zu einem MCP-Server herzustellen:
+
+    ```kotlin
+    suspend fun connectToServer(serverScriptPath: String) {
+        try {
+            val command = buildList {
+                when (serverScriptPath.substringAfterLast(".")) {
+                    "js" -> add("node")
+                    "py" -> add(if (System.getProperty("os.name").lowercase().contains("win")) "python" else "python3")
+                    "jar" -> addAll(listOf("java", "-jar"))
+                    else -> throw IllegalArgumentException("Serverskript muss eine .js-, .py- oder .jar-Datei sein")
+                }
+                add(serverScriptPath)
+            }
+
+            val process = ProcessBuilder(command).start()
+            val transport = StdioClientTransport(
+                input = process.inputStream.asSource().buffered(),
+                output = process.outputStream.asSink().buffered()
+            )
+
+            mcp.connect(transport)
+
+            val toolsResult = mcp.listTools()
+            tools = toolsResult?.tools?.map { tool ->
+                ToolUnion.ofTool(
+                    Tool.builder()
+                        .name(tool.name)
+                        .description(tool.description ?: "")
+                        .inputSchema(
+                            Tool.InputSchema.builder()
+                                .type(JsonValue.from(tool.inputSchema.type))
+                                .properties(tool.inputSchema.properties.toJsonValue())
+                                .putAdditionalProperty("required", JsonValue.from(tool.inputSchema.required))
+                                .build()
+                        )
+                        .build()
+                )
+            } ?: emptyList()
+            println("Mit Server verbunden; Werkzeuge: ${tools.joinToString(", ") { it.tool().get().name() }}")
+        } catch (e: Exception) {
+            println("Verbindung zum MCP-Server fehlgeschlagen: $e")
+            throw e
+        }
+    }
+    ```
+
+    Erstellen Sie außerdem eine Hilfsfunktion, die für Anthropic ein `JsonObject` in ein `JsonValue` konvertiert:
+
+    ```kotlin
+    private fun JsonObject.toJsonValue(): JsonValue {
+        val mapper = ObjectMapper()
+        val node = mapper.readTree(this.toString())
+        return JsonValue.fromJsonNode(node)
+    }
+    ```
+
+    ### Logik der Anfrageverarbeitung
+
+    Fügen wir nun die Kernfunktionalität für die Verarbeitung von Abfragen und das Handling von Tool-Aufrufen hinzu:
+
+    ```kotlin
+    private val messageParamsBuilder: MessageCreateParams.Builder = MessageCreateParams.builder()
+        .model(Model.CLAUDE_3_5_SONNET_20241022)
+        .maxTokens(1024)
+
+    suspend fun processQuery(query: String): String {
+        val messages = mutableListOf(
+            MessageParam.builder()
+                .role(MessageParam.Role.USER)
+                .content(query)
+                .build()
+        )
+
+        val response = anthropic.messages().create(
+            messageParamsBuilder
+                .messages(messages)
+                .tools(tools)
+                .build()
+        )
+
+        val finalText = mutableListOf<String>()
+        response.content().forEach { content ->
+            when {
+                content.isText() -> finalText.add(content.text().getOrNull()?.text() ?: "")
+
+                content.isToolUse() -> {
+                    val toolName = content.toolUse().get().name()
+                    val toolArgs =
+                        content.toolUse().get()._input().convert(object : TypeReference<Map<String, JsonValue>>() {})
+
+                    val result = mcp.callTool(
+                        name = toolName,
+                        arguments = toolArgs ?: emptyMap()
+                    )
+                    finalText.add("[Werkzeug $toolName wird mit Argumenten $toolArgs aufgerufen]")
+
+                    messages.add(
+                        MessageParam.builder()
+                            .role(MessageParam.Role.USER)
+                            .content(
+                                """
+                                    "type": "tool_result",
+                                    "tool_name": $toolName,
+                                    "result": ${result?.content?.joinToString("\n") { (it as TextContent).text ?: "" }}
+                                """.trimIndent()
+                            )
+                            .build()
+                    )
+
+                    val aiResponse = anthropic.messages().create(
+                        messageParamsBuilder
+                            .messages(messages)
+                            .build()
+                    )
+
+                    finalText.add(aiResponse.content().first().text().getOrNull()?.text() ?: "")
+                }
+            }
+        }
+
+        return finalText.joinToString("\n", prefix = "", postfix = "")
+    }
+    ```
+
+    ### Interaktiver Chat
+
+    Wir fügen die Chatloop hinzu:
+
+    ```kotlin
+    suspend fun chatLoop() {
+        println("\nMCP-Client gestartet!")
+        println("Gib deine Anfragen ein oder „quit“ zum Beenden.")
+
+        while (true) {
+            print("\nAnfrage: ")
+            val message = readLine() ?: break
+            if (message.lowercase() == "quit") break
+            val response = processQuery(message)
+            println("\n$response")
+        }
+    }
+    ```
+
+    ### Haupteinstieg
+
+    Zum Schluss fügen wir die Hauptausführungsfunktion hinzu:
+
+    ```kotlin
+    fun main(args: Array<String>) = runBlocking {
+        if (args.isEmpty()) throw IllegalArgumentException("Aufruf: java -jar <Ihr_Pfad>/build/libs/kotlin-mcp-client-0.1.0-all.jar <Pfad_zum_Server-Skript>")
+        val serverPath = args.first()
+        val client = MCPClient()
+        client.use {
+            client.connectToServer(serverPath)
+            client.chatLoop()
+        }
+    }
+    ```
+
+    ## Den Client ausführen
+
+    So führen Sie Ihren Client mit einem beliebigen MCP-Server aus:
+
+    ```bash
+    ./gradlew build
+
+    # Client ausführen
+    java -jar build/libs/<your-jar-name>.jar path/to/server.jar # JVM-Server
+    java -jar build/libs/<your-jar-name>.jar path/to/server.py # Python-Server
+    java -jar build/libs/<your-jar-name>.jar path/to/build/index.js # Node-Server
+    ```
+
+    <Note>
+      Wenn Sie das Wetter-Tutorial aus dem Server-Quickstart fortführen, könnte Ihr Befehl in etwa so aussehen: `java -jar build/libs/kotlin-mcp-client-0.1.0-all.jar .../samples/weather-stdio-server/build/libs/weather-stdio-server-0.1.0-all.jar`
+    </Note>
+
+    **Der Client wird Folgendes tun:**
+
+    1. Mit dem angegebenen Server verbinden
+    2. Verfügbare Werkzeuge anzeigen
+    3. Starten Sie eine interaktive Chat-Sitzung, in der Sie Folgendes tun können:
+       * Anfragen eingeben
+       * Werkzeugausführungen ansehen
+       * Antworten von Claude erhalten
+
+    ## Funktionsweise
+
+    Hier ist ein grobes Workflow-Schema:
+
+    ```mermaid
+    ---
+    config:
+        theme: neutral
+    ---
+    sequenceDiagram
+        actor User
+        participant Client
+        participant Claude
+        participant MCP_Server as MCP Server
+        participant Tools
+
+        User->>Client: Anfrage senden
+        Client<<->>MCP_Server: Verfügbare Werkzeuge abrufen
+        Client->>Claude: Anfrage mit Werkzeugbeschreibungen senden
+        Claude-->>Client: Entscheidung zur Werkzeugausführung
+        Client->>MCP_Server: Ausführung des Werkzeugs anfordern
+        MCP_Server->>Tools: Ausgewählte Werkzeuge ausführen
+        Tools-->>MCP_Server: Ergebnisse zurückgeben
+        MCP_Server-->>Client: Ergebnisse senden
+        Client->>Claude: Werkzeugergebnisse senden
+        Claude-->>Client: Finale Antwort bereitstellen
+        Client-->>User: Antwort anzeigen
+    ```
+
+    Wenn Sie eine Abfrage senden:
+
+    1. Der Client ruft die Liste der verfügbaren Werkzeuge vom Server ab
+    2. Ihre Anfrage wird zusammen mit Beschreibungen der Werkzeuge an Claude gesendet
+    3. Claude entscheidet, welche Werkzeuge (falls überhaupt) verwendet werden
+    4. Der Client führt alle angeforderten Werkzeuge über den Server aus
+    5. Ergebnisse werden an Claude zurückgesendet.
+    6. Claude gibt eine Antwort in natürlicher Sprache
+    7. Die Antwort wird Ihnen angezeigt
+
+    ## Bewährte Verfahren
+
+    1. **Fehlerbehandlung**
+       * Nutze das Typsystem von Kotlin, um Fehler explizit zu modellieren
+       * Fasse Aufrufe externer Werkzeuge und APIs in `try-catch`-Blöcke, wenn Ausnahmen möglich sind
+       * Formuliere klare und aussagekräftige Fehlermeldungen
+       * Behandle Netzwerk-Timeouts und Verbindungsprobleme möglichst elegant
+
+    2. **Sicherheit**
+       * API-Schlüssel und -Geheimnisse sicher in `local.properties`, Umgebungsvariablen oder Secret-Managern aufbewahren
+       * Alle externen Antworten prüfen, um unerwartete oder unsichere Datennutzung zu vermeiden
+       * Beim Einsatz von Werkzeugen auf Berechtigungen und Vertrauensgrenzen achten
+
+    ## Fehlerbehebung
+
+    ### Probleme mit Serverpfaden
+
+    * Überprüfen Sie, ob der Pfad zu Ihrem Serverskript korrekt ist
+    * Verwenden Sie den absoluten Pfad, wenn der relative Pfad nicht funktioniert.
+    * Für Windows-Nutzende stellen Sie sicher, dass Sie Vorwärtsschrägstriche (/) oder maskierte Backslashes (\) im Pfad verwenden
+    * Stellen Sie sicher, dass die erforderliche Laufzeitumgebung installiert ist (Java für Java, npm für Node.js oder uv für Python).
+    * Stellen Sie sicher, dass die Serverdatei die korrekte Dateiendung besitzt (.jar für Java, .js für Node.js oder .py für Python)
+
+    Beispiel für die korrekte Verwendung von Pfaden:
+
+    ```bash
+    # Relativer Pfad
+    java -jar build/libs/client.jar ./server/build/libs/server.jar
+
+    # Absoluter Pfad
+    java -jar build/libs/client.jar /Users/username/projects/mcp-server/build/libs/server.jar
+
+    # Windows-Pfad (beide Formate funktionieren)
+    java -jar build/libs/client.jar C:/projects/mcp-server/build/libs/server.jar
+    java -jar build/libs/client.jar C:\\projects\\mcp-server\\build\\libs\\server.jar
+    ```
+
+    ### Antwort-Timing
+
+    * Die erste Antwort kann bis zu 30 Sekunden dauern
+    * Das ist normal und tritt auf während:
+      * Der Server wird initialisiert
+      * Claude verarbeitet die Anfrage
+      * Werkzeuge werden ausgeführt
+    * Spätere Antworten sind in der Regel schneller
+    * Unterbrechen Sie den Prozess während dieser anfänglichen Wartezeit nicht
+
+    ### Häufige Fehlermeldungen
+
+    Wenn Sie Folgendes sehen:
+
+    * `Connection refused`: Stellen Sie sicher, dass der Server läuft und der Pfad korrekt ist.
+    * `Tool execution failed`: Prüfen Sie, ob die für das Werkzeug erforderlichen Umgebungsvariablen gesetzt sind
+    * `ANTHROPIC_API_KEY is not set`: Prüfen Sie Ihre Umgebungsvariablen
+  </Tab>
+
+  <Tab title="C#">
+    [Den vollständigen Code zu diesem Tutorial finden Sie hier.](https://github.com/modelcontextprotocol/csharp-sdk/tree/main/samples/QuickstartClient)
+
+    ## Systemanforderungen
+
+    Bevor Sie beginnen, vergewissern Sie sich, dass Ihr System diese Anforderungen erfüllt:
+
+    * .NET 8.0 oder höher
+    * Anthropic-API-Schlüssel (Claude)
+    * Windows, Linux oder macOS
+
+    ## Einrichten der Umgebung
+
+    Erstellen Sie zunächst ein neues .NET-Projekt:
+
+    ```bash
+    dotnet new console -n QuickstartClient
+    cd QuickstartClient
+    ```
+
+    Fügen Sie anschließend die erforderlichen Abhängigkeiten zu Ihrem Projekt hinzu:
+
+    ```bash
+    dotnet add package ModelContextProtocol --prerelease
+    dotnet add package Anthropic.SDK
+    dotnet add package Microsoft.Extensions.Hosting
+    dotnet add package Microsoft.Extensions.AI
+    ```
+
+    ## Einrichten deines API-Schlüssels
+
+    Sie benötigen einen Anthropic-API-Schlüssel aus der [Anthropic Console](https://console.anthropic.com/settings/keys).
+
+    ```bash
+    dotnet user-secrets init
+    dotnet user-secrets set "ANTHROPIC_API_KEY" "<dein Schlüssel hier>"
+    ```
+
+    ## Den Client erstellen
+
+    ### Grundstruktur des Clients
+
+    Zuerst richten wir die grundlegende Clientklasse in der Datei `Program.cs` ein:
+
+    ```csharp
+    using Anthropic.SDK;
+    using Microsoft.Extensions.AI;
+    using Microsoft.Extensions.Configuration;
+    using Microsoft.Extensions.Hosting;
+    using ModelContextProtocol.Client;
+    using ModelContextProtocol.Protocol.Transport;
+
+    var builder = Host.CreateApplicationBuilder(args);
+
+    builder.Configuration
+        .AddEnvironmentVariables()
+        .AddUserSecrets<Program>();
+    ```
+
+    Dadurch entsteht der Anfang einer .NET-Konsolenanwendung, die den API-Schlüssel aus Benutzergeheimnissen auslesen kann.
+
+    Als Nächstes richten wir den MCP-Client ein:
+
+    ```csharp
+    var (command, arguments) = GetCommandAndArguments(args);
+
+    var clientTransport = new StdioClientTransport(new()
+    {
+        Name = "Demo-Server",
+        Command = command,
+        Arguments = arguments,
+    });
+
+    await using var mcpClient = await McpClientFactory.CreateAsync(clientTransport);
+
+    var tools = await mcpClient.ListToolsAsync();
+    foreach (var tool in tools)
+    {
+        Console.WriteLine($"Mit Server verbunden, verfügbare Werkzeuge: {tool.Name}")
+    }
+    ```
+
+    Fügen Sie die folgende Funktion am Ende der Datei `Program.cs` hinzu:
+
+    ```csharp
+    static (string command, string[] arguments) GetCommandAndArguments(string[] args)
+    {
+        return args switch
+        {
+            [var script] when script.EndsWith(".py") => ("python", args),
+            [var script] when script.EndsWith(".js") => ("node", args),
+            [var script] when Directory.Exists(script) || (File.Exists(script) && script.EndsWith(".csproj")) => ("dotnet", ["run", "--project", script, "--no-build"]),
+            _ => throw new NotSupportedException("Ein nicht unterstütztes Server-Skript wurde angegeben. Unterstützte Skripte sind .py, .js oder .csproj")
+        };
+    }
+    ```
+
+    Dies erzeugt einen MCP-Client, der sich mit einem Server verbindet, der als Befehlszeilenargument angegeben wird. Anschließend listet er die verfügbaren Werkzeuge des verbundenen Servers auf.
+
+    ### Logik der Anfrageverarbeitung
+
+    Fügen wir nun die Kernfunktionalität zum Verarbeiten von Abfragen und zum Ausführen von Werkzeugaufrufen hinzu:
+
+    ```csharp
+    using var anthropicClient = new AnthropicClient(new APIAuthentication(builder.Configuration["ANTHROPIC_API_KEY"]))
+        .Messages
+        .AsBuilder()
+        .UseFunctionInvocation()
+        .Build();
+
+    var options = new ChatOptions
+    {
+        MaxOutputTokens = 1000,
+        ModelId = "claude-3-5-sonnet-20241022",
+        Tools = [.. tools]
+    };
+
+    Console.ForegroundColor = ConsoleColor.Green;
+    Console.WriteLine("MCP-Client gestartet!");
+    Console.ResetColor();
+
+    PromptForInput();
+    while(Console.ReadLine() is string query && !"exit".Equals(query, StringComparison.OrdinalIgnoreCase))
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            PromptForInput();
+            continue;
+        }
+
+        await foreach (var message in anthropicClient.GetStreamingResponseAsync(query, options))
+        {
+            Console.Write(message);
+        }
+        Console.WriteLine();
+
+        PromptForInput();
+    }
+
+    static void PromptForInput()
+    {
+        Console.WriteLine("Geben Sie einen Befehl ein (oder 'exit' zum Beenden):");
+        Console.ForegroundColor = ConsoleColor.Cyan;
+        Console.Write("> ");
+        Console.ResetColor();
+    }
+    ```
+
+    ## Wichtige Komponenten im Überblick
+
+    ### 1. Client-Initialisierung
+
+    * Der Client wird mit `McpClientFactory.CreateAsync()` initialisiert; dabei werden der Transporttyp und der auszuführende Befehl zum Starten des Servers festgelegt.
+
+    ### 2. Server-Verbindung
+
+    * Unterstützt Python-, Node.js- und .NET-Server.
+    * Der Server wird mit dem in den Argumenten angegebenen Befehl gestartet.
+    * Konfiguriert die Verwendung von STDIO für die Kommunikation mit dem Server.
+    * Initialisiert die Sitzung und die verfügbaren Werkzeuge.
+
+    ### 3. Anfrageverarbeitung
+
+    * Verwendet [Microsoft.Extensions.AI](https://learn.microsoft.com/dotnet/ai/ai-extensions) für den Chat-Client.
+    * Konfiguriert den `IChatClient` für die automatische Ausführung von Werkzeugen (Funktionen).
+    * Der Client liest die Eingabe des Benutzers und sendet sie an den Server.
+    * Der Server verarbeitet die Anfrage und gibt eine Antwort zurück.
+    * Die Antwort wird dem Nutzer angezeigt.
+
+    ## Den Client ausführen
+
+    So starten Sie Ihren Client mit einem beliebigen MCP-Server:
+
+    ```bash
+    dotnet run -- path/to/server.csproj # .NET-Server
+    dotnet run -- path/to/server.py # Python-Server
+    dotnet run -- path/to/server.js # Node.js-Server
+    ```
+
+    <Note>
+      Wenn Sie das Wetter-Tutorial aus dem Server-Quickstart fortsetzen, könnte Ihr Befehl etwa so aussehen: `dotnet run -- path/to/QuickstartWeatherServer`.
+    </Note>
+
+    Der Client wird:
+
+    1. Mit dem angegebenen Server verbinden
+    2. Verfügbare Werkzeuge anzeigen
+    3. Starten Sie eine interaktive Chat-Sitzung, in der Sie Folgendes tun können:
+       * Anfragen eingeben
+       * Werkzeugausführungen ansehen
+       * Antworten von Claude erhalten
+    4. Beenden Sie die Sitzung, wenn Sie fertig sind.
+
+    Hier ist ein Beispiel, wie es aussehen sollte, wenn es mit dem Quickstart eines Wetterservers verbunden ist:
+
+    <Frame>
+      <img src="/images/quickstart-dotnet-client.png" />
+    </Frame>
+  </Tab>
+</Tabs>
+
+<div id="next-steps">
+  ## Nächste Schritte
+</div>
+
+<CardGroup cols={2}>
+  <Card title="Beispiel-Server" icon="grid" href="/de/examples">
+    Entdecken Sie unsere Galerie offizieller MCP-Server und -Implementierungen
+  </Card>
+
+  <Card title="Beispiel-Clients" icon="cubes" href="/de/clients">
+    Sehen Sie sich die Liste der Clients an, die MCP-Integrationen unterstützen
+  </Card>
+</CardGroup>

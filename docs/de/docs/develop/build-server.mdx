@@ -1,0 +1,1854 @@
+---
+title: "Einen MCP-Server entwickeln"
+description: "Erstellen Sie Ihren eigenen Server für die Verwendung in Claude für Desktop und anderen Clients."
+---
+
+In diesem Tutorial entwickeln wir einen einfachen MCP-Wetterserver und verbinden ihn mit einem Host: Claude für Desktop.
+
+<div id="what-well-be-building">
+  ### Was wir bauen werden
+</div>
+
+Wir werden einen Server erstellen, der zwei Werkzeuge bereitstellt: `get_alerts` und `get_forecast`. Anschließend verbinden wir den Server mit einem MCP-Host (in diesem Fall Claude für Desktop):
+
+<Frame>
+  <img src="/images/current-weather.png" />
+</Frame>
+
+<Note>
+  Server können sich mit jedem Client verbinden. Wir haben hier der Einfachheit halber Claude für Desktop gewählt, aber wir bieten auch Anleitungen zum [Erstellen eines eigenen Clients](/de/docs/develop/build-client) sowie eine [Liste weiterer Clients](/de/clients) an.
+</Note>
+
+<div id="core-mcp-concepts">
+  ### Zentrale MCP-Konzepte
+</div>
+
+MCP-Server können drei Hauptarten von Fähigkeiten bereitstellen:
+
+1. **[Ressourcen](/de/docs/learn/server-concepts#resources)**: Dateiliche Daten, die von Clients gelesen werden können (z. B. API-Antworten oder Dateiinhalte)
+2. **[Werkzeuge](/de/docs/learn/server-concepts#tools)**: Funktionen, die vom LLM aufgerufen werden können (mit Zustimmung der Nutzer)
+3. **[Prompts](/de/docs/learn/server-concepts#prompts)**: Vorgefertigte Vorlagen, die Nutzerinnen und Nutzern helfen, bestimmte Aufgaben zu erledigen
+
+Dieses Tutorial konzentriert sich in erster Linie auf Werkzeuge.
+
+<Tabs>
+  <Tab title="Python">
+    Legen wir los und bauen unseren Wetter-Server! [Den vollständigen Code für das, was wir bauen, finden Sie hier.](https://github.com/modelcontextprotocol/quickstart-resources/tree/main/weather-server-python)
+
+    ### Vorkenntnisse
+
+    Diese Schnellstartanleitung setzt Vertrautheit mit den folgenden Themen voraus:
+
+    * Python
+    * LLMs wie Claude
+
+    ### Logging in MCP-Servern
+
+    Beim Implementieren von MCP-Servern seien Sie vorsichtig, wie Sie das Logging handhaben:
+
+    **Für STDIO-basierte Server:** Niemals in die Standardausgabe (stdout) schreiben. Dazu zählt:
+
+    * `print()`-Anweisungen in Python
+    * `console.log()` in JavaScript
+    * `fmt.Println()` in Go
+    * Ähnliche stdout-Funktionen in anderen Programmiersprachen
+
+    Das Schreiben auf stdout beschädigt die JSON-RPC-Nachrichten und lässt Ihren Server abstürzen.
+
+    **Für HTTP-basierte Server:** Protokollierung über die Standardausgabe ist unproblematisch, da sie HTTP-Antworten nicht beeinträchtigt.
+
+    ### Bewährte Verfahren
+
+    1. Verwenden Sie eine Logging-Bibliothek, die auf stderr oder in Dateien schreibt.
+
+    ### Kurze Beispiele
+
+    ```python
+    # ❌ Schlecht (STDIO)
+    print("Verarbeitung der Anfrage")
+
+    # ✅ Gut (STDIO)
+    import logging
+    logging.info("Verarbeitung der Anfrage")
+    ```
+
+    ### Systemanforderungen
+
+    * Python 3.10 oder höher ist installiert.
+    * Sie müssen das Python-MCP-SDK in Version 1.2.0 oder höher verwenden.
+
+    ### Richten Sie Ihre Umgebung ein
+
+    Installieren wir zunächst `uv` und richten unser Python-Projekt sowie die Umgebung ein:
+
+    <CodeGroup>
+      ```bash macOS/Linux
+      curl -LsSf https://astral.sh/uv/install.sh | sh
+      ```
+
+      ```powershell Windows
+      powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+      ```
+    </CodeGroup>
+
+    Starten Sie anschließend Ihr Terminal neu, damit der Befehl „uv“ erkannt wird.
+
+    Legen wir nun unser Projekt an und richten es ein:
+
+    <CodeGroup>
+      ```bash macOS/Linux
+      # Ein neues Verzeichnis für unser Projekt erstellen
+      uv init weather
+      cd weather
+
+      # Virtuelle Umgebung erstellen und aktivieren
+      uv venv
+      source .venv/bin/activate
+
+      # Abhängigkeiten installieren
+      uv add "mcp[cli]" httpx
+
+      # Server-Datei erstellen
+      touch weather.py
+      ```
+
+      ```powershell Windows
+      # Ein neues Verzeichnis für unser Projekt erstellen
+      uv init weather
+      cd weather
+
+      # Virtuelle Umgebung erstellen und aktivieren
+      uv venv
+      .venv\Scripts\activate
+
+      # Abhängigkeiten installieren
+      uv add mcp[cli] httpx
+
+      # Server-Datei erstellen
+      new-item weather.py
+      ```
+    </CodeGroup>
+
+    Lassen Sie uns nun damit beginnen, Ihren Server zu bauen.
+
+    ## Ihren Server erstellen
+
+    ### Pakete importieren und Instanz einrichten
+
+    Fügen Sie dies oben in Ihrer Datei `weather.py` hinzu:
+
+    ```python
+    from typing import Any
+    import httpx
+    from mcp.server.fastmcp import FastMCP
+
+    # FastMCP-Server initialisieren
+    mcp = FastMCP("weather")
+
+    # Konstanten
+    NWS_API_BASE = "https://api.weather.gov"
+    USER_AGENT = "weather-app/1.0"
+    ```
+
+    Die Klasse FastMCP nutzt Python-Typannotationen und Docstrings, um Werkzeugdefinitionen automatisch zu generieren. So wird das Erstellen und die Pflege von MCP-Werkzeugen erleichtert.
+
+    ### Hilfsfunktionen
+
+    Als Nächstes fügen wir Hilfsfunktionen hinzu, um Daten aus der National-Weather-Service-API abzurufen und zu formatieren:
+
+    ```python
+    async def make_nws_request(url: str) -> dict[str, Any] | None:
+        """Stellt eine Anfrage an die NWS-API mit geeigneter Fehlerbehandlung."""
+        headers = {
+            "User-Agent": USER_AGENT,
+            "Accept": "application/geo+json"
+        }
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(url, headers=headers, timeout=30.0)
+                response.raise_for_status()
+                return response.json()
+            except Exception:
+                return None
+
+    def format_alert(feature: dict) -> str:
+        """Formatiert ein Warnhinweis-Feature als gut lesbaren String."""
+        props = feature["properties"]
+        return f"""
+    Ereignis: {props.get('event', 'Unbekannt')}
+    Gebiet: {props.get('areaDesc', 'Unbekannt')}
+    Schweregrad: {props.get('severity', 'Unbekannt')}
+    Beschreibung: {props.get('description', 'Keine Beschreibung verfügbar')}
+    Anweisungen: {props.get('instruction', 'Keine spezifischen Anweisungen vorhanden')}
+    """
+    ```
+
+    ### Ausführung von Werkzeugen implementieren
+
+    Der Handler für die Werkzeugausführung ist dafür verantwortlich, die Logik jedes einzelnen Werkzeugs tatsächlich auszuführen. Fügen wir ihn hinzu:
+
+    ```python
+    @mcp.tool()
+    async def get_alerts(state: str) -> str:
+        """Wetterwarnungen für einen US-Bundesstaat abrufen.
+
+        Args:
+            state: US-Bundesstaat mit zweibuchstabigem Code (z. B. CA, NY)
+        """
+        url = f"{NWS_API_BASE}/alerts/active/area/{state}"
+        data = await make_nws_request(url)
+
+        if not data or "features" not in data:
+            return "Warnungen konnten nicht abgerufen werden oder es wurden keine Warnungen gefunden."
+
+        if not data["features"]:
+            return "Keine aktiven Warnungen für diesen Bundesstaat."
+
+        alerts = [format_alert(feature) for feature in data["features"]]
+        return "\n---\n".join(alerts)
+
+    @mcp.tool()
+    async def get_forecast(latitude: float, longitude: float) -> str:
+        """Wettervorhersage für einen Ort abrufen.
+
+        Args:
+            latitude: Breitengrad des Ortes
+            longitude: Längengrad des Ortes
+        """
+        # Zuerst den Vorhersage-Grid-Endpunkt abrufen
+        points_url = f"{NWS_API_BASE}/points/{latitude},{longitude}"
+        points_data = await make_nws_request(points_url)
+
+        if not points_data:
+            return "Vorhersagedaten für diesen Ort konnten nicht abgerufen werden."
+
+        # Die Vorhersage-URL aus der Points-Antwort abrufen
+        forecast_url = points_data["properties"]["forecast"]
+        forecast_data = await make_nws_request(forecast_url)
+
+        if not forecast_data:
+            return "Detaillierte Vorhersage konnte nicht abgerufen werden."
+
+        # Die Zeitabschnitte zu einer lesbaren Vorhersage formatieren
+        periods = forecast_data["properties"]["periods"]
+        forecasts = []
+        for period in periods[:5]:  # Nur die nächsten 5 Zeitabschnitte anzeigen
+            forecast = f"""
+    {period['name']}:
+    Temperatur: {period['temperature']}°{period['temperatureUnit']}
+    Wind: {period['windSpeed']} {period['windDirection']}
+    Prognose: {period['detailedForecast']}
+    """
+            forecasts.append(forecast)
+
+        return "\n---\n".join(forecasts)
+    ```
+
+    ### Server ausführen
+
+    Zum Schluss initialisieren und starten wir den Server:
+
+    ```python
+    if __name__ == "__main__":
+        # Server initialisieren und starten
+        mcp.run(transport='stdio')
+    ```
+
+    Ihr Server ist fertig! Führen Sie `uv run weather.py` aus, um den MCP-Server zu starten, der auf Nachrichten von MCP-Hosts wartet.
+
+    Testen wir nun Ihren Server mit einem vorhandenen MCP-Host: Claude für Desktop.
+
+    ## Testen Sie Ihren Server mit Claude für Desktop
+
+    <Note>
+      Claude für Desktop ist unter Linux noch nicht verfügbar. Linux-Nutzende können mit dem Tutorial [Building a client](/de/docs/develop/build-client) fortfahren, um einen MCP-Client zu erstellen, der sich mit dem soeben erstellten Server verbindet.
+    </Note>
+
+    Stellen Sie zunächst sicher, dass Sie Claude für Desktop installiert haben. [Die neueste Version können Sie hier installieren.](https://claude.ai/download)
+    Wenn Sie Claude für Desktop bereits verwenden, **stellen Sie sicher, dass es auf die neueste Version aktualisiert ist.**
+
+    Wir müssen Claude für Desktop für die MCP-Server konfigurieren, die Sie verwenden möchten. Öffnen Sie dazu die Konfiguration Ihrer Claude-für-Desktop-App unter `~/Library/Application Support/Claude/claude_desktop_config.json` in einem Texteditor. Legen Sie die Datei an, falls sie noch nicht existiert.
+
+    Wenn Sie zum Beispiel [VS Code](https://code.visualstudio.com/) installiert haben:
+
+    <CodeGroup>
+      ```bash macOS/Linux
+      code ~/Library/Application\ Support/Claude/claude_desktop_config.json
+      ```
+
+      ```powershell Windows
+      code $env:AppData\Claude\claude_desktop_config.json
+      ```
+    </CodeGroup>
+
+    Fügen Sie anschließend Ihre Server im Schlüssel `mcpServers` hinzu. Die MCP-UI-Elemente werden in Claude für Desktop nur angezeigt, wenn mindestens ein Server korrekt konfiguriert ist.
+
+    In diesem Fall fügen wir unseren einzelnen Wetterserver wie folgt hinzu:
+
+    <CodeGroup>
+      ```json macOS/Linux
+      {
+        "mcpServers": {
+          "weather": {
+            "command": "uv",
+            "args": [
+              "--directory",
+              "/ABSOLUTE/PATH/TO/PARENT/FOLDER/weather",
+              "run",
+              "weather.py"
+            ]
+          }
+        }
+      }
+      ```
+
+      ```json Windows
+      {
+        "mcpServers": {
+          "weather": {
+            "command": "uv",
+            "args": [
+              "--directory",
+              "C:\\ABSOLUTE\\PATH\\TO\\PARENT\\FOLDER\\weather",
+              "run",
+              "weather.py"
+            ]
+          }
+        }
+      }
+      ```
+    </CodeGroup>
+
+    <Warning>
+      Möglicherweise müssen Sie den vollständigen Pfad zur ausführbaren Datei `uv` im Feld `command` angeben. Dies können Sie ermitteln, indem Sie `which uv` auf macOS/Linux oder `where uv` unter Windows ausführen.
+    </Warning>
+
+    <Note>
+      Stellen Sie sicher, dass Sie den absoluten Pfad zu Ihrem Server angeben. Sie können ihn ermitteln, indem Sie `pwd` unter macOS/Linux oder `cd` in der Windows-Eingabeaufforderung ausführen. Unter Windows denken Sie daran, doppelte Backslashes (`\\`) oder Schrägstriche (`/`) im JSON-Pfad zu verwenden.
+    </Note>
+
+    Dies teilt Claude für Desktop Folgendes mit:
+
+    1. Es gibt einen MCP-Server namens „weather“
+    2. Um es zu starten, führen Sie `uv --directory /ABSOLUTE/PATH/TO/PARENT/FOLDER/weather run weather.py` aus.
+
+    Speichern Sie die Datei und starten Sie **Claude für Desktop** neu.
+  </Tab>
+
+  <Tab title="Node">
+    Legen wir los und bauen unseren Wetter-Server! [Den vollständigen Code für das, was wir erstellen, finden Sie hier.](https://github.com/modelcontextprotocol/quickstart-resources/tree/main/weather-server-typescript)
+
+    ### Vorkenntnisse
+
+    Diese Schnellstartanleitung setzt Vertrautheit mit Folgendem voraus:
+
+    * TypeScript
+    * LLMs wie Claude
+
+    ### Logging in MCP-Servern
+
+    Beim Implementieren von MCP-Servern sollten Sie darauf achten, wie Sie das Logging handhaben:
+
+    **Für STDIO-basierte Server:** Niemals in die Standardausgabe (stdout) schreiben. Dazu zählen:
+
+    * `print()`-Anweisungen in Python
+    * `console.log()` in JavaScript
+    * `fmt.Println()` in Go
+    * Ähnliche stdout-Funktionen in anderen Programmiersprachen
+
+    Ausgaben auf stdout beschädigen die JSON-RPC-Nachrichten und legen Ihren Server lahm.
+
+    **Für HTTP-basierte Server:** Protokollierung über die Standardausgabe ist unproblematisch, da sie HTTP-Antworten nicht beeinträchtigt.
+
+    ### Best Practices
+
+    1. Verwenden Sie eine Protokollierungsbibliothek, die nach stderr oder in Dateien schreibt, etwa `logging` in Python.
+    2. Für JavaScript ist besondere Vorsicht geboten – `console.log()` schreibt standardmäßig auf stdout.
+
+    ### Kurze Beispiele
+
+    ```javascript
+    // ❌ Schlecht (STDIO)
+    console.log("Server gestartet");
+
+    // ✅ Gut (STDIO)
+    console.error("Server gestartet"); // stderr ist unbedenklich
+    ```
+
+    ### Systemanforderungen
+
+    Stellen Sie für TypeScript sicher, dass die neueste Version von Node installiert ist.
+
+    ### Richten Sie Ihre Umgebung ein
+
+    Installieren wir zunächst Node.js und npm, falls noch nicht geschehen. Sie können beide von [nodejs.org](https://nodejs.org/) herunterladen.
+    Überprüfen Sie Ihre Node.js-Installation:
+
+    ```bash
+    node --version
+    npm --version
+    ```
+
+    Für dieses Tutorial benötigen Sie Node.js in Version 16 oder höher.
+
+    Legen wir nun unser Projekt an und richten es ein:
+
+    <CodeGroup>
+      ```bash macOS/Linux
+      # Erstelle ein neues Verzeichnis für das Projekt
+      mkdir weather
+      cd weather
+
+      # Initialisiere ein neues npm-Projekt
+      npm init -y
+
+      # Installiere Abhängigkeiten
+      npm install @modelcontextprotocol/sdk zod@3
+      npm install -D @types/node typescript
+
+      # Lege die Dateien an
+      mkdir src
+      touch src/index.ts
+      ```
+
+      ```powershell Windows
+      # Erstelle ein neues Verzeichnis für das Projekt
+      md weather
+      cd weather
+
+      # Initialisiere ein neues npm-Projekt
+      npm init -y
+
+      # Installiere Abhängigkeiten
+      npm install @modelcontextprotocol/sdk zod@3
+      npm install -D @types/node typescript
+
+      # Lege die Dateien an
+      md src
+      new-item src\index.ts
+      ```
+    </CodeGroup>
+
+    Aktualisieren Sie Ihre package.json, um type: &quot;module&quot; sowie ein Build-Skript hinzuzufügen:
+
+    ```json package.json
+    {
+      "type": "module",
+      "bin": {
+        "weather": "./build/index.js"
+      },
+      "scripts": {
+        "build": "tsc && chmod 755 build/index.js"
+      },
+      "files": ["build"]
+    }
+    ```
+
+    Erstellen Sie eine `tsconfig.json` im Projektstammverzeichnis:
+
+    ```json tsconfig.json
+    {
+      "compilerOptions": {
+        "target": "ES2022",
+        "module": "Node16",
+        "moduleResolution": "Node16",
+        "outDir": "./build",
+        "rootDir": "./src",
+        "strict": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true
+      },
+      "include": ["src/**/*"],
+      "exclude": ["node_modules"]
+    }
+    ```
+
+    Lassen Sie uns nun damit beginnen, Ihren Server zu erstellen.
+
+    ## Ihren Server erstellen
+
+    ### Pakete importieren und Instanz einrichten
+
+    Fügen Sie diese am Anfang Ihrer Datei `src/index.ts` hinzu:
+
+    ```typescript
+    import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+    import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+    import { z } from "zod";
+
+    const NWS_API_BASE = "https://api.weather.gov";
+    const USER_AGENT = "weather-app/1.0";
+
+    // Serverinstanz erstellen
+    const server = new McpServer({
+      name: "weather",
+      version: "1.0.0",
+      capabilities: {
+        resources: {},
+        tools: {},
+      },
+    });
+    ```
+
+    ### Hilfsfunktionen
+
+    Als Nächstes fügen wir unsere Hilfsfunktionen hinzu, um die Daten der National Weather Service API abzufragen und zu formatieren:
+
+    ```typescript
+    // Hilfsfunktion für NWS-API-Anfragen
+    async function makeNWSRequest<T>(url: string): Promise<T | null> {
+      const headers = {
+        "User-Agent": USER_AGENT,
+        Accept: "application/geo+json",
+      };
+
+      try {
+        const response = await fetch(url, { headers });
+        if (!response.ok) {
+          throw new Error(`HTTP-Fehler! Status: ${response.status}`);
+        }
+        return (await response.json()) as T;
+      } catch (error) {
+        console.error("Fehler bei der NWS-Anfrage:", error);
+        return null;
+      }
+    }
+
+    interface AlertFeature {
+      properties: {
+        event?: string;
+        areaDesc?: string;
+        severity?: string;
+        status?: string;
+        headline?: string;
+      };
+    }
+
+    // Warnmeldungen formatieren
+    function formatAlert(feature: AlertFeature): string {
+      const props = feature.properties;
+      return [
+        `Ereignis: ${props.event || "Unbekannt"}`,
+        `Gebiet: ${props.areaDesc || "Unbekannt"}`,
+        `Schweregrad: ${props.severity || "Unbekannt"}`,
+        `Status: ${props.status || "Unbekannt"}`,
+        `Titel: ${props.headline || "Kein Titel"}`,
+        "---",
+      ].join("\n");
+    }
+
+    interface ForecastPeriod {
+      name?: string;
+      temperature?: number;
+      temperatureUnit?: string;
+      windSpeed?: string;
+      windDirection?: string;
+      shortForecast?: string;
+    }
+
+    interface AlertsResponse {
+      features: AlertFeature[];
+    }
+
+    interface PointsResponse {
+      properties: {
+        forecast?: string;
+      };
+    }
+
+    interface ForecastResponse {
+      properties: {
+        periods: ForecastPeriod[];
+      };
+    }
+    ```
+
+    ### Implementierung der Werkzeugausführung
+
+    Der Handler für die Werkzeugausführung ist dafür zuständig, die Logik jedes Werkzeugs auszuführen. Fügen wir ihn hinzu:
+
+    ```typescript
+    // Wetterwerkzeuge registrieren
+    server.tool(
+      "get_alerts",
+      "Wetterwarnungen für einen Bundesstaat abrufen",
+      {
+        state: z.string().length(2).describe("Zweistelliger Bundesstaatscode (z. B. CA, NY)"),
+      },
+      async ({ state }) => {
+        const stateCode = state.toUpperCase();
+        const alertsUrl = `${NWS_API_BASE}/alerts?area=${stateCode}`;
+        const alertsData = await makeNWSRequest<AlertsResponse>(alertsUrl);
+
+        if (!alertsData) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: "Warnungsdaten konnten nicht abgerufen werden",
+              },
+            ],
+          };
+        }
+
+        const features = alertsData.features || [];
+        if (features.length === 0) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Keine aktiven Warnungen für ${stateCode}`,
+              },
+            ],
+          };
+        }
+
+        const formattedAlerts = features.map(formatAlert);
+        const alertsText = `Aktive Warnungen für ${stateCode}:\n\n${formattedAlerts.join("\n")}`;
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: alertsText,
+            },
+          ],
+        };
+      },
+    );
+
+    server.tool(
+      "get_forecast",
+      "Wettervorhersage für einen Ort abrufen",
+      {
+        latitude: z.number().min(-90).max(90).describe("Breitengrad des Ortes"),
+        longitude: z
+          .number()
+          .min(-180)
+          .max(180)
+          .describe("Längengrad des Ortes"),
+      },
+      async ({ latitude, longitude }) => {
+        // Gitterpunktdaten abrufen
+        const pointsUrl = `${NWS_API_BASE}/points/${latitude.toFixed(4)},${longitude.toFixed(4)}`;
+        const pointsData = await makeNWSRequest<PointsResponse>(pointsUrl);
+
+        if (!pointsData) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Gitterpunktdaten für die Koordinaten konnten nicht abgerufen werden: ${latitude}, ${longitude}. Dieser Ort wird möglicherweise nicht von der NWS-API unterstützt (nur US-Standorte werden unterstützt).`,
+              },
+            ],
+          };
+        }
+
+        const forecastUrl = pointsData.properties?.forecast;
+        if (!forecastUrl) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: "Vorhersage-URL aus Gitterpunktdaten konnte nicht ermittelt werden",
+              },
+            ],
+          };
+        }
+
+        // Vorhersagedaten abrufen
+        const forecastData = await makeNWSRequest<ForecastResponse>(forecastUrl);
+        if (!forecastData) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: "Vorhersagedaten konnten nicht abgerufen werden",
+              },
+            ],
+          };
+        }
+
+        const periods = forecastData.properties?.periods || [];
+        if (periods.length === 0) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: "Keine Vorhersagezeiträume verfügbar",
+              },
+            ],
+          };
+        }
+
+        // Vorhersagezeiträume formatieren
+        const formattedForecast = periods.map((period: ForecastPeriod) =>
+          [
+            `${period.name || "Unbekannt"}:`,
+            `Temperatur: ${period.temperature || "Unbekannt"}°${period.temperatureUnit || "F"}`,
+            `Wind: ${period.windSpeed || "Unbekannt"} ${period.windDirection || ""}`,
+            `${period.shortForecast || "Keine Vorhersage verfügbar"}`,
+            "---",
+          ].join("\n"),
+        );
+
+        const forecastText = `Vorhersage für ${latitude}, ${longitude}:\n\n${formattedForecast.join("\n")}`;
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: forecastText,
+            },
+          ],
+        };
+      },
+    );
+    ```
+
+    ### Server ausführen
+
+    Abschließend implementieren Sie die Hauptfunktion, um den Server zu starten:
+
+    ```typescript
+    async function main() {
+      const transport = new StdioServerTransport();
+      await server.connect(transport);
+      console.error("Weather MCP-Server läuft über STDIO")
+    }
+
+    main().catch((error) => {
+      console.error("Schwerwiegender Fehler in main():", error)
+      process.exit(1);
+    });
+    ```
+
+    Stellen Sie sicher, dass Sie `npm run build` ausführen, um Ihren Server zu erstellen! Dies ist ein sehr wichtiger Schritt, damit sich Ihr Server verbinden kann.
+
+    Testen wir Ihren Server nun über einen vorhandenen MCP-Host: Claude für Desktop.
+
+    ## Ihren Server mit Claude für Desktop testen
+
+    <Note>
+      Claude für Desktop ist unter Linux noch nicht verfügbar. Linux-Nutzer können mit dem Tutorial [Client erstellen](/de/docs/develop/build-client) fortfahren, um einen MCP-Client zu erstellen, der sich mit dem soeben erstellten Server verbindet.
+    </Note>
+
+    Stelle zunächst sicher, dass du Claude für Desktop installiert hast. [Die neueste Version kannst du hier installieren.](https://claude.ai/download)
+    Wenn du Claude für Desktop bereits installiert hast, **stelle sicher, dass es auf die neueste Version aktualisiert ist.**
+
+    Wir müssen Claude für Desktop für die MCP-Server konfigurieren, die Sie verwenden möchten. Öffnen Sie dazu die Konfiguration Ihrer Claude-für-Desktop-App unter `~/Library/Application Support/Claude/claude_desktop_config.json` in einem Texteditor. Legen Sie die Datei an, falls sie noch nicht existiert.
+
+    Wenn Sie beispielsweise [VS Code](https://code.visualstudio.com/) installiert haben:
+
+    <CodeGroup>
+      ```bash macOS/Linux
+      code ~/Library/Application\ Support/Claude/claude_desktop_config.json
+      ```
+
+      ```powershell Windows
+      code $env:AppData\Claude\claude_desktop_config.json
+      ```
+    </CodeGroup>
+
+    Fügen Sie anschließend Ihre Server unter dem Schlüssel `mcpServers` hinzu. Die MCP-UI-Elemente werden in Claude für Desktop nur angezeigt, wenn mindestens ein Server ordnungsgemäß konfiguriert ist.
+
+    In diesem Fall fügen wir unseren einzelnen Wetterserver wie folgt hinzu:
+
+    <CodeGroup>
+      ```json macOS/Linux
+      {
+        "mcpServers": {
+          "weather": {
+            "command": "node",
+            "args": ["/ABSOLUTE/PATH/TO/PARENT/FOLDER/weather/build/index.js"]
+          }
+        }
+      }
+      ```
+
+      ```json Windows
+      {
+        "mcpServers": {
+          "weather": {
+            "command": "node",
+            "args": ["C:\\PATH\\TO\\PARENT\\FOLDER\\weather\\build\\index.js"]
+          }
+        }
+      }
+      ```
+    </CodeGroup>
+
+    Damit wird Claude für Desktop mitgeteilt:
+
+    1. Es gibt einen MCP-Server namens „weather“
+    2. Starten Sie es, indem Sie `node /ABSOLUTE/PATH/TO/PARENT/FOLDER/weather/build/index.js` ausführen.
+
+    Speichern Sie die Datei und starten Sie **Claude für Desktop** neu.
+  </Tab>
+
+  <Tab title="Java">
+    <Note>
+      Dies ist eine Quickstart-Demo auf Basis der Spring-AI-MCP-Autokonfiguration und Boot-Starter.
+      Informationen zum manuellen Erstellen synchroner und asynchroner MCP-Server finden Sie in der Dokumentation zum [Java SDK Server](/de/sdk/java/mcp-server).
+    </Note>
+
+    Legen wir los und bauen unseren Wetter-Server!
+    [Den vollständigen Code für das, was wir bauen werden, findest du hier.](https://github.com/spring-projects/spring-ai-examples/tree/main/model-context-protocol/weather/starter-stdio-server)
+
+    Weitere Informationen finden Sie in der Referenzdokumentation zum [MCP Server Boot Starter](https://docs.spring.io/spring-ai/reference/api/mcp/mcp-server-boot-starter-docs.html).
+    Für eine manuelle Implementierung eines MCP-Servers finden Sie Hinweise in der [MCP Server Java SDK-Dokumentation](/de/sdk/java/mcp-server).
+
+    ### Logging in MCP-Servern
+
+    Beim Implementieren von MCP-Servern sollten Sie sorgfältig darauf achten, wie Sie das Logging handhaben:
+
+    **Für STDIO-basierte Server:** Niemals auf die Standardausgabe (stdout) schreiben. Dies umfasst:
+
+    * `print()`-Anweisungen in Python
+    * `console.log()` in JavaScript
+    * `fmt.Println()` in Go
+    * Ähnliche stdout-Funktionen in anderen Programmiersprachen
+
+    Ausgaben auf stdout beschädigen die JSON-RPC 2.0‑Nachrichten und bringen Ihren Server zum Absturz.
+
+    **Für HTTP-basierte Server:** Protokollierung über die Standardausgabe ist unproblematisch, da sie HTTP-Antworten nicht beeinträchtigt.
+
+    ### Bewährte Verfahren
+
+    1. Verwenden Sie eine Logging-Bibliothek, die auf stderr oder in Dateien schreibt.
+    2. Stellen Sie sicher, dass keine konfigurierte Protokollierungsbibliothek auf STDOUT schreibt
+
+    ### Systemanforderungen
+
+    * Java 17 oder höher ist installiert.
+    * [Spring Boot 3.3.x](https://docs.spring.io/spring-boot/installing.html) oder höher
+
+    ### Richten Sie Ihre Umgebung ein
+
+    Verwenden Sie den [Spring Initializr](https://start.spring.io/), um das Projekt zu initialisieren.
+
+    Fügen Sie die folgenden Abhängigkeiten hinzu:
+
+    <CodeGroup>
+      ```xml Maven
+      <dependencies>
+            <dependency>
+                <groupId>org.springframework.ai</groupId>
+                <artifactId>spring-ai-starter-mcp-server</artifactId>
+            </dependency>
+
+            <dependency>
+                <groupId>org.springframework</groupId>
+                <artifactId>spring-web</artifactId>
+            </dependency>
+      </dependencies>
+      ```
+
+      ```groovy Gradle
+      dependencies {
+        implementation platform("org.springframework.ai:spring-ai-starter-mcp-server")
+        implementation platform("org.springframework:spring-web")
+      }
+      ```
+    </CodeGroup>
+
+    Konfigurieren Sie anschließend Ihre Anwendung, indem Sie die Anwendungseigenschaften festlegen:
+
+    <CodeGroup>
+      ```bash application.properties
+      spring.main.bannerMode=off
+      logging.pattern.console=
+      ```
+
+      ```yaml application.yml
+      logging:
+        pattern:
+          console:
+      spring:
+        main:
+          banner-mode: off
+      ```
+    </CodeGroup>
+
+    Die [Serverkonfigurationseigenschaften](https://docs.spring.io/spring-ai/reference/api/mcp/mcp-server-boot-starter-docs.html#_configuration_properties) dokumentieren alle verfügbaren Eigenschaften.
+
+    Nun lassen Sie uns mit dem Aufbau Ihres Servers beginnen.
+
+    ## Eigenen Server erstellen
+
+    ### Wetterdienst
+
+    Implementieren wir eine [WeatherService.java](https://github.com/spring-projects/spring-ai-examples/blob/main/model-context-protocol/weather/starter-stdio-server/src/main/java/org/springframework/ai/mcp/sample/server/WeatherService.java), die einen REST-Client nutzt, um Daten über die National Weather Service API abzufragen:
+
+    ```java
+    @Service
+    public class WeatherService {
+
+    	private final RestClient restClient;
+
+    	public WeatherService() {
+    		this.restClient = RestClient.builder()
+    			.baseUrl("https://api.weather.gov")
+    			.defaultHeader("Accept", "application/geo+json")
+    			.defaultHeader("User-Agent", "WeatherApiClient/1.0 (your@email.com)")
+    			.build();
+    	}
+
+      @Tool(description = "Wettervorhersage für eine bestimmte Breiten-/Längengradposition abrufen")
+      public String getWeatherForecastByLocation(
+          double latitude,   // Breitengrad
+          double longitude   // Längengrad
+      ) {
+          // Gibt eine detaillierte Vorhersage zurück, einschließlich:
+          // - Temperatur und Einheit
+          // - Windgeschwindigkeit und -richtung
+          // - Ausführliche Vorhersagebeschreibung
+      }
+
+      @Tool(description = "Wetterwarnungen für einen US-Bundesstaat abrufen")
+      public String getAlerts(
+          @ToolParam(description = "Zweistelliger US-Bundesstaatencode (z. B. CA, NY)") String state
+      ) {
+          // Gibt aktive Warnungen zurück, einschließlich:
+          // - Ereignistyp
+          // - Betroffenes Gebiet
+          // - Schweregrad
+          // - Beschreibung
+          // - Sicherheitshinweise
+      }
+
+      // ......
+    }
+    ```
+
+    Die Annotation `@Service` registriert den Dienst automatisch in Ihrem Anwendungskontext.
+    Die Spring-AI-Annotation `@Tool` erleichtert das Erstellen und die Wartung von MCP-Werkzeugen.
+
+    Die Autokonfiguration registriert diese Werkzeuge automatisch beim MCP-Server.
+
+    ### Erstellen Sie Ihre Boot-Anwendung
+
+    ```java
+    @SpringBootApplication
+    public class McpServerApplication {
+
+    	public static void main(String[] args) {
+    		SpringApplication.run(McpServerApplication.class, args);
+    	}
+
+    	@Bean
+    	public ToolCallbackProvider weatherTools(WeatherService weatherService) {
+    		return MethodToolCallbackProvider.builder().toolObjects(weatherService).build();
+    	}
+    }
+    ```
+
+    Verwendet die `MethodToolCallbackProvider`-Utils, um die `@Tools` in ausführbare Callbacks zu konvertieren, die vom MCP-Server genutzt werden.
+
+    ### Server starten
+
+    Zum Schluss bauen wir den Server:
+
+    ```bash
+    ./mvnw clean install
+    ```
+
+    Dadurch wird im Ordner `target` die Datei `mcp-weather-stdio-server-0.0.1-SNAPSHOT.jar` erzeugt.
+
+    Testen wir nun Ihren Server mit einem vorhandenen MCP-Host: Claude für Desktop.
+
+    ## Ihren Server mit Claude für Desktop testen
+
+    <Note>
+      Claude für Desktop ist auf Linux noch nicht verfügbar.
+    </Note>
+
+    Stelle zunächst sicher, dass du Claude für Desktop installiert hast.
+    [Du kannst die neueste Version hier installieren.](https://claude.ai/download) Wenn du Claude für Desktop bereits hast, **stelle sicher, dass es auf die neueste Version aktualisiert ist.**
+
+    Wir müssen Claude for Desktop für die MCP-Server konfigurieren, die Sie verwenden möchten.
+    Öffnen Sie dazu die Konfiguration Ihrer Claude-for-Desktop-App unter `~/Library/Application Support/Claude/claude_desktop_config.json` in einem Texteditor.
+    Erstellen Sie die Datei, falls sie noch nicht existiert.
+
+    Wenn Sie beispielsweise [VS Code](https://code.visualstudio.com/) installiert haben:
+
+    <CodeGroup>
+      ```bash macOS/Linux
+      code ~/Library/Application\ Support/Claude/claude_desktop_config.json
+      ```
+
+      ```powershell Windows
+      code $env:AppData\Claude\claude_desktop_config.json
+      ```
+    </CodeGroup>
+
+    Fügen Sie dann Ihre Server unter dem Schlüssel `mcpServers` hinzu.
+    Die MCP-UI-Elemente werden in Claude für Desktop nur angezeigt, wenn mindestens ein Server ordnungsgemäß konfiguriert ist.
+
+    In diesem Fall fügen wir unseren einzelnen Wetterserver wie folgt hinzu:
+
+    <CodeGroup>
+      ```json macOS/Linux
+      {
+        "mcpServers": {
+          "spring-ai-mcp-weather": {
+            "command": "java",
+            "args": [
+              "-Dspring.ai.mcp.server.stdio=true",
+              "-jar",
+              "/ABSOLUTE/PATH/TO/PARENT/FOLDER/mcp-weather-stdio-server-0.0.1-SNAPSHOT.jar"
+            ]
+          }
+        }
+      }
+      ```
+
+      ```json Windows
+      {
+        "mcpServers": {
+          "spring-ai-mcp-weather": {
+            "command": "java",
+            "args": [
+              "-Dspring.ai.mcp.server.transport=STDIO",
+              "-jar",
+              "C:\\ABSOLUTE\\PATH\\TO\\PARENT\\FOLDER\\weather\\mcp-weather-stdio-server-0.0.1-SNAPSHOT.jar"
+            ]
+          }
+        }
+      }
+      ```
+    </CodeGroup>
+
+    <Note>
+      Stellen Sie sicher, dass Sie den absoluten Pfad zu Ihrem Server angeben.
+    </Note>
+
+    Damit teilst du Claude für Desktop mit:
+
+    1. Es gibt einen MCP-Server namens „my-weather-server“
+    2. Starten Sie es, indem Sie `java -jar /ABSOLUTE/PATH/TO/PARENT/FOLDER/mcp-weather-stdio-server-0.0.1-SNAPSHOT.jar` ausführen
+
+    Speichern Sie die Datei und starten Sie **Claude for Desktop** neu.
+
+    ## Testen Ihres Servers mit dem Java-Client
+
+    ### Einen MCP-Client manuell erstellen
+
+    Verwenden Sie den `MCP-Client`, um eine Verbindung zum Server herzustellen:
+
+    ```java
+    var stdioParams = ServerParameters.builder("java")
+      .args("-jar", "/ABSOLUTER/PFAD/ZUM/ÜBERORDNETEN/ORDNER/mcp-weather-stdio-server-0.0.1-SNAPSHOT.jar")
+      .build();
+
+    var stdioTransport = new StdioClientTransport(stdioParams);
+
+    var mcpClient = McpClient.sync(stdioTransport).build();
+
+    mcpClient.initialize();
+
+    ListToolsResult toolsList = mcpClient.listTools();
+
+    CallToolResult weather = mcpClient.callTool(
+      new CallToolRequest("getWeatherForecastByLocation",
+          Map.of("latitude", "47.6062", "longitude", "-122.3321")));
+
+    CallToolResult alert = mcpClient.callTool(
+      new CallToolRequest("getAlerts", Map.of("state", "NY")));
+
+    mcpClient.closeGracefully();
+    ```
+
+    ### MCP-Client Boot Starter verwenden
+
+    Erstellen Sie eine neue Spring-Boot-Starter-Anwendung mit der Abhängigkeit `spring-ai-starter-mcp-client`:
+
+    ```xml
+    <dependency>
+        <groupId>org.springframework.ai</groupId>
+        <artifactId>spring-ai-starter-mcp-client</artifactId>
+    </dependency>
+    ```
+
+    und setzen Sie die Eigenschaft `spring.ai.mcp.client.stdio.servers-configuration` so, dass sie auf Ihre `claude_desktop_config.json` verweist.
+    Sie können die bestehende Anthropic-Desktop-Konfiguration wiederverwenden:
+
+    ```properties
+    spring.ai.mcp.client.stdio.servers-configuration=file:PFAD/ZU/claude_desktop_config.json
+    ```
+
+    Wenn Sie Ihre Client-Anwendung starten, erstellt die Autokonfiguration automatisch MCP-Clients aus der Datei claude&#95;desktop&#95;config.json.
+
+    Weitere Informationen finden Sie in der Referenzdokumentation zu den [MCP Client Boot Starters](https://docs.spring.io/spring-ai/reference/api/mcp/mcp-server-boot-client-docs.html).
+
+    ## Weitere Beispiele für Java-MCP-Server
+
+    Der [starter-webflux-server](https://github.com/spring-projects/spring-ai-examples/tree/main/model-context-protocol/weather/starter-webflux-server) zeigt, wie ein MCP-Server mit SSE-Transport erstellt wird.
+    Er veranschaulicht, wie MCP-Werkzeuge, Ressourcen und Prompts definiert und registriert werden, wobei die Auto-Konfigurationsfunktionen von Spring Boot genutzt werden.
+  </Tab>
+
+  <Tab title="Kotlin">
+    Legen wir mit dem Bau unseres Wetter-Servers los! [Den vollständigen Code für das, was wir bauen, finden Sie hier.](https://github.com/modelcontextprotocol/kotlin-sdk/tree/main/samples/weather-stdio-server)
+
+    ### Vorkenntnisse
+
+    Diese Schnellstartanleitung setzt voraus, dass Sie Folgendes bereits kennen:
+
+    * Kotlin
+    * LLMs wie Claude
+
+    ### Systemanforderungen
+
+    * Java 17 oder höher ist installiert.
+
+    ### Richten Sie Ihre Umgebung ein
+
+    Installieren wir zunächst `java` und `gradle`, falls Sie das noch nicht getan haben.
+    Sie können `java` von der [offiziellen Oracle-JDK-Website](https://www.oracle.com/java/technologies/downloads/) herunterladen.
+    Überprüfen Sie Ihre `java`-Installation:
+
+    ```bash
+    java --version
+    ```
+
+    Legen wir nun Ihr Projekt an und richten es ein:
+
+    <CodeGroup>
+      ```bash macOS/Linux
+      # Neues Verzeichnis für das Projekt erstellen
+      mkdir weather
+      cd weather
+
+      # Neues Kotlin-Projekt initialisieren
+      gradle init
+      ```
+
+      ```powershell Windows
+      # Neues Verzeichnis für das Projekt erstellen
+      md weather
+      cd weather
+
+      # Neues Kotlin-Projekt initialisieren
+      gradle init
+      ```
+    </CodeGroup>
+
+    Nach dem Ausführen von `gradle init` werden Ihnen Optionen zum Erstellen Ihres Projekts angezeigt.
+    Wählen Sie **Application** als Projekttyp, **Kotlin** als Programmiersprache und **Java 17** als Java-Version.
+
+    Alternativ können Sie eine Kotlin-Anwendung mit dem [IntelliJ-IDEA-Projektassistenten](https://kotlinlang.org/docs/jvm-get-started.html) erstellen.
+
+    Fügen Sie nach dem Erstellen des Projekts die folgenden Abhängigkeiten hinzu:
+
+    <CodeGroup>
+      ```kotlin build.gradle.kts
+      val mcpVersion = "0.4.0"
+      val slf4jVersion = "2.0.9"
+      val ktorVersion = "3.1.1"
+
+      dependencies {
+          implementation("io.modelcontextprotocol:kotlin-sdk:$mcpVersion")
+          implementation("org.slf4j:slf4j-nop:$slf4jVersion")
+          implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
+          implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
+      }
+      ```
+
+      ```groovy build.gradle
+      def mcpVersion = '0.3.0'
+      def slf4jVersion = '2.0.9'
+      def ktorVersion = '3.1.1'
+
+      dependencies {
+          implementation "io.modelcontextprotocol:kotlin-sdk:$mcpVersion"
+          implementation "org.slf4j:slf4j-nop:$slf4jVersion"
+          implementation "io.ktor:ktor-client-content-negotiation:$ktorVersion"
+          implementation "io.ktor:ktor-serialization-kotlinx-json:$ktorVersion"
+      }
+      ```
+    </CodeGroup>
+
+    Fügen Sie außerdem die folgenden Plugins zu Ihrem Buildskript hinzu:
+
+    <CodeGroup>
+      ```kotlin build.gradle.kts
+      plugins {
+          kotlin("plugin.serialization") version "your_version_of_kotlin"
+          id("com.github.johnrengelman.shadow") version "8.1.1"
+      }
+      ```
+
+      ```groovy build.gradle
+      plugins {
+          id 'org.jetbrains.kotlin.plugin.serialization' version 'your_version_of_kotlin'
+          id 'com.github.johnrengelman.shadow' version '8.1.1'
+      }
+      ```
+    </CodeGroup>
+
+    Legen wir nun mit dem Aufbau Ihres Servers los.
+
+    ## Einen Server erstellen
+
+    ### Instanz einrichten
+
+    Fügen Sie eine Server-Initialisierungsfunktion hinzu:
+
+    ```kotlin
+    // Hauptfunktion zum Ausführen des MCP-Servers
+    fun `run mcp server`() {
+        // Erstelle die MCP-Server-Instanz mit einer einfachen Implementierung
+        val server = Server(
+            Implementation(
+                name = "weather", // Werkzeugname ist „weather“
+                version = "1.0.0" // Version der Implementierung
+            ),
+            ServerOptions(
+                capabilities = ServerCapabilities(tools = ServerCapabilities.Tools(listChanged = true))
+            )
+        )
+
+        // Erstelle einen Transport über Standard-I/O für die Serverkommunikation
+        val transport = StdioServerTransport(
+            System.`in`.asInput(),
+            System.out.asSink().buffered()
+        )
+
+        runBlocking {
+            server.connect(transport)
+            val done = Job()
+            server.onClose {
+                done.complete()
+            }
+            done.join()
+        }
+    }
+    ```
+
+    ### Hilfsfunktionen für die Wetter-API
+
+    Als Nächstes fügen wir Funktionen und Datenklassen hinzu, um Antworten der National-Weather-Service-API abzurufen und zu konvertieren:
+
+    ```kotlin
+    // Erweiterungsfunktion zum Abrufen von Vorhersageinformationen für eine bestimmte Breite und Länge
+    suspend fun HttpClient.getForecast(latitude: Double, longitude: Double): List<String> {
+        val points = this.get("/points/$latitude,$longitude").body<Points>()
+        val forecast = this.get(points.properties.forecast).body<Forecast>()
+        return forecast.properties.periods.map { period ->
+            """
+                ${period.name}:
+                Temperatur: ${period.temperature} ${period.temperatureUnit}
+                Wind: ${period.windSpeed} ${period.windDirection}
+                Prognose: ${period.detailedForecast}
+            """.trimIndent()
+        }
+    }
+
+    // Erweiterungsfunktion zum Abrufen von Wetterwarnungen für einen bestimmten Bundesstaat
+    suspend fun HttpClient.getAlerts(state: String): List<String> {
+        val alerts = this.get("/alerts/active/area/$state").body<Alert>()
+        return alerts.features.map { feature ->
+            """
+                Ereignis: ${feature.properties.event}
+                Gebiet: ${feature.properties.areaDesc}
+                Schweregrad: ${feature.properties.severity}
+                Beschreibung: ${feature.properties.description}
+                Hinweise: ${feature.properties.instruction}
+            """.trimIndent()
+        }
+    }
+
+    @Serializable
+    data class Points(
+        val properties: Properties
+    ) {
+        @Serializable
+        data class Properties(val forecast: String)
+    }
+
+    @Serializable
+    data class Forecast(
+        val properties: Properties
+    ) {
+        @Serializable
+        data class Properties(val periods: List<Period>)
+
+        @Serializable
+        data class Period(
+            val number: Int, val name: String, val startTime: String, val endTime: String,
+            val isDaytime: Boolean, val temperature: Int, val temperatureUnit: String,
+            val temperatureTrend: String, val probabilityOfPrecipitation: JsonObject,
+            val windSpeed: String, val windDirection: String,
+            val shortForecast: String, val detailedForecast: String,
+        )
+    }
+
+    @Serializable
+    data class Alert(
+        val features: List<Feature>
+    ) {
+        @Serializable
+        data class Feature(
+            val properties: Properties
+        )
+
+        @Serializable
+        data class Properties(
+            val event: String, val areaDesc: String, val severity: String,
+            val description: String, val instruction: String?,
+        )
+    }
+    ```
+
+    ### Ausführung von Werkzeugen implementieren
+
+    Der Handler für die Werkzeugausführung ist dafür verantwortlich, die Logik jedes Werkzeugs wirklich auszuführen. Fügen wir ihn hinzu:
+
+    ```kotlin
+    // HTTP-Client mit Standard-Request-Konfiguration und JSON-Content-Negotiation erstellen
+    val httpClient = HttpClient {
+        defaultRequest {
+            url("https://api.weather.gov")
+            headers {
+                append("Accept", "application/geo+json")
+                append("User-Agent", "WeatherApiClient/1.0")
+            }
+            contentType(ContentType.Application.Json)
+        }
+        // Content-Negotiation-Plugin für JSON-Serialisierung/Deserialisierung installieren
+        install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
+    }
+
+    // Ein Werkzeug registrieren, um Wetterwarnungen nach Bundesstaat abzurufen
+    server.addTool(
+        name = "get_alerts",
+        description = """
+            Wetterwarnungen für einen US-Bundesstaat abrufen. Eingabe ist der zweibuchstabige Code des US-Bundesstaats (z. B. CA, NY)
+        """.trimIndent(),
+        inputSchema = Tool.Input(
+            properties = buildJsonObject {
+                putJsonObject("state") {
+                    put("type", "string")
+                    put("description", "Zweibuchstabiger Code des US-Bundesstaats (z. B. CA, NY)")
+                }
+            },
+            required = listOf("state")
+        )
+    ) { request ->
+        val state = request.arguments["state"]?.jsonPrimitive?.content
+        if (state == null) {
+            return@addTool CallToolResult(
+                content = listOf(TextContent("Der Parameter „state“ ist erforderlich."))
+            )
+        }
+
+        val alerts = httpClient.getAlerts(state)
+
+        CallToolResult(content = alerts.map { TextContent(it) })
+    }
+
+    // Ein Werkzeug registrieren, um die Wettervorhersage anhand von Breiten- und Längengrad abzurufen
+    server.addTool(
+        name = "get_forecast",
+        description = """
+            Wettervorhersage für eine bestimmte Breite/Länge abrufen
+        """.trimIndent(),
+        inputSchema = Tool.Input(
+            properties = buildJsonObject {
+                putJsonObject("latitude") { put("type", "number") }
+                putJsonObject("longitude") { put("type", "number") }
+            },
+            required = listOf("latitude", "longitude")
+        )
+    ) { request ->
+        val latitude = request.arguments["latitude"]?.jsonPrimitive?.doubleOrNull
+        val longitude = request.arguments["longitude"]?.jsonPrimitive?.doubleOrNull
+        if (latitude == null || longitude == null) {
+            return@addTool CallToolResult(
+                content = listOf(TextContent("Die Parameter „latitude“ und „longitude“ sind erforderlich."))
+            )
+        }
+
+        val forecast = httpClient.getForecast(latitude, longitude)
+
+        CallToolResult(content = forecast.map { TextContent(it) })
+    }
+    ```
+
+    ### Server starten
+
+    Implementieren Sie abschließend die Hauptfunktion, um den Server zu starten:
+
+    ```kotlin
+    fun main() = `mcp server ausführen`()
+    ```
+
+    Stellen Sie sicher, dass Sie `./gradlew build` ausführen, um Ihren Server zu erstellen. Dies ist ein sehr wichtiger Schritt, damit sich Ihr Server verbinden kann.
+
+    Testen wir nun Ihren Server mit einem vorhandenen MCP-Host: Claude für Desktop.
+
+    ## Ihren Server mit Claude für Desktop testen
+
+    <Note>
+      Claude für Desktop ist unter Linux noch nicht verfügbar. Linux-Nutzer können mit dem Tutorial [Building a client](/de/docs/develop/build-client) fortfahren, um einen MCP-Client zu erstellen, der sich mit dem soeben erstellten Server verbindet.
+    </Note>
+
+    Stellen Sie zunächst sicher, dass Claude für Desktop installiert ist. [Die neueste Version können Sie hier installieren.](https://claude.ai/download)
+    Wenn Sie Claude für Desktop bereits haben, **stellen Sie sicher, dass es auf dem neuesten Stand ist.**
+
+    Wir müssen Claude für Desktop für die MCP-Server konfigurieren, die Sie nutzen möchten.
+    Öffnen Sie dafür die Konfigurationsdatei Ihrer Claude-für-Desktop-App unter `~/Library/Application Support/Claude/claude_desktop_config.json` in einem Texteditor.
+    Erstellen Sie die Datei, falls sie noch nicht existiert.
+
+    Wenn Sie beispielsweise [VS Code](https://code.visualstudio.com/) installiert haben:
+
+    <CodeGroup>
+      ```bash macOS/Linux
+      code ~/Library/Application\ Support/Claude/claude_desktop_config.json
+      ```
+
+      ```powershell Windows
+      code $env:AppData\Claude\claude_desktop_config.json
+      ```
+    </CodeGroup>
+
+    Fügen Sie anschließend Ihre Server unter dem Schlüssel `mcpServers` hinzu.
+    Die MCP-UI-Elemente werden in Claude für Desktop nur angezeigt, wenn mindestens ein Server korrekt konfiguriert ist.
+
+    In diesem Fall fügen wir unseren einzelnen Wetterserver wie folgt hinzu:
+
+    <CodeGroup>
+      ```json macOS/Linux
+      {
+        "mcpServers": {
+          "weather": {
+            "command": "java",
+            "args": [
+              "-jar",
+              "/ABSOLUTE/PATH/TO/PARENT/FOLDER/weather/build/libs/weather-0.1.0-all.jar"
+            ]
+          }
+        }
+      }
+      ```
+
+      ```json Windows
+      {
+        "mcpServers": {
+          "weather": {
+            "command": "java",
+            "args": [
+              "-jar",
+              "C:\\PATH\\TO\\PARENT\\FOLDER\\weather\\build\\libs\\weather-0.1.0-all.jar"
+            ]
+          }
+        }
+      }
+      ```
+    </CodeGroup>
+
+    Dies weist Claude für Desktop an:
+
+    1. Es gibt einen MCP-Server namens „weather“
+    2. Starten Sie es mit `java -jar /ABSOLUTE/PATH/TO/PARENT/FOLDER/weather/build/libs/weather-0.1.0-all.jar`
+
+    Speichern Sie die Datei und starten Sie **Claude for Desktop** neu.
+  </Tab>
+
+  <Tab title="C#">
+    Legen wir mit dem Bau unseres Wetterservers los! [Den vollständigen Code für das, was wir hier erstellen, finden Sie hier.](https://github.com/modelcontextprotocol/csharp-sdk/tree/main/samples/QuickstartWeatherServer)
+
+    ### Voraussetzungen
+
+    Dieser Schnellstart setzt voraus, dass Sie mit Folgendem vertraut sind:
+
+    * C#
+    * LLMs wie Claude
+    * .NET 8 oder höher
+
+    ### Logging in MCP-Servern
+
+    Beim Implementieren von MCP-Servern achten Sie sorgfältig darauf, wie Sie das Logging handhaben:
+
+    **Für STDIO-basierte Server:** Niemals auf die Standardausgabe (stdout) schreiben. Dies umfasst:
+
+    * `print()`-Anweisungen in Python
+    * `console.log()` in JavaScript
+    * `fmt.Println()` in Go
+    * Ähnliche stdout-Funktionen in anderen Programmiersprachen
+
+    Ausgaben auf stdout beschädigen die JSON-RPC 2.0-Nachrichten und bringen Ihren Server zum Absturz.
+
+    **Für HTTP-basierte Server:** Logging auf der Standardausgabe ist unproblematisch, da es HTTP-Antworten nicht beeinträchtigt.
+
+    ### Best Practices
+
+    1. Verwenden Sie eine Logging-Bibliothek, die in stderr oder Dateien schreibt
+
+    ### Systemanforderungen
+
+    * [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) oder höher installiert.
+
+    ### Umgebung einrichten
+
+    Installieren wir zuerst `dotnet`, falls Sie es noch nicht haben. Sie können `dotnet` von der [offiziellen Microsoft-.NET-Website](https://dotnet.microsoft.com/download/) herunterladen. Überprüfen Sie anschließend Ihre `dotnet`-Installation:
+
+    ```bash
+    dotnet --version
+    ```
+
+    Erstellen und richten wir nun Ihr Projekt ein:
+
+    <CodeGroup>
+      ```bash macOS/Linux
+      # Erstellen Sie ein neues Verzeichnis für unser Projekt
+      mkdir weather
+      cd weather
+      # Initialisieren Sie ein neues C#-Projekt
+      dotnet new console
+      ```
+
+      ```powershell Windows
+      # Erstellen Sie ein neues Verzeichnis für unser Projekt
+      mkdir weather
+      cd weather
+      # Initialisieren Sie ein neues C#-Projekt
+      dotnet new console
+      ```
+    </CodeGroup>
+
+    Nachdem Sie `dotnet new console` ausgeführt haben, wird ein neues C#-Projekt erstellt.
+    Sie können das Projekt in Ihrer bevorzugten IDE öffnen, z. B. in [Visual Studio](https://visualstudio.microsoft.com/) oder [Rider](https://www.jetbrains.com/rider/).
+    Alternativ können Sie eine C#-Anwendung mit dem [Projektassistenten von Visual Studio](https://learn.microsoft.com/en-us/visualstudio/get-started/csharp/tutorial-console?view=vs-2022) erstellen.
+    Nachdem Sie das Projekt erstellt haben, fügen Sie das NuGet-Paket für das Model Context Protocol (MCP) SDK und das Hosting hinzu:
+
+    ```bash
+    # Das NuGet-Paket „Model Context Protocol SDK“ hinzufügen
+    dotnet add package ModelContextProtocol --prerelease
+    # Das NuGet-Paket „.NET Hosting“ hinzufügen
+    dotnet add package Microsoft.Extensions.Hosting
+    ```
+
+    Legen wir nun mit dem Aufbau Ihres Servers los.
+
+    ## Ihren Server erstellen
+
+    Öffnen Sie die Datei `Program.cs` in Ihrem Projekt und ersetzen Sie ihren Inhalt durch den folgenden Code:
+
+    ```csharp
+    using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.Extensions.Hosting;
+    using ModelContextProtocol;
+    using System.Net.Http.Headers;
+
+    var builder = Host.CreateEmptyApplicationBuilder(settings: null);
+
+    builder.Services.AddMcpServer()
+        .WithStdioServerTransport()
+        .WithToolsFromAssembly();
+
+    builder.Services.AddSingleton(_ =>
+    {
+        var client = new HttpClient() { BaseAddress = new Uri("https://api.weather.gov") };
+        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("weather-tool", "1.0"));
+        return client;
+    });
+
+    var app = builder.Build();
+
+    await app.RunAsync();
+    ```
+
+    <Note>
+      Wenn Sie den `ApplicationHostBuilder` erstellen, verwenden Sie `CreateEmptyApplicationBuilder` statt `CreateDefaultBuilder`. So wird verhindert, dass der Server zusätzliche Nachrichten auf die Konsole schreibt. Dies ist nur für Server erforderlich, die den STDIO-Transport verwenden.
+    </Note>
+
+    Dieser Code richtet eine einfache Konsolenanwendung ein, die das Model Context Protocol (MCP) SDK verwendet, um einen MCP-Server mit STDIO-Transport (Standard Input/Output) zu erstellen.
+
+    ### Hilfsfunktionen für die Wetter-API
+
+    Erstellen Sie eine Erweiterungsklasse für `HttpClient`, die die Verarbeitung von JSON-Anfragen vereinfacht:
+
+    ```csharp
+    using System.Text.Json;
+
+    internal static class HttpClientExt
+    {
+        public static async Task<JsonDocument> ReadJsonDocumentAsync(this HttpClient client, string requestUri)
+        {
+            using var response = await client.GetAsync(requestUri);
+            response.EnsureSuccessStatusCode();
+            return await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync());
+        }
+    }
+    ```
+
+    Als Nächstes definieren Sie eine Klasse mit den Handlern zur Werkzeugausführung, um Antworten der National Weather Service API abzufragen und zu konvertieren:
+
+    ```csharp
+    using ModelContextProtocol.Server;
+    using System.ComponentModel;
+    using System.Globalization;
+    using System.Text.Json;
+
+    namespace QuickstartWeatherServer.Tools;
+
+    [McpServerToolType]
+    public static class WeatherTools
+    {
+        [McpServerTool, Description("Wetterwarnungen für einen US-Bundesstaat abrufen.")]
+        public static async Task<string> GetAlerts(
+            HttpClient client,
+            [Description("US-Bundesstaat, für den Warnungen abgerufen werden sollen.")] string state)
+        {
+            using var jsonDocument = await client.ReadJsonDocumentAsync($"/alerts/active/area/{state}");
+            var jsonElement = jsonDocument.RootElement;
+            var alerts = jsonElement.GetProperty("features").EnumerateArray();
+
+            if (!alerts.Any())
+            {
+                return "Keine aktiven Warnungen für diesen Bundesstaat.";
+            }
+
+            return string.Join("\n--\n", alerts.Select(alert =>
+            {
+                JsonElement properties = alert.GetProperty("properties");
+                return $"""
+                        Ereignis: {properties.GetProperty("event").GetString()}
+                        Gebiet: {properties.GetProperty("areaDesc").GetString()}
+                        Schweregrad: {properties.GetProperty("severity").GetString()}
+                        Beschreibung: {properties.GetProperty("description").GetString()}
+                        Hinweise: {properties.GetProperty("instruction").GetString()}
+                        """;
+            }));
+        }
+
+        [McpServerTool, Description("Wettervorhersage für einen Ort abrufen.")]
+        public static async Task<string> GetForecast(
+            HttpClient client,
+            [Description("Breitengrad des Ortes.")] double latitude,
+            [Description("Längengrad des Ortes.")] double longitude)
+        {
+            var pointUrl = string.Create(CultureInfo.InvariantCulture, $"/points/{latitude},{longitude}");
+            using var jsonDocument = await client.ReadJsonDocumentAsync(pointUrl);
+            var forecastUrl = jsonDocument.RootElement.GetProperty("properties").GetProperty("forecast").GetString()
+                ?? throw new Exception($"Keine Vorhersage-URL bereitgestellt von {client.BaseAddress}points/{latitude},{longitude}");
+
+            using var forecastDocument = await client.ReadJsonDocumentAsync(forecastUrl);
+            var periods = forecastDocument.RootElement.GetProperty("properties").GetProperty("periods").EnumerateArray();
+
+            return string.Join("\n---\n", periods.Select(period => $"""
+                    {period.GetProperty("name").GetString()}
+                    Temperatur: {period.GetProperty("temperature").GetInt32()}°F
+                    Wind: {period.GetProperty("windSpeed").GetString()} {period.GetProperty("windDirection").GetString()}
+                    Vorhersage: {period.GetProperty("detailedForecast").GetString()}
+                    """));
+        }
+    }
+    ```
+
+    ### Server starten
+
+    Führen Sie abschließend den Server mit dem folgenden Befehl aus:
+
+    ```bash
+    dotnet run
+    ```
+
+    Dadurch wird der Server gestartet und über die Standard-Ein-/Ausgabe auf eingehende Anfragen gewartet.
+
+    ## Ihren Server mit Claude für Desktop testen
+
+    <Note>
+      Claude für Desktop ist unter Linux noch nicht verfügbar. Linux-Nutzer können mit dem Tutorial [Building a client](/de/docs/develop/build-client) fortfahren, um einen MCP-Client zu erstellen, der sich mit dem soeben erstellten Server verbindet.
+    </Note>
+
+    Stellen Sie zunächst sicher, dass Claude für Desktop installiert ist. [Die neueste Version können Sie hier installieren.](https://claude.ai/download) Falls Sie Claude für Desktop bereits installiert haben, **stellen Sie sicher, dass es auf die neueste Version aktualisiert ist.**
+    here.](https://claude.ai/download) If you already have Claude for Desktop, **make sure it&#39;s updated to the latest version.**
+    Wir müssen Claude für Desktop für die MCP-Server konfigurieren, die Sie verwenden möchten. Öffnen Sie dazu die Konfigurationsdatei Ihrer Claude-für-Desktop-App unter `~/Library/Application Support/Claude/claude_desktop_config.json` in einem Texteditor. Legen Sie die Datei an, falls sie nicht existiert.
+    Wenn Sie beispielsweise [VS Code](https://code.visualstudio.com/) installiert haben:
+
+    <CodeGroup>
+      ```bash macOS/Linux
+      code ~/Library/Application\ Support/Claude/claude_desktop_config.json
+      ```
+
+      ```powershell Windows
+      code $env:AppData\Claude\claude_desktop_config.json
+      ```
+    </CodeGroup>
+
+    Fügen Sie anschließend Ihre Server unter dem Schlüssel `mcpServers` hinzu. Die MCP-UI-Elemente werden in Claude für Desktop nur angezeigt, wenn mindestens ein Server korrekt konfiguriert ist.
+    In diesem Beispiel fügen wir unseren einzelnen Wetterserver wie folgt hinzu:
+
+    <CodeGroup>
+      ```json macOS/Linux
+      {
+        "mcpServers": {
+          "weather": {
+            "command": "dotnet",
+            "args": ["run", "--project", "/ABSOLUTE/PATH/TO/PROJECT", "--no-build"]
+          }
+        }
+      }
+      ```
+
+      ```json Windows
+      {
+        "mcpServers": {
+          "weather": {
+            "command": "dotnet",
+            "args": [
+              "run",
+              "--project",
+              "C:\\ABSOLUTE\\PATH\\TO\\PROJECT",
+              "--no-build"
+            ]
+          }
+        }
+      }
+      ```
+    </CodeGroup>
+
+    Dadurch erfährt Claude für Desktop:
+
+    1. Es gibt einen MCP-Server namens „weather“
+    2. Starten Sie es, indem Sie `dotnet run /ABSOLUTE/PATH/TO/PROJECT` ausführen.
+       Speichern Sie die Datei und starten Sie **Claude for Desktop** neu.
+  </Tab>
+</Tabs>
+
+<div id="test-with-commands">
+  ### Mit Befehlen testen
+</div>
+
+Stellen wir sicher, dass Claude für Desktop die beiden Werkzeuge erkennt, die wir in unserem `weather`-Server bereitgestellt haben. Sie können dies überprüfen, indem Sie nach dem Symbol „Suche und Werkzeuge“ <img src="/images/claude-desktop-mcp-slider.svg" style={{display: 'inline', margin: 0, height: '1.3em'}} /> suchen:
+
+<Frame>
+  <img src="/images/visual-indicator-mcp-tools.png" />
+</Frame>
+
+Nachdem Sie auf das Schieberegler-Symbol geklickt haben, sollten zwei Werkzeuge aufgelistet sein:
+
+<Frame>
+  <img src="/images/available-mcp-tools.png" />
+</Frame>
+
+Wenn Ihr Server von Claude für Desktop nicht erkannt wird, wechseln Sie zum Abschnitt [Troubleshooting](#troubleshooting) für Tipps zur Fehlerbehebung.
+
+Wenn das Symbol für die Werkzeugeinstellungen angezeigt wird, können Sie Ihren Server jetzt testen, indem Sie die folgenden Befehle in Claude für Desktop ausführen:
+
+* Wie ist das Wetter in Sacramento?
+* Welche aktiven Wetterwarnungen gibt es in Texas?
+
+<Frame>
+  <img src="/images/current-weather.png" />
+</Frame>
+
+<Frame>
+  <img src="/images/weather-alerts.png" />
+</Frame>
+
+<Note>
+  Da es sich um den US National Weather Service handelt, funktionieren die Anfragen nur für Orte in den USA.
+</Note>
+
+<div id="whats-happening-under-the-hood">
+  ## Was unter der Haube passiert
+</div>
+
+Wenn Sie eine Frage stellen:
+
+1. Der Client sendet Ihre Frage an Claude
+2. Claude analysiert die verfügbaren Werkzeuge und entscheidet, welche verwendet werden sollen
+3. Der Client führt die ausgewählten Werkzeuge über den MCP-Server aus
+4. Die Ergebnisse werden an Claude zurückgesendet
+5. Claude formuliert eine Antwort in natürlicher Sprache
+6. Die Antwort wird Ihnen angezeigt!
+
+<div id="troubleshooting">
+  ## Fehlerbehebung
+</div>
+
+<AccordionGroup>
+  <Accordion title="Integrationsprobleme mit Claude für Desktop">
+    **Protokolle von Claude für Desktop abrufen**
+
+    Protokolle der Claude.app im Zusammenhang mit MCP werden in Protokolldateien unter `~/Library/Logs/Claude` geschrieben:
+
+    * `mcp.log` enthält allgemeine Protokolle zu MCP-Verbindungen und Verbindungsfehlern.
+    * Dateien namens `mcp-server-SERVERNAME.log` enthalten Fehlerausgaben (stderr) des jeweiligen Servers.
+
+    Führen Sie den folgenden Befehl aus, um aktuelle Protokolle aufzulisten und neue Einträge live zu verfolgen:
+
+    ```bash
+    # Claudes Protokolle auf Fehler prüfen
+    tail -n 20 -f ~/Library/Logs/Claude/mcp*.log
+    ```
+
+    **Server wird in Claude nicht angezeigt**
+
+    1. Prüfen Sie die Syntax Ihrer Datei `claude_desktop_config.json`
+    2. Stellen Sie sicher, dass der Pfad zu Ihrem Projekt absolut ist und nicht relativ
+    3. Starten Sie Claude für Desktop vollständig neu
+
+    **Werkzeugaufrufe schlagen stillschweigend fehl**
+
+    Wenn Claude versucht, die Werkzeuge zu verwenden, diese jedoch fehlschlagen:
+
+    1. Prüfen Sie Claudes Protokolle auf Fehler
+    2. Stellen Sie sicher, dass Ihr Server fehlerfrei gebaut wird und läuft
+    3. Versuchen Sie, Claude für Desktop neu zu starten
+
+    **Nichts davon funktioniert. Was soll ich tun?**
+
+    Bitte sehen Sie in unserem [Debugging-Leitfaden](/de/legacy/tools/debugging) nach. Dort finden Sie bessere Debugging-Werkzeuge und ausführlichere Anleitungen.
+  </Accordion>
+
+  <Accordion title="Probleme mit der Weather-API">
+    **Fehler: Abrufen der Grid-Point-Daten fehlgeschlagen**
+
+    Das bedeutet in der Regel:
+
+    1. Die Koordinaten liegen außerhalb der USA
+    2. Die NWS-API hat derzeit Probleme
+    3. Sie unterliegen einer Ratenbegrenzung
+
+    Lösung:
+
+    * Vergewissern Sie sich, dass Sie US-Koordinaten verwenden
+    * Fügen Sie eine kurze Verzögerung zwischen Anfragen ein
+    * Prüfen Sie die Statusseite der NWS-API
+
+    **Fehler: Keine aktiven Warnungen für [STATE]**
+
+    Das ist kein Fehler – es bedeutet lediglich, dass es derzeit keine Wetterwarnungen für diesen Bundesstaat gibt. Versuchen Sie einen anderen Bundesstaat oder prüfen Sie erneut bei Unwetter.
+  </Accordion>
+</AccordionGroup>
+
+<Note>
+  Für weitergehende Fehlerbehebung sehen Sie sich unseren Leitfaden zum [Debugging von MCP](/de/legacy/tools/debugging) an
+</Note>
+
+<div id="next-steps">
+  ## Nächste Schritte
+</div>
+
+<CardGroup cols={2}>
+  <Card title="Einen Client entwickeln" icon="outlet" href="/de/docs/develop/build-client">
+    Erfahren Sie, wie Sie Ihren eigenen MCP-Client entwickeln, der sich mit Ihrem Server verbinden kann
+  </Card>
+
+  <Card title="Beispielserver" icon="grid" href="/de/examples">
+    Entdecken Sie unsere Galerie offizieller MCP-Server und Implementierungen
+  </Card>
+
+  <Card title="Debugging-Leitfaden" icon="bug" href="/de/legacy/tools/debugging">
+    Erfahren Sie, wie Sie MCP-Server und Integrationen effektiv debuggen
+  </Card>
+
+  <Card title="MCP mit LLMs entwickeln" icon="comments" href="/de/tutorials/building-mcp-with-llms">
+    Erfahren Sie, wie Sie LLMs wie Claude nutzen, um Ihre MCP-Entwicklung zu beschleunigen
+  </Card>
+</CardGroup>

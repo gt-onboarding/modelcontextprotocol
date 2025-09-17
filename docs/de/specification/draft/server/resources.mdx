@@ -1,0 +1,435 @@
+---
+title: Ressourcen
+---
+
+<div id="enable-section-numbers" />
+
+<Info>**Protokollrevision**: Entwurf</Info>
+
+Der Model Context Protocol (MCP) bietet eine standardisierte Möglichkeit für Server, Ressourcen gegenüber Clients offenzulegen. Ressourcen ermöglichen es Servern, Daten bereitzustellen, die Sprachmodellen Kontext liefern – etwa Dateien, Datenbankschemata oder anwendungsspezifische Informationen. Jede Ressource ist eindeutig durch eine [URI](https://datatracker.ietf.org/doc/html/rfc3986) identifiziert.
+
+<div id="user-interaction-model">
+  ## Benutzerinteraktionsmodell
+</div>
+
+Ressourcen im MCP sind **anwendungsgetrieben** konzipiert; Host-Anwendungen
+entscheiden, wie sie Kontext je nach Bedarf einbeziehen.
+
+Beispielsweise könnten Anwendungen:
+
+* Ressourcen über UI-Elemente zur expliziten Auswahl bereitstellen, etwa in einer Baum- oder Listenansicht
+* Nutzerinnen und Nutzern ermöglichen, verfügbare Ressourcen zu durchsuchen und zu filtern
+* Eine automatische Kontextaufnahme implementieren, basierend auf Heuristiken oder der Auswahl des KI-Modells
+
+![Beispiel eines Auswahlwerkzeugs für Ressourcen-Kontext](/specification/draft/server/resource-picker.png)
+
+Implementierungen können Ressourcen jedoch über jedes Interface-Muster bereitstellen, das
+ihren Anforderungen entspricht—das Protokoll selbst schreibt kein spezifisches Benutzerinteraktionsmodell vor.
+
+<div id="capabilities">
+  ## Fähigkeiten
+</div>
+
+Server, die Ressourcen unterstützen, MÜSSEN die Fähigkeit `resources` deklarieren:
+
+```json
+{
+  "capabilities": {
+    "resources": {
+      "subscribe": true,
+      "listChanged": true
+    }
+  }
+}
+```
+
+Diese Fähigkeit unterstützt zwei optionale Merkmale:
+
+* `subscribe`: ob der Client einzelne Ressourcen abonnieren kann, um über Änderungen benachrichtigt zu werden.
+* `listChanged`: ob der Server Benachrichtigungen sendet, wenn sich die Liste der verfügbaren Ressourcen ändert.
+
+Sowohl `subscribe` als auch `listChanged` sind optional—Server können keines von beiden, nur eines oder beide unterstützen:
+
+```json
+{
+  "capabilities": {
+    "resources": {} // Keine der Merkmale unterstützt
+  }
+}
+```
+
+```json
+{
+  "capabilities": {
+    "resources": {
+      "subscribe": true // Nur Abonnements unterstützt
+    }
+  }
+}
+```
+
+```json
+{
+  "capabilities": {
+    "resources": {
+      "listChanged": true // Nur Benachrichtigungen über Listenänderungen unterstützt
+    }
+  }
+}
+```
+
+<div id="protocol-messages">
+  ## Protokollnachrichten
+</div>
+
+<div id="listing-resources">
+  ### Auflisten von Ressourcen
+</div>
+
+Um verfügbare Ressourcen zu ermitteln, senden Clients eine `resources/list`-Anfrage. Dieser Vorgang
+unterstützt [Seitennummerierung](/de/specification/draft/server/utilities/pagination).
+
+**Anfrage:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "resources/list",
+  "params": {
+    "cursor": "optional-cursor-value"
+  }
+}
+```
+
+**Antwort:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "resources": [
+      {
+        "uri": "file:///project/src/main.rs",
+        "name": "main.rs",
+        "title": "Hauptdatei der Rust-Anwendung",
+        "description": "Primärer Einstiegspunkt der Anwendung",
+        "mimeType": "text/x-rust",
+        "icons": [
+          {
+            "src": "https://example.com/rust-file-icon.png",
+            "mimeType": "image/png",
+            "sizes": "48x48"
+          }
+        ]
+      }
+    ],
+    "nextCursor": "next-page-cursor"
+  }
+}
+```
+
+<div id="reading-resources">
+  ### Ressourcen lesen
+</div>
+
+Um den Inhalt von Ressourcen abzurufen, senden Clients eine `resources/read`-Anfrage:
+
+**Anfrage:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "resources/read",
+  "params": {
+    "uri": "file:///project/src/main.rs"
+  }
+}
+```
+
+**Antwort:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "contents": [
+      {
+        "uri": "file:///project/src/main.rs",
+        "name": "main.rs",
+        "title": "Hauptdatei der Rust-Anwendung",
+        "mimeType": "text/x-rust",
+        "text": "fn main() {\n    println!(\"Hello world!\");\n}"
+      }
+    ]
+  }
+}
+```
+
+<div id="resource-templates">
+  ### Ressourcen-Vorlagen
+</div>
+
+Ressourcen-Vorlagen ermöglichen es Servern, parametrisierte Ressourcen mithilfe von
+[URI-Vorlagen](https://datatracker.ietf.org/doc/html/rfc6570) bereitzustellen. Argumente können
+über [die Completion-API](/de/specification/draft/server/utilities/completion) automatisch vervollständigt werden.
+
+**Anfrage:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "method": "resources/templates/list"
+}
+```
+
+**Antwort:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "result": {
+    "resourceTemplates": [
+      {
+        "uriTemplate": "file:///{path}",
+        "name": "Project Files",
+        "title": "📁 Project Files",
+        "description": "Zugriff auf Dateien im Projektverzeichnis",
+        "mimeType": "application/octet-stream"
+      }
+    ]
+  }
+}
+```
+
+<div id="list-changed-notification">
+  ### Benachrichtigung über geänderte Liste
+</div>
+
+Wenn sich die Liste der verfügbaren Ressourcen ändert, **SOLLEN** Server, die die Fähigkeit `listChanged` erklärt haben, eine Benachrichtigung senden:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/resources/list_changed"
+}
+```
+
+<div id="subscriptions">
+  ### Abonnements
+</div>
+
+Das Protokoll unterstützt optionale Abonnements für Änderungen an Ressourcen. Clients können sich für bestimmte Ressourcen anmelden und Benachrichtigungen erhalten, wenn diese geändert werden:
+
+**Abonnementanfrage:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 4,
+  "method": "resources/subscribe",
+  "params": {
+    "uri": "file:///project/src/main.rs"
+  }
+}
+```
+
+**Aktualisierungsbenachrichtigung:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/resources/updated",
+  "params": {
+    "uri": "file:///project/src/main.rs",
+    "title": "Hauptdatei der Rust-Anwendung"
+  }
+}
+```
+
+<div id="message-flow">
+  ## Nachrichtenfluss
+</div>
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Server
+
+    Note over Client,Server: Ressourcenerkennung
+    Client->>Server: resources/list
+    Server-->>Client: Liste der Ressourcen
+
+    Note over Client,Server: Ressourcenzugriff
+    Client->>Server: resources/read
+    Server-->>Client: Ressourceninhalte
+
+    Note over Client,Server: Abonnements
+    Client->>Server: resources/subscribe
+    Server-->>Client: Abonnement bestätigt
+
+    Note over Client,Server: Aktualisierungen
+    Server--)Client: notifications/resources/updated
+    Client->>Server: resources/read
+    Server-->>Client: Aktualisierte Inhalte
+```
+
+<div id="data-types">
+  ## Datentypen
+</div>
+
+<div id="resource">
+  ### Ressource
+</div>
+
+Eine Ressourcendefinition umfasst:
+
+* `uri`: Eindeutiger Bezeichner der Ressource
+* `name`: Name der Ressource.
+* `title`: Optionaler, menschenlesbarer Anzeigename der Ressource.
+* `description`: Optionale Beschreibung
+* `mimeType`: Optionaler MIME-Typ
+* `size`: Optionale Größe in Bytes
+
+<div id="resource-contents">
+  ### Inhalt von Ressourcen
+</div>
+
+Ressourcen können entweder Text- oder Binärdaten enthalten:
+
+<div id="text-content">
+  #### Textinhalt
+</div>
+
+```json
+{
+  "uri": "file:///example.txt",
+  "name": "example.txt",
+  "title": "Beispiel-Textdatei",
+  "mimeType": "text/plain",
+  "text": "Inhalt der Ressource"
+}
+```
+
+<div id="binary-content">
+  #### Binärinhalt
+</div>
+
+```json
+{
+  "uri": "file:///example.png",
+  "name": "example.png",
+  "title": "Beispielbild",
+  "mimeType": "image/png",
+  "blob": "base64-encoded-data"
+}
+```
+
+<div id="annotations">
+  ### Annotationen
+</div>
+
+Ressourcen, Ressourcen-Vorlagen und Inhaltsblöcke unterstützen optionale Annotationen, die Clients Hinweise geben, wie die Ressource verwendet oder dargestellt werden soll:
+
+* **`audience`**: Ein Array, das die vorgesehene(n) Zielgruppe(n) für diese Ressource angibt. Gültige Werte sind `"user"` und `"assistant"`. Zum Beispiel kennzeichnet `["user", "assistant"]` Inhalte, die für beide hilfreich sind.
+* **`priority`**: Eine Zahl von 0,0 bis 1,0, die die Wichtigkeit dieser Ressource angibt. Ein Wert von 1 bedeutet „am wichtigsten“ (praktisch erforderlich), während 0 „am wenigsten wichtig“ bedeutet (vollständig optional).
+* **`lastModified`**: Ein Zeitstempel im ISO-8601-Format, der angibt, wann die Ressource zuletzt geändert wurde (z. B. `"2025-01-12T15:00:58Z"`).
+
+Beispielressource mit Annotationen:
+
+```json
+{
+  "uri": "file:///project/README.md",
+  "name": "README.md",
+  "title": "Project Documentation",
+  "mimeType": "text/markdown",
+  "annotations": {
+    "audience": ["user"],
+    "priority": 0.8,
+    "lastModified": "2025-01-12T15:00:58Z"
+  }
+}
+```
+
+Clients können diese Annotationen nutzen, um:
+
+* Ressourcen nach ihrer vorgesehenen Zielgruppe zu filtern
+* Zu priorisieren, welche Ressourcen in den Kontext aufgenommen werden
+* Änderungszeiten anzuzeigen oder nach Aktualität zu sortieren
+
+<div id="common-uri-schemes">
+  ## Gängige URI-Schemata
+</div>
+
+Das Protokoll definiert mehrere standardisierte URI-Schemata. Diese Liste ist nicht vollständig—Implementierungen können jederzeit zusätzliche, benutzerdefinierte URI-Schemata verwenden.
+
+<div id="https">
+  ### https://
+</div>
+
+Wird verwendet, um eine im Web verfügbare Ressource darzustellen.
+
+Server **SOLLTEN** dieses Schema nur verwenden, wenn der Client in der Lage ist, die Ressource eigenständig direkt aus dem Web abzurufen und zu laden – das heißt, er muss die Ressource nicht über den MCP-Server lesen.
+
+Für andere Anwendungsfälle **SOLLTEN** Server stattdessen ein anderes URI-Schema verwenden oder ein benutzerdefiniertes definieren, selbst wenn der Server die Ressourcendaten seinerseits aus dem Internet herunterlädt.
+
+<div id="file">
+  ### file://
+</div>
+
+Wird verwendet, um Ressourcen zu identifizieren, die sich wie ein Dateisystem verhalten. Die Ressourcen müssen jedoch nicht einem tatsächlichen physischen Dateisystem entsprechen.
+
+MCP-Server **DÜRFEN** file://-Ressourcen mit einem
+[XDG-MIME-Typ](https://specifications.freedesktop.org/shared-mime-info-spec/0.14/ar01s02.html#id-1.3.14),
+wie `inode/directory`, kennzeichnen, um nicht reguläre Dateien (etwa Verzeichnisse) darzustellen, die ansonsten keinen standardisierten MIME-Typ haben.
+
+<div id="git">
+  ### git://
+</div>
+
+Integration mit der Git-Versionsverwaltung.
+
+<div id="custom-uri-schemes">
+  ### Benutzerdefinierte URI-Schemata
+</div>
+
+Benutzerdefinierte URI-Schemata **MÜSSEN** im Einklang mit [RFC3986](https://datatracker.ietf.org/doc/html/rfc3986) stehen und die oben genannten Hinweise berücksichtigen.
+
+<div id="error-handling">
+  ## Fehlerbehandlung
+</div>
+
+Server **SOLLTEN** für gängige Fehlerfälle die standardisierten JSON-RPC-Fehler zurückgeben:
+
+* Ressource nicht gefunden: `-32002`
+* Interner Fehler: `-32603`
+
+Beispiel für einen Fehler:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 5,
+  "error": {
+    "code": -32002,
+    "message": "Resource not found",
+    "data": {
+      "uri": "file:///nonexistent.txt"
+    }
+  }
+}
+```
+
+<div id="security-considerations">
+  ## Sicherheitshinweise
+</div>
+
+1. Server **MÜSSEN** alle Ressourcen-URIs validieren
+2. Zugriffskontrollen **SOLLTEN** für sensible Ressourcen implementiert werden
+3. Binärdaten **MÜSSEN** korrekt codiert werden
+4. Berechtigungen für Ressourcen **SOLLTEN** vor Ausführungen geprüft werden

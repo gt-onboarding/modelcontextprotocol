@@ -1,0 +1,30 @@
+---
+title: Überblick
+---
+
+<Info>**Protokollrevision**: 2024-11-05</Info>
+
+Server stellen die grundlegenden Bausteine bereit, um über
+MCP Kontext zu Sprachmodellen hinzuzufügen. Diese Primitiven ermöglichen umfassende Interaktionen zwischen Clients, Servern und Sprachmodellen:
+
+* **Prompts**: Vordefinierte Vorlagen oder Anweisungen, die Interaktionen mit dem Sprachmodell steuern
+* **Ressourcen**: Strukturierte Daten oder Inhalte, die dem Modell zusätzlichen Kontext liefern
+* **Werkzeuge**: Ausführbare Funktionen, die es Modellen erlauben, Aktionen auszuführen oder Informationen abzurufen
+
+Jedes Primitive lässt sich in der folgenden Steuerungshierarchie zusammenfassen:
+
+| Primitive | Steuerung              | Beschreibung                                       | Beispiel                        |
+| --------- | ---------------------- | -------------------------------------------------- | ------------------------------- |
+| Prompts   | Benutzerkontrolliert   | Interaktive Vorlagen, die durch Benutzerwahl aufgerufen werden | Slash-Befehle, Menüoptionen     |
+| Ressourcen | Anwendungskontrolliert | Kontextdaten, die vom Client angehängt und verwaltet werden | Dateiinhalte, Git-Verlauf       |
+| Werkzeuge | Modellkontrolliert     | Funktionen, die dem LLM bereitgestellt werden, um Aktionen auszuführen | API-POST-Anfragen, Dateischreiben |
+
+Entdecken Sie diese zentralen Primitiven im Folgenden genauer:
+
+<CardGroup cols={3}>
+  <Card title="Prompts" icon="message" href="/de/specification/2024-11-05/server/prompts" />
+
+  <Card title="Ressourcen" icon="file-lines" href="/de/specification/2024-11-05/server/resources" />
+
+  <Card title="Werkzeuge" icon="wrench" href="/de/specification/2024-11-05/server/tools" />
+</CardGroup>

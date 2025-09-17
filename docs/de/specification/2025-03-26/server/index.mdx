@@ -1,0 +1,30 @@
+---
+title: Übersicht
+---
+
+<Info>**Protokollrevision**: 2025-03-26</Info>
+
+Server liefern die grundlegenden Bausteine, um über
+MCP Sprachmodellen Kontext hinzuzufügen. Diese Grundelemente ermöglichen rich­tige Interaktionen zwischen Clients, Servern und Sprachmodellen:
+
+* **Prompts**: Vordefinierte Vorlagen oder Anweisungen, die Interaktionen des Sprachmodells steuern
+* **Ressourcen**: Strukturierte Daten oder Inhalte, die dem Modell zusätzlichen Kontext liefern
+* **Werkzeuge**: Ausführbare Funktionen, mit denen Modelle Aktionen ausführen oder Informationen abrufen können
+
+Jedes Grundelement lässt sich in der folgenden Steuerungshierarchie zusammenfassen:
+
+| Grundelement | Steuerung               | Beschreibung                                               | Beispiel                        |
+| ------------ | ----------------------- | ---------------------------------------------------------- | ------------------------------- |
+| Prompts      | Benutzer­gesteuert      | Interaktive Vorlagen, die vom Benutzer gezielt aufgerufen werden | Slash-Befehle, Menüoptionen     |
+| Ressourcen   | Anwendungs­gesteuert    | Kontextdaten, die vom Client angehängt und verwaltet werden      | Dateiinhalte, Git-Verlauf       |
+| Werkzeuge    | Modell­gesteuert        | Funktionen, die dem LLM zum Ausführen von Aktionen bereitgestellt werden | API-POST-Anfragen, Dateischreiben |
+
+Erkunden Sie diese Schlüsselelemente unten im Detail:
+
+<CardGroup cols={3}>
+  <Card title="Prompts" icon="message" href="/de/specification/2025-03-26/server/prompts" />
+
+  <Card title="Ressourcen" icon="file-lines" href="/de/specification/2025-03-26/server/resources" />
+
+  <Card title="Werkzeuge" icon="wrench" href="/de/specification/2025-03-26/server/tools" />
+</CardGroup>

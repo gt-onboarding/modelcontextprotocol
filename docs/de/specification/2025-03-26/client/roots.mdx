@@ -1,0 +1,205 @@
+---
+title: Wurzeln
+---
+
+<Info>**Protokollrevision**: 2025-03-26</Info>
+
+Das Model Context Protocol (MCP) bietet eine standardisierte Möglichkeit für Clients, Dateisystem-„Wurzeln“ für Server bereitzustellen. Wurzeln definieren die Grenzen, innerhalb derer Server im Dateisystem operieren können, und machen deutlich, auf welche Verzeichnisse und Dateien sie Zugriff haben. Server können von unterstützenden Clients die Liste der Wurzeln anfordern und Benachrichtigungen erhalten, wenn sich diese Liste ändert.
+
+<div id="user-interaction-model">
+  ## Benutzerinteraktionsmodell
+</div>
+
+Wurzeln in MCP werden in der Regel über Arbeitsbereichs- oder Projektkonfigurationsoberflächen bereitgestellt.
+
+Implementierungen könnten beispielsweise einen Arbeitsbereichs-/Projektauswähler anbieten, der Nutzerinnen und Nutzern ermöglicht, Verzeichnisse und Dateien auszuwählen, auf die der Server Zugriff haben soll. Dies kann mit einer automatischen Erkennung des Arbeitsbereichs aus Versionskontrollsystemen oder Projektdateien kombiniert werden.
+
+Implementierungen sind jedoch frei, Wurzeln über jedes passende Interaktionsmuster der Benutzeroberfläche bereitzustellen—das Protokoll selbst schreibt kein spezifisches Benutzerinteraktionsmodell vor.
+
+<div id="capabilities">
+  ## Fähigkeiten
+</div>
+
+Clients, die Wurzeln unterstützen, **MÜSSEN** die Fähigkeit `roots` während der
+[Initialisierung](/de/specification/2025-03-26/basic/lifecycle#initialization) deklarieren:
+
+```json
+{
+  "capabilities": {
+    "roots": {
+      "listChanged": true
+    }
+  }
+}
+```
+
+`listChanged` gibt an, ob der Client Benachrichtigungen ausgibt, wenn sich die Liste der Wurzeln
+ändert.
+
+<div id="protocol-messages">
+  ## Protokollnachrichten
+</div>
+
+<div id="listing-roots">
+  ### Auflisten von Wurzeln
+</div>
+
+Um Wurzeln abzurufen, senden Server eine `roots/list`-Anfrage:
+
+**Anfrage:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "roots/list"
+}
+```
+
+**Antwort:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "roots": [
+      {
+        "uri": "file:///home/user/projects/myproject",
+        "name": "My Project"
+      }
+    ]
+  }
+}
+```
+
+<div id="root-list-changes">
+  ### Änderungen an der Root-Liste
+</div>
+
+Wenn sich Wurzeln ändern, MÜSSEN Clients, die `listChanged` unterstützen, eine Benachrichtigung senden:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/roots/list_changed"
+}
+```
+
+<div id="message-flow">
+  ## Nachrichtenfluss
+</div>
+
+```mermaid
+sequenceDiagram
+    participant Server
+    participant Client
+
+    Note over Server,Client: Ermittlung
+    Server->>Client: roots/list
+    Client-->>Server: Verfügbare Wurzeln
+
+    Note over Server,Client: Änderungen
+    Client--)Server: notifications/roots/list_changed
+    Server->>Client: roots/list
+    Client-->>Server: Aktualisierte Wurzeln
+```
+
+<div id="data-types">
+  ## Datentypen
+</div>
+
+<div id="root">
+  ### Wurzel
+</div>
+
+Eine Wurzeldefinition umfasst:
+
+* `uri`: Eindeutiger Bezeichner der Wurzel. In der aktuellen Spezifikation **MUSS** dies eine `file://`-URI sein.
+* `name`: Optionaler, menschenlesbarer Name für Anzeigezwecke.
+
+Beispielwurzeln für verschiedene Anwendungsfälle:
+
+<div id="project-directory">
+  #### Projektverzeichnis
+</div>
+
+```json
+{
+  "uri": "file:///home/user/projects/myproject",
+  "name": "Mein Projekt"
+}
+```
+
+<div id="multiple-repositories">
+  #### Mehrere Repositories
+</div>
+
+```json
+[
+  {
+    "uri": "file:///home/user/repos/frontend",
+    "name": "Frontend-Repository"
+  },
+  {
+    "uri": "file:///home/user/repos/backend",
+    "name": "Backend-Repository"
+  }
+]
+```
+
+<div id="error-handling">
+  ## Fehlerbehandlung
+</div>
+
+Clients **SOLLTEN** standardmäßige JSON-RPC-Fehler für gängige Fehlerszenarien zurückgeben:
+
+* Client unterstützt Wurzeln nicht: `-32601` (Methode nicht gefunden)
+* Interne Fehler: `-32603`
+
+Beispielfehler:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "error": {
+    "code": -32601,
+    "message": "Roots not supported",
+    "data": {
+      "reason": "Client does not have roots capability"
+    }
+  }
+}
+```
+
+<div id="security-considerations">
+  ## Sicherheitshinweise
+</div>
+
+1. Clients **MÜSSEN**:
+   * Nur Wurzeln mit passenden Berechtigungen freigeben
+   * Alle Wurzel-URIs validieren, um Pfadtraversierung zu verhindern
+   * Angemessene Zugriffskontrollen implementieren
+   * Die Zugänglichkeit der Wurzeln überwachen
+
+2. Server **SOLLEN**:
+   * Fälle behandeln, in denen Wurzeln nicht mehr verfügbar sind
+   * Wurzelgrenzen während der Operationen respektieren
+   * Alle Pfade gegen die angegebenen Wurzeln validieren
+
+<div id="implementation-guidelines">
+  ## Implementierungsrichtlinien
+</div>
+
+1. Clients **SOLLTEN**:
+   * Nutzerinnen und Nutzer um Zustimmung bitten, bevor Wurzeln für Server freigegeben werden
+   * Klare Benutzeroberflächen für die Verwaltung von Wurzeln bereitstellen
+   * Die Zugänglichkeit von Wurzeln prüfen, bevor sie freigegeben werden
+   * Auf Änderungen an Wurzeln überwachen
+
+2. Server **SOLLTEN**:
+   * Vor der Nutzung die Wurzeln-Fähigkeit prüfen
+   * Änderungen an der Wurzelliste robust handhaben
+   * Grenzen von Wurzeln bei Operationen respektieren
+   * Informationen zu Wurzeln angemessen cachen

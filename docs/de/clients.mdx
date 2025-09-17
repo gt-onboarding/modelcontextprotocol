@@ -1,0 +1,1385 @@
+---
+title: "Beispiel-Clients"
+description: "Eine Liste von Anwendungen, die MCP-Integrationen unterstützen"
+---
+
+Diese Seite bietet einen Überblick über Anwendungen, die das Model Context Protocol (MCP) unterstützen. Jeder Client kann unterschiedliche MCP-Funktionen unterstützen und damit unterschiedliche Integrationsstufen mit MCP-Servern ermöglichen.
+
+<div id="feature-support-matrix">
+  ## Funktionsunterstützung (Matrix)
+</div>
+
+<div id="feature-support-matrix-wrapper">
+  {/* prettier-ignore-start */}
+
+  | Client                                           | \[Ressourcen] | \[Prompts] | \[Werkzeuge] | \[Discovery] | \[Sampling] | \[Wurzeln] | \[Elicitation] |
+  | ------------------------------------------------ | ----------- | --------- | ------- | ---------------------- | ---------- | ----- | ------------ |
+  | \[5ire]\[5ire]                                     | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[AgentAI]\[AgentAI]                               | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[AgenticFlow]\[AgenticFlow]                       | ✅          | ✅        | ✅      | ✅                     | ❌         | ❌    | ❓            |
+  | \[AIQL TUUI]\[AIQL TUUI]                           | ✅          | ✅        | ✅      | ✅                     | ✅         | ❌    | ❓            |
+  | \[Amazon Q CLI]\[Amazon Q CLI]                     | ❌          | ✅        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[Amazon Q IDE]\[Amazon Q IDE]                     | ❌          | ❌        | ✅      | ❌                     | ❌         | ❌    | ❓            |
+  | \[Amp]\[Amp]                                       | ✅          | ❌        | ✅      | ❌                     | ✅         | ❌    | ❓            |
+  | \[Apify MCP Tester]\[Apify MCP Tester]             | ❌          | ❌        | ✅      | ✅                     | ❌         | ❌    | ❓            |
+  | \[Augment Code]\[AugmentCode]                      | ❌          | ❌        | ✅      | ❌                     | ❌         | ❌    | ❓            |
+  | \[BeeAI Framework]\[BeeAI Framework]               | ❌          | ❌        | ✅      | ❌                     | ❌         | ❌    | ❓            |
+  | \[BoltAI]\[BoltAI]                                 | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[Call Chirp]\[Call Chirp]                         | ❌          | ✅        | ✅      | ❌                     | ❌         | ❌    | ❓            |\
+  | \[ChatGPT]\[ChatGPT]                               | ❌          | ❌        | ✅      | ❌                     | ❌         | ❌    | ❓            |
+  | \[ChatWise]\[ChatWise]                             | ❌          | ❌        | ✅      | ❌                     | ❌         | ❌    | ❓            |
+  | \[Claude.ai]\[Claude.ai]                           | ✅          | ✅        | ✅      | ❌                     | ❌         | ❌    | ❓            |
+  | \[Claude Code]\[Claude Code]                       | ✅          | ✅        | ✅      | ❌                     | ❌         | ✅    | ❓            |
+  | \[Claude Desktop App]\[Claude Desktop]             | ✅          | ✅        | ✅      | ❌                     | ❌         | ❌    | ❓            |
+  | \[Chorus]\[Chorus]                                 | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[Cline]\[Cline]                                   | ✅          | ❌        | ✅      | ✅                     | ❌         | ❌    | ❓            |
+  | \[CodeGPT]\[CodeGPT]                               | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[Continue]\[Continue]                             | ✅          | ✅        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[Copilot-MCP]\[CopilotMCP]                        | ✅          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[Cursor]\[Cursor]                                 | ❌          | ❌        | ✅      | ❌                     | ❌         | ❌    | ❓            |
+  | \[Daydreams Agents]\[Daydreams]                    | ✅          | ✅        | ✅      | ❌                     | ❌         | ❌    | ❓            |
+  | \[Emacs Mcp]\[Mcp.el]                              | ❌          | ❌        | ✅      | ❌                     | ❌         | ❌    | ❓            |
+  | \[fast-agent]\[fast-agent]                         | ✅          | ✅        | ✅      | ✅                     | ✅         | ✅    | ✅            |
+  | \[FlowDown]\[FlowDown]                             | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❌            |
+  | \[FLUJO]\[FLUJO]                                   | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[Genkit]\[Genkit]                                 | ⚠️          | ✅        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[Glama]\[Glama]                                   | ✅          | ✅        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[Gemini CLI]\[Gemini CLI]                         | ❌          | ✅        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[GenAIScript]\[GenAIScript]                       | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[GitHub Copilot coding agent]\[GitHubCopilotCodingAgent]                       | ❌          | ❌        | ✅      | ❌                     | ❌         | ❌    | ❌            |
+  | \[Goose]\[Goose]                                   | ✅          | ✅        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[gptme]\[gptme]                                   | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[HyperAgent]\[HyperAgent]                         | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[JetBrains AI Assistant]\[JetBrains AI Assistant] | ❌          | ❌        | ✅      | ❌                     | ❌         | ❌    | ❓            |
+  | \[Kilo Code]\[Kilo Code]                           | ✅          | ❌        | ✅      | ✅                     | ❌         | ❌    | ❓            |
+  | \[Klavis AI Slack/Discord/Web]\[Klavis AI]         | ✅          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[Langflow]\[Langflow]                             | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[LibreChat]\[LibreChat]                           | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[LM Studio]\[LM Studio]                           | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[Lutra]\[Lutra]                                   | ✅          | ✅        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[mcp-agent]\[mcp-agent]                           | ✅          | ✅        | ✅      | ❓                     | ⚠️         | ✅    | ✅            |
+  | \[mcp-client-chatbot]\[mcp-client-chatbot]         | ❌          | ❌        | ✅      | ❌                     | ❌         | ❌    | ❓            |
+  | \[mcp-use]\[mcp-use]                               | ✅          | ✅        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[modelcontextchat.com]\[modelcontextchat.com]     | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[MCPHub]\[MCPHub]                                 | ✅          | ✅        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[MCPOmni-Connect]\[MCPOmni-Connect]               | ✅          | ✅        | ✅      | ❓                     | ✅         | ❌    | ❓            |
+  | \[Memex]\[Memex]                                   | ✅          | ✅        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[Microsoft Copilot Studio]                       | ❌          | ❌        | ✅      | ✅                     | ❌         | ❌    | ❓            |
+  | \[MindPal]\[MindPal]                               | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[MooPoint]\[MooPoint]                             | ❌          | ❌        | ✅      | ❓                     | ✅         | ❌    | ❓            |
+  | \[Msty Studio]\[Msty Studio]                       | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[NVIDIA Agent Intelligence toolkit]\[AIQ toolkit] | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[OpenSumi]\[OpenSumi]                             | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[oterm]\[oterm]                                   | ❌          | ✅        | ✅      | ❓                     | ✅         | ❌    | ❓            |
+  | \[Postman]\[postman]                               | ✅          | ✅        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[RecurseChat]\[RecurseChat]                       | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[Roo Code]\[Roo Code]                             | ✅          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[Shortwave]\[Shortwave]                           | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[Slack MCP Client]\[Slack MCP Client]             | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[Sourcegraph Cody]\[Cody]                         | ✅          | ❌        | ❌      | ❓                     | ❌         | ❌    | ❓            |
+  | \[SpinAI]\[SpinAI]                                 | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[Superinterface]\[Superinterface]                 | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[Superjoin]\[Superjoin]                           | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[systemprompt]\[systemprompt]                     | ✅          | ✅        | ✅      | ❓                     | ✅         | ❌    | ❓            |
+  | \[Tambo]\[Tambo]                                   | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[Tencent CloudBase AI DevKit]\[Tencent CloudBase AI DevKit] | ❌      | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[TheiaAI/TheiaIDE]\[TheiaAI/TheiaIDE]             | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[Tome]\[Tome]                                     | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[TypingMind App]\[TypingMind App]                 | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[VS Code GitHub Copilot]\[VS Code]                | ✅          | ✅        | ✅      | ✅                     | ✅         | ✅    | ✅            |
+  | \[Warp]\[Warp]                                     | ✅          | ❌        | ✅      | ✅                     | ❌         | ❌    | ❓            |
+  | \[WhatsMCP]\[WhatsMCP]                             | ❌          | ❌        | ✅      | ❌                     | ❌         | ❌    | ❓            |
+  | \[Windsurf Editor]\[Windsurf]                      | ❌          | ❌        | ✅      | ✅                     | ❌         | ❌    | ❓            |
+  | \[Witsy]\[Witsy]                                   | ❌          | ❌        | ✅      | ❓                     | ❌         | ❌    | ❓            |
+  | \[Zed]\[Zed]                                       | ❌          | ✅        | ✅      | ❌                     | ❌         | ❌    | ❓            |
+  | \[Zencoder]\[Zencoder]                             | ❌          | ❌        | ✅      | ❌                     | ❌         | ❌    | ❓            |
+
+  {/* prettier-ignore-end */}
+
+  [Ressourcen]: /docs/concepts/resources
+
+  [Prompts]: /docs/concepts/prompts
+
+  [Werkzeuge]: /docs/concepts/tools
+
+  [Erkennung]: /docs/concepts/tools#tool-discovery-and-updates
+
+  [Sampling]: /docs/concepts/sampling
+
+  [Wurzeln]: /docs/concepts/roots
+
+  [Elicitation]: /docs/concepts/elicitation
+
+  [5ire]: https://github.com/nanbingxyz/5ire
+
+  [AgentAI]: https://github.com/AdamStrojek/rust-agentai
+
+  [AgenticFlow]: https://agenticflow.ai/mcp
+
+  [AIQ Toolkit]: https://github.com/NVIDIA/AIQToolkit
+
+  [AIQL TUUI]: https://github.com/AI-QL/tuui
+
+  [Amazon Q CLI]: https://github.com/aws/amazon-q-developer-cli
+
+  [Amazon Q IDE]: https://aws.amazon.com/q/developer
+
+  [Amp]: https://ampcode.com
+
+  [Apify MCP-Tester]: https://apify.com/jiri.spilka/tester-mcp-client
+
+  [AugmentCode]: https://augmentcode.com
+
+  [BeeAI Framework]: https://i-am-bee.github.io/beeai-framework
+
+  [BoltAI]: https://boltai.com
+
+  [Call Chirp]: https://www.call-chirp.com
+
+  [ChatGPT]: https://chatgpt.com
+
+  [ChatWise]: https://chatwise.app
+
+  [Claude.ai]: https://claude.ai
+
+  [Claude Code]: https://claude.ai/code
+
+  [Claude Desktop]: https://claude.ai/download
+
+  [Chorus]: https://chorus.sh
+
+  [Cline]: https://github.com/cline/cline
+
+  [CodeGPT]: https://codegpt.co
+
+  [Fortfahren]: https://github.com/continuedev/continue
+
+  [CopilotMCP]: https://github.com/VikashLoomba/copilot-mcp
+
+  [Cursor]: https://cursor.com
+
+  [Daydreams]: https://github.com/daydreamsai/daydreams
+
+  [Klavis AI]: https://www.klavis.ai/
+
+  [Mcp.el]: https://github.com/lizqwerscott/mcp.el
+
+  [fast-agent]: https://github.com/evalstate/fast-agent
+
+  [FlowDown]: https://github.com/Lakr233/FlowDown
+
+  [FLUJO]: https://github.com/mario-andreschak/flujo
+
+  [Glama]: https://glama.ai/chat
+
+  [Gemini CLI]: https://goo.gle/gemini-cli
+
+  [Genkit]: https://github.com/firebase/genkit
+
+  [GenAIScript]: https://microsoft.github.io/genaiscript/reference/scripts/mcp-tools/
+
+  [GitHub Copilot Coding Agent]: https://docs.github.com/en/enterprise-cloud@latest/copilot/concepts/about-copilot-coding-agent
+
+  [Goose]: https://block.github.io/goose/docs/goose-architecture/#interoperability-with-extensions
+
+  [JetBrains AI Assistant]: https://plugins.jetbrains.com/plugin/22282-jetbrains-ai-assistant
+
+  [Kilo Code]: https://github.com/Kilo-Org/kilocode
+
+  [LibreChat]: https://github.com/danny-avila/LibreChat
+
+  [LM Studio]: https://lmstudio.ai
+
+  [Lutra]: https://lutra.ai
+
+  [mcp-agent]: https://github.com/lastmile-ai/mcp-agent
+
+  [mcp-client-chatbot]: https://github.com/cgoinglove/mcp-client-chatbot
+
+  [mcp-use]: https://github.com/pietrozullo/mcp-use
+
+  [modelcontextchat.com]: https://modelcontextchat.com
+
+  [MCPHub]: https://github.com/ravitemer/mcphub.nvim
+
+  [MCPOmni-Connect]: https://github.com/Abiorh001/mcp_omni_connect
+
+  [Memex]: https://memex.tech/
+
+  [Microsoft Copilot Studio]: https://learn.microsoft.com/de-de/microsoft-copilot-studio/agent-extend-action-mcp
+
+  [MindPal]: https://mindpal.io
+
+  [MooPoint]: https://moopoint.io
+
+  [Msty Studio]: https://msty.ai
+
+  [OpenSumi]: https://github.com/opensumi/core
+
+  [oterm]: https://github.com/ggozad/oterm
+
+  [Postman]: https://postman.com/downloads
+
+  [RecurseChat]: https://recurse.chat/
+
+  [Roo Code]: https://roocode.com
+
+  [Shortwave]: https://www.shortwave.com
+
+  [Slack MCP-Client]: https://github.com/tuannvm/slack-mcp-client
+
+  [Cody]: https://sourcegraph.com/cody
+
+  [SpinAI]: https://spinai.dev
+
+  [Superinterface]: https://superinterface.ai
+
+  [Superjoin]: https://superjoin.ai
+
+  [systemprompt]: https://systemprompt.io
+
+  [Tambo]: https://tambo.co
+
+  [Tencent CloudBase AI DevKit]: https://docs.cloudbase.net/ai/agent/mcp
+
+  [TheiaAI/TheiaIDE]: https://eclipsesource.com/blogs/2024/12/19/theia-ide-und-theia-ai-unterstuetzen-mcp/
+
+  [Tome]: https://github.com/runebookai/tome
+
+  [TypingMind-App]: https://www.typingmind.com
+
+  [VS Code]: https://code.visualstudio.com/
+
+  [Windsurf]: https://codeium.com/windsurf
+
+  [gptme]: https://github.com/gptme/gptme
+
+  [Warp]: https://www.warp.dev/
+
+  [WhatsMCP]: https://wassist.app/mcp/
+
+  [Witsy]: https://github.com/nbonamy/witsy
+
+  [Zed]: https://zed.dev
+
+  [Zencoder]: https://zencoder.ai
+
+  [HyperAgent]: https://github.com/hyperbrowserai/HyperAgent
+</div>
+
+<div id="client-details">
+  ## Clientdetails
+</div>
+
+<div id="5ire">
+  ### 5ire
+</div>
+
+[5ire](https://github.com/nanbingxyz/5ire) ist ein Open-Source-Desktopassistent mit KI, plattformübergreifend, der Werkzeuge über MCP-Server unterstützt.
+
+**Hauptfunktionen:**
+
+- Integrierte MCP-Server lassen sich schnell aktivieren und deaktivieren.
+- Nutzer können weitere Server hinzufügen, indem sie die Konfigurationsdatei anpassen.
+- Open Source und benutzerfreundlich, geeignet für Einsteiger.
+- Die MCP-Unterstützung wird fortlaufend ausgebaut.
+
+<div id="agentai">
+  ### AgentAI
+</div>
+
+[AgentAI](https://github.com/AdamStrojek/rust-agentai) ist eine Rust-Bibliothek, die die Erstellung von KI-Agenten vereinfacht. Die Bibliothek bietet eine nahtlose Integration mit MCP-Servern.
+
+[Beispiel für die Integration eines MCP-Servers](https://github.com/AdamStrojek/rust-agentai/blob/master/examples/tools_mcp.rs)
+
+**Wichtige Funktionen:**
+
+- Multi-LLM – Wir unterstützen die meisten LLM-APIs (OpenAI, Anthropic, Gemini, Ollama und alle mit der OpenAI-API kompatiblen).
+- Integrierte Unterstützung für MCP-Server.
+- Erstellen Sie Agenten-Workflows in einer typen- und speichersicheren Sprache wie Rust.
+
+<div id="agenticflow">
+  ### AgenticFlow
+</div>
+
+[AgenticFlow](https://agenticflow.ai/) ist eine No-Code-AI-Plattform, mit der Sie rund um die Uhr Agents für Vertriebs-, Marketing- und Kreativaufgaben erstellen können. Verbinden Sie über MCP sicher mehr als 2.500 APIs und 10.000 Werkzeuge.
+
+**Wichtigste Funktionen:**
+
+- No-Code-Erstellung von AI-Agents und Aufbau von Workflows.
+- Zugriff auf eine umfangreiche Bibliothek mit über 10.000 Werkzeugen und mehr als 2.500 APIs über MCP.
+- Einfacher Dreischritt-Prozess zum Verbinden von MCP-Servern.
+- Verbindungen sicher verwalten und Zugriff jederzeit widerrufen.
+
+**Erfahren Sie mehr:**
+
+- [AgenticFlow MCP-Integration](https://agenticflow.ai/mcp)
+
+<div id="aiql-tuui">
+  ### AIQL TUUI
+</div>
+
+[AIQL TUUI] ist eine native, plattformübergreifende Desktop-Chat-Anwendung für KI mit MCP-Unterstützung. Sie unterstützt mehrere KI-Anbieter (z. B. Anthropic, Cloudflare, Deepseek, OpenAI, Qwen), lokale KI-Modelle (über vLLM, Ray usw.) sowie aggregierte API-Plattformen (wie Deepinfra, Openrouter u. a.).
+
+**Wesentliche Funktionen:**
+
+- **Dynamisches Umschalten von LLM-APIs und Agenten**: Nahtlos zwischen unterschiedlichen LLM-APIs und Agenten wechseln – jederzeit.
+- **Umfassende Unterstützung von Fähigkeiten**: Integrierte Unterstützung für Werkzeuge, Prompts, Ressourcen und Sampling-Methoden.
+- **Konfigurierbare Agenten**: Hohe Flexibilität dank auswählbarer und anpassbarer Werkzeuge über die Agenten-Einstellungen.
+- **Erweiterte Sampling-Kontrolle**: Sampling-Parameter anpassen und mehrstufiges Sampling für optimale Ergebnisse nutzen.
+- **Plattformübergreifende Kompatibilität**: Voll kompatibel mit macOS, Windows und Linux.
+- **Kostenlos & Open Source (FOSS)**: Freizügige Lizenz erlaubt Modifikationen und individuelles App-Bundling.
+
+**Mehr erfahren:**
+
+- [TUUI-Dokumentation](https://www.tuui.com/)
+- [AIQL-GitHub-Repository](https://github.com/AI-QL)
+
+<div id="amazon-q-cli">
+  ### Amazon Q CLI
+</div>
+
+[Amazon Q CLI](https://github.com/aws/amazon-q-developer-cli) ist ein Open-Source, agentischer Coding-Assistent für Terminals.
+
+**Wichtige Funktionen:**
+
+- Volle Unterstützung für MCP-Server.
+- Prompts mit Ihrem bevorzugten Texteditor bearbeiten.
+- Gespeicherte Prompts sofort mit `@` aufrufen.
+- AWS-Ressourcen direkt über Ihr Terminal steuern und organisieren.
+- Werkzeuge, Profile, Kontextverwaltung, Auto-Compacting und vieles mehr!
+
+**Erste Schritte**
+
+```bash
+brew install amazon-q
+```
+
+<div id="amazon-q-ide">
+  ### Amazon Q IDE
+</div>
+
+[Amazon Q IDE](https://aws.amazon.com/q/developer) ist ein Open-Source, agentischer Coding-Assistent für IDEs.
+
+**Wichtige Funktionen:**
+
+- Unterstützung für die IDEs VS Code, JetBrains, Visual Studio und Eclipse.
+- AWS-Ressourcen direkt aus Ihrer IDE steuern und organisieren.
+- Berechtigungen für jedes MCP-Werkzeug über die Benutzeroberfläche der IDE verwalten.
+
+<div id="apify-mcp-tester">
+  ### Apify MCP Tester
+</div>
+
+[Apify MCP Tester](https://github.com/apify/tester-mcp-client) ist ein Open-Source-Client, der über Server-Sent Events (SSE) eine Verbindung zu jedem MCP-Server herstellt.
+Er ist ein eigenständiger Apify-Actor, der für das Testen von MCP-Servern über SSE entwickelt wurde und Authorization-Header unterstützt.
+Er verwendet reines JavaScript (Old-School-Stil) und wird auf Apify gehostet, sodass Sie ihn ohne Einrichtung ausführen können.
+
+**Hauptfunktionen:**
+
+- Stellt über SSE eine Verbindung zu jedem MCP-Server her.
+- Funktioniert mit dem [Apify MCP Server](https://apify.com/apify/actors-mcp-server), um mit einem oder mehreren Apify-[Actors](https://apify.com/store) zu interagieren.
+- Nutzt dynamisch Werkzeuge basierend auf Kontext und Benutzeranfragen (falls vom Server unterstützt).
+
+<div id="amp">
+  ### Amp
+</div>
+
+[Amp](https://ampcode.com) ist ein agentenbasiertes Coding-Werkzeug von Sourcegraph. Es läuft in VS Code (und kompatiblen Forks wie Cursor, Windsurf und VSCodium) sowie als Kommandozeilen-Tool. Es ist außerdem für Mehrbenutzerbetrieb ausgelegt — Sie können Threads teilen und mit Ihrem Team zusammenarbeiten.
+
+**Wesentliche Funktionen:**
+
+- Feingranulare Kontrolle über aktivierte Werkzeuge und Berechtigungen
+- Unterstützung für MCP-Server, die in der VS-Code-Datei `mcp.json` definiert sind
+
+<div id="augment-code">
+  ### Augment Code
+</div>
+
+[Augment Code](https://augmentcode.com) ist eine KI-gestützte Programmierplattform für VS Code und JetBrains mit autonomen Agenten, Chat und Code-Vervollständigungen. Sowohl lokale als auch Remote-Agenten verfügen über vollständiges Verständnis des gesamten Codebestands und native Unterstützung für MCP, wodurch erweiterter Kontext über externe Quellen und Werkzeuge ermöglicht wird.
+
+**Hauptfunktionen:**
+
+- Umfassende MCP-Unterstützung in lokalen und Remote-Agenten.
+- Fügen Sie zusätzlichen Kontext über MCP-Server hinzu.
+- Automatisieren Sie Ihre Entwicklungs-Workflows mit MCP-Werkzeugen.
+- Funktioniert in VS Code und JetBrains-IDEs.
+
+<div id="beeai-framework">
+  ### BeeAI Framework
+</div>
+
+[BeeAI Framework](https://i-am-bee.github.io/beeai-framework) ist ein Open-Source-Framework zum Erstellen, Bereitstellen und Bedienen leistungsstarker agentischer Workflows im großen Maßstab. Das Framework umfasst das **MCP-Tool**, eine native Funktion, die die Integration von MCP-Servern in agentische Workflows vereinfacht.
+
+**Wesentliche Funktionen:**
+
+- MCP-Werkzeuge nahtlos in agentische Workflows einbinden.
+- Framework-native Werkzeuge schnell aus verbundenen MCP-Clients instanziieren.
+- Geplante Unterstützung für agentische MCP-Funktionen.
+
+**Erfahre mehr:**
+
+- [Beispiel für die Verwendung von MCP-Werkzeugen in einem agentischen Workflow](https://i-am-bee.github.io/beeai-framework/#/typescript/tools?id=using-the-mcptool-class)
+
+<div id="boltai">
+  ### BoltAI
+</div>
+
+[BoltAI](https://boltai.com) ist ein nativer All-in-One-AI-Chat-Client mit MCP-Unterstützung. BoltAI unterstützt mehrere AI-Anbieter (OpenAI, Anthropic, Google AI …) sowie lokale AI-Modelle (über Ollama, LM Studio oder LMX).
+
+**Hauptfunktionen:**
+
+- MCP-Tool-Integrationen: Nach der Einrichtung kann in jedem Chat ein einzelner MCP-Server aktiviert werden
+- Schnelle MCP-Einrichtung: Konfiguration aus der Claude-Desktop-App oder dem Cursor-Editor importieren
+- MCP-Tools in jeder App mit der AI-Command-Funktion aufrufen
+- Verbindung zu entfernten MCP-Servern in der mobilen App
+
+**Mehr erfahren:**
+
+- [BoltAI-Dokumentation](https://boltai.com/docs/plugins/mcp-servers)
+- [BoltAI-Website](https://boltai.com)
+
+<div id="call-chirp">
+  ### Call Chirp
+</div>
+
+[Call Chirp] https://www.call-chirp.com nutzt KI, um jedes entscheidende Detail aus Ihren geschäftlichen Gesprächen zu erfassen, und synchronisiert Erkenntnisse automatisch mit Ihrem CRM sowie Ihren Projektwerkzeugen, damit Ihnen kein abschlussentscheidender Moment mehr entgeht.
+
+**Wichtige Funktionen:**
+
+- Speichern von Transkriptionen aus Zoom, Google Meet und weiteren Diensten
+- MCP-Werkzeuge für Voice-AI-Agenten
+- Unterstützung für Remote-MCP-Server
+
+<div id="chatgpt">
+  ### ChatGPT
+</div>
+
+ChatGPT ist der KI-Assistent von OpenAI, der MCP-Unterstützung für entfernte Server bietet, um tiefgehende Recherchen durchzuführen.
+
+**Hauptfunktionen:**
+
+- Unterstützung für MCP über die Verbindungsoberfläche in den Einstellungen
+- Zugriff auf Suchwerkzeuge von konfigurierten MCP-Servern für tiefgehende Recherchen
+- Sicherheits- und Compliance-Funktionen in Enterprise-Qualität
+
+<div id="chatwise">
+  ### ChatWise
+</div>
+
+ChatWise ist eine für den Desktop optimierte, leistungsstarke Chat-Anwendung, mit der Sie Ihre eigenen API-Schlüssel verwenden können. Sie unterstützt eine breite Palette von LLMs und integriert sich mit dem Model Context Protocol (MCP), um Werkzeug-Workflows zu ermöglichen.
+
+**Wichtige Funktionen:**
+
+- Unterstützung für Werkzeuge in MCP-Servern
+- Bietet integrierte Werkzeuge wie Websuche, Artefakte und Bildgenerierung.
+
+<div id="claude-code">
+  ### Claude Code
+</div>
+
+Claude Code ist ein interaktives, agentenbasiertes Coding-Tool von Anthropic, das dich mit natürlichsprachigen Anweisungen beim schnelleren Programmieren unterstützt. Es unterstützt die MCP-Integration für Ressourcen, Prompts, Werkzeuge und Wurzeln und fungiert zudem als MCP-Server zur Integration mit anderen Clients.
+
+**Wesentliche Funktionen:**
+
+- Vollständige Unterstützung für Ressourcen, Prompts, Werkzeuge und Wurzeln von MCP-Servern
+- Stellt eigene Werkzeuge über einen MCP-Server bereit, um sich mit anderen MCP-Clients zu integrieren
+
+<div id="claudeai">
+  ### Claude.ai
+</div>
+
+[Claude.ai](https://claude.ai) ist Anthropics webbasierter KI-Assistent mit MCP-Unterstützung für Remote-Server.
+
+**Wichtigste Funktionen:**
+
+- Unterstützung für Remote-MCP-Server über die Integrationsoberfläche in den Einstellungen
+- Zugriff auf Werkzeuge, Prompts und Ressourcen von konfigurierten MCP-Servern
+- Nahtlose Integration in Claudes Konversationsoberfläche
+- Sicherheits- und Compliance-Funktionen auf Enterprise-Niveau
+
+<div id="claude-desktop-app">
+  ### Claude Desktop-App
+</div>
+
+Die Claude-Desktop-App bietet umfassende Unterstützung für MCP und ermöglicht eine nahtlose Integration mit lokalen Werkzeugen und Datenquellen.
+
+**Wichtigste Funktionen:**
+
+- Umfassende Unterstützung für Ressourcen, sodass lokale Dateien und Daten angehängt werden können
+- Unterstützung für Prompt-Vorlagen
+- Integration von Werkzeugen zum Ausführen von Befehlen und Skripten
+- Lokale Serververbindungen für höhere Privatsphäre und Sicherheit
+
+<div id="chorus">
+  ### Chorus
+</div>
+
+[Chorus](https://chorus.sh) ist eine native Mac-App für Gespräche mit KIs. Chatte gleichzeitig mit mehreren Modellen, nutze Werkzeuge und MCPs, erstelle Projekte, führe Schnellchats, verwende deinen eigenen Schlüssel – alles in einer blitzschnellen App mit tastaturfreundlichen Shortcuts.
+
+**Wichtigste Funktionen:**
+
+- MCP-Unterstützung mit 1-Klick-Installation
+- Integrierte Werkzeuge wie Websuche, Terminal und Bildgenerierung
+- Chatte gleichzeitig mit mehreren Modellen (Cloud oder lokal)
+- Erstelle Projekte mit kontextbezogenem Speicher
+- Schnellchat mit einer KI, die deinen Bildschirm sehen kann
+
+<div id="cline">
+  ### Cline
+</div>
+
+[Cline](https://github.com/cline/cline) ist ein autonomer Coding-Agent für VS Code, der Dateien bearbeitet, Befehle ausführt, einen Browser verwendet und mehr – jeweils mit deiner Zustimmung.
+
+**Wichtige Funktionen:**
+
+- Werkzeuge in natürlicher Sprache erstellen und hinzufügen (z. B. „Füge ein Werkzeug hinzu, das das Web durchsucht“)
+- Benutzerdefinierte MCP-Server, die Cline erstellt, über das Verzeichnis `~/Documents/Cline/MCP` mit anderen teilen
+- Zeigt konfigurierte MCP-Server zusammen mit ihren Werkzeugen, Ressourcen und Fehlerprotokollen an
+
+<div id="codegpt">
+  ### CodeGPT
+</div>
+
+[CodeGPT](https://codegpt.co) ist eine beliebte Erweiterung für VS Code und JetBrains, die KI-gestützte Programmierunterstützung direkt in Ihren Editor bringt. Sie unterstützt die Integration mit MCP-Servern für Werkzeuge, sodass Sie externe KI-Funktionen nahtlos in Ihren Entwicklungsworkflow einbinden können.
+
+**Hauptfunktionen:**
+
+- Nutzung von MCP-Werkzeugen aus jedem konfigurierten MCP-Server
+- Nahtlose Integration in die Oberflächen von VS Code und JetBrains
+- Unterstützung mehrerer LLM-Anbieter sowie benutzerdefinierter Endpunkte
+
+**Erfahren Sie mehr:**
+
+- [CodeGPT-Dokumentation](https://docs.codegpt.co/)
+
+<div id="continue">
+  ### Continue
+</div>
+
+[Continue](https://github.com/continuedev/continue) ist ein Open-Source-KI-Codeassistent mit integrierter Unterstützung für alle MCP-Funktionen.
+
+**Wichtigste Funktionen:**
+
+- Tippe „@“, um MCP-Ressourcen zu erwähnen
+- Prompt-Vorlagen erscheinen als Slash-Befehle
+- Sowohl eingebaute als auch MCP-Werkzeuge direkt im Chat verwenden
+- Unterstützt VS Code und JetBrains-IDEs mit jedem LLM
+
+<div id="copilot-mcp">
+  ### Copilot-MCP
+</div>
+
+[Copilot-MCP](https://github.com/VikashLoomba/copilot-mcp) ermöglicht KI-gestützte Programmierunterstützung über das Model Context Protocol (MCP).
+
+**Wesentliche Merkmale:**
+
+- Unterstützung für MCP-Werkzeuge und -Ressourcen
+- Integration in Entwicklungs-Workflows
+- Erweiterbare KI-Funktionen
+
+<div id="cursor">
+  ### Cursor
+</div>
+
+[Cursor](https://docs.cursor.com/advanced/model-context-protocol) ist ein KI-Code-Editor.
+
+**Wichtige Funktionen:**
+
+- Unterstützung für MCP-Tools im Cursor Composer
+- Unterstützung für STDIO und SSE
+
+<div id="daydreams">
+  ### Daydreams
+</div>
+
+[Daydreams](https://github.com/daydreamsai/daydreams) ist ein generatives Agenten-Framework zur Ausführung beliebiger Vorgänge on-chain.
+
+**Hauptfunktionen:**
+
+- Unterstützt MCP-Server in der Konfiguration
+- Stellt einen MCP-Client bereit
+
+<div id="emacs-mcp">
+  ### Emacs Mcp
+</div>
+
+[Emacs Mcp](https://github.com/lizqwerscott/mcp.el) ist ein Emacs-Client zur Anbindung an MCP-Server und ermöglicht nahtlose Verbindungen und Interaktionen. Er bietet Unterstützung für die Ausführung von MCP-Werkzeugen in AI-Plugins wie [gptel](https://github.com/karthink/gptel) und [llm](https://github.com/ahyatt/llm) und hält sich dabei an das Standardformat von Emacs für Werkzeugaufrufe. Diese Integration erweitert die Funktionalität von AI-Werkzeugen im Emacs-Ökosystem.
+
+**Hauptfunktionen:**
+
+- Bietet MCP-Werkzeugunterstützung für Emacs.
+
+<div id="fast-agent">
+  ### fast-agent
+</div>
+
+[fast-agent](https://github.com/evalstate/fast-agent) ist ein Python-Agenten-Framework mit einfacher deklarativer Unterstützung für das Erstellen von Agenten und Workflows sowie vollständiger multimodaler Unterstützung für Anthropic- und OpenAI-Modelle.
+
+**Wichtige Funktionen:**
+
+- PDF- und Bildunterstützung auf Basis nativer MCP-Typen
+- Interaktives Frontend zur Entwicklung und Diagnose von Agenten-Anwendungen, inklusive Passthrough- und Playback-Simulatoren
+- Integrierte Unterstützung für „Building Effective Agents“-Workflows
+- Agenten als MCP-Server bereitstellen
+
+<div id="flowdown">
+  ### FlowDown
+</div>
+
+[FlowDown](https://github.com/Lakr233/FlowDown) ist eine blitzschnelle und flüssige Client-App für die Arbeit mit KI/LLMs, mit starkem Fokus auf Datenschutz und Nutzererlebnis. Sie unterstützt MCP-Server, um ihre Funktionen mit externen Werkzeugen zu erweitern, sodass Nutzende leistungsstarke, maßgeschneiderte Workflows erstellen können.
+
+**Hauptfunktionen:**
+
+- **Nahtlose MCP-Integration**: Einfach mit MCP-Servern verbinden und eine breite Palette externer Werkzeuge nutzen.
+- **Privacy-First-Design**: Ihre Daten bleiben auf Ihrem Gerät. Wir erheben keine Nutzerdaten und gewährleisten vollständige Privatsphäre.
+- **Leichtgewichtig & effizient**: Ein kompaktes, optimiertes Design sorgt für ein reibungsloses, reaktionsschnelles Erlebnis mit jedem KI-Modell.
+- **Breite Kompatibilität**: Funktioniert mit allen OpenAI-kompatiblen Anbietern und unterstützt lokale Offline-Modelle über MLX.
+- **Hochwertiges Nutzererlebnis**: Bietet ansprechend formatiertes Markdown, blitzschnelles Textrendering und intelligente, automatische Chat-Titel.
+
+**Erfahren Sie mehr:**
+
+- [FlowDown-Website](https://flowdown.ai/)
+- [FlowDown-Dokumentation](https://apps.qaq.wiki/docs/flowdown/)
+
+<div id="flujo">
+  ### FLUJO
+</div>
+
+Stell dir n8n + ChatGPT vor. FLUJO ist eine Desktop-Anwendung, die sich in MCP integriert und eine Workflow-Builder-Oberfläche für KI-Interaktionen bereitstellt. Entwickelt mit Next.js und React, unterstützt sie sowohl Online- als auch Offline-Modelle (Ollama), verwaltet API-Schlüssel und Umgebungsvariablen zentral und kann MCP-Server von GitHub installieren. FLUJO bietet einen ChatCompletions-Endpunkt, und Flows können aus anderen KI-Anwendungen wie Cline, Roo oder Claude ausgeführt werden.
+
+**Hauptfunktionen:**
+
+- Verwaltung von Umgebungen und API-Schlüsseln
+- Modellverwaltung
+- MCP-Server-Integration
+- Workflow-Orchestrierung
+- Chat-Oberfläche
+
+<div id="genkit">
+  ### Genkit
+</div>
+
+[Genkit](https://github.com/firebase/genkit) ist ein sprachübergreifendes SDK zum Aufbau und zur Integration von GenAI-Funktionen in Anwendungen. Das Plugin [genkitx-mcp](https://github.com/firebase/genkit/tree/main/js/plugins/mcp) ermöglicht die Nutzung von MCP-Servern als Client oder das Erstellen von MCP-Servern aus Genkit-Werkzeugen und Prompts.
+
+**Wichtige Funktionen:**
+
+- Client-Unterstützung für Werkzeuge und Prompts (Ressourcen teilweise unterstützt)
+- Umfangreiche Discovery mit Unterstützung im Dev-UI-Playground von Genkit
+- Nahtlose Interoperabilität mit den bestehenden Werkzeugen und Prompts von Genkit
+- Funktioniert mit einer großen Bandbreite von GenAI-Modellen führender Anbieter
+
+<div id="glama">
+  ### Glama
+</div>
+
+[Glama](https://glama.ai/chat) ist ein umfassender KI‑Arbeitsbereich und eine Integrationsplattform, die eine einheitliche Oberfläche zu führenden LLM‑Anbietern wie OpenAI, Anthropic und anderen bietet. Sie unterstützt das Model Context Protocol (MCP)-Ökosystem und ermöglicht es Entwicklern und Unternehmen, MCP‑Server einfach zu entdecken, zu erstellen und zu verwalten.
+
+**Wichtige Funktionen:**
+
+- Integriertes [MCP‑Serververzeichnis](https://glama.ai/mcp/servers)
+- Integriertes [MCP‑Tool‑Verzeichnis](https://glama.ai/mcp/tools)
+- Hosten Sie MCP‑Server und greifen Sie über die Chat‑ oder SSE‑Endpunkte darauf zu
+  – Möglichkeit, gleichzeitig mit mehreren LLMs und MCP‑Servern zu chatten
+- Lokale Dateien und Daten hochladen und analysieren
+- Volltextsuche über all Ihre Chats und Daten
+
+<div id="genaiscript">
+  ### GenAIScript
+</div>
+
+Programmgesteuertes Zusammenstellen von Prompts für LLMs mit [GenAIScript](https://microsoft.github.io/genaiscript/) (in JavaScript). Orchestrieren Sie LLMs, Werkzeuge und Daten in JavaScript.
+
+**Wesentliche Funktionen:**
+
+- JavaScript-Toolkit für die Arbeit mit Prompts
+- Abstraktion für einfache und effiziente Nutzung
+- Nahtlose Integration in Visual Studio Code
+
+<div id="goose">
+  ### Goose
+</div>
+
+[Goose](https://github.com/block/goose) ist ein Open-Source-AI-Agent, der Ihre Softwareentwicklung beschleunigt, indem er Codieraufgaben automatisiert.
+
+**Hauptfunktionen:**
+
+- Stellt MCP-Funktionalität über Werkzeuge für Goose bereit.
+- MCPs können direkt über das [Erweiterungsverzeichnis](https://block.github.io/goose/v1/extensions/), die CLI oder die UI installiert werden.
+- Goose ermöglicht es Ihnen, seine Funktionalität zu erweitern, indem Sie [eigene MCP-Server entwickeln](https://block.github.io/goose/docs/tutorials/custom-extensions).
+- Enthält integrierte Werkzeuge für Entwicklung, Web Scraping, Automatisierung, Speicher sowie Integrationen mit JetBrains und Google Drive.
+
+<div id="github-copilot-coding-agent">
+  ### GitHub Copilot Coding Agent
+</div>
+
+Delegieren Sie Aufgaben an den [GitHub Copilot Coding Agent](https://docs.github.com/en/copilot/concepts/about-copilot-coding-agent) und lassen Sie ihn im Hintergrund arbeiten, während Sie sich auf die wirkungsvollste und interessanteste Arbeit konzentrieren.
+
+**Hauptfunktionen:**
+
+- Delegieren Sie Aufgaben an Copilot über GitHub Issues, Visual Studio Code, GitHub Copilot Chat oder über Ihren bevorzugten MCP-Host mithilfe des GitHub-MCP-Servers
+- Passen Sie Copilot an Ihr Projekt an, indem Sie [die Entwicklungsumgebung des Agents konfigurieren](https://docs.github.com/en/enterprise-cloud@latest/copilot/how-tos/agents/copilot-coding-agent/customizing-the-development-environment-for-copilot-coding-agent#preinstalling-tools-or-dependencies-in-copilots-environment) oder [benutzerdefinierte Anweisungen hinzufügen](https://docs.github.com/en/enterprise-cloud@latest/copilot/how-tos/agents/copilot-coding-agent/best-practices-for-using-copilot-to-work-on-tasks#adding-custom-instructions-to-your-repository)
+- [Erweitern Sie den Kontext und die Fähigkeiten von Copilot mit MCP-Werkzeugen](https://docs.github.com/en/enterprise-cloud@latest/copilot/how-tos/agents/copilot-coding-agent/extending-copilot-coding-agent-with-mcp) – mit Unterstützung für lokale und entfernte MCP-Server
+
+<div id="gptme">
+  ### gptme
+</div>
+
+[gptme](https://github.com/gptme/gptme) ist ein Open-Source-, terminalbasierter persönlicher KI-Assistent/-Agent, entwickelt zur Unterstützung bei Programmieraufgaben und allgemeiner Wissensarbeit.
+
+**Wichtige Funktionen:**
+
+- CLI-first-Design mit Fokus auf Einfachheit und Benutzerfreundlichkeit
+- Umfangreiche integrierte Werkzeuge für Shell-Befehle, Python-Ausführung, Dateioperationen und Web-Browsing
+- Local-first-Ansatz mit Unterstützung für mehrere LLM-Anbieter
+- Open Source, auf Erweiterbarkeit ausgelegt und leicht anpassbar
+
+<div id="hyperagent">
+  ### HyperAgent
+</div>
+
+[HyperAgent](https://github.com/hyperbrowserai/HyperAgent) ist Playwright mit KI-Turbo. Mit HyperAgent brauchen Sie keine brüchigen Skripte mehr, sondern nur noch leistungsstarke Befehle in natürlicher Sprache. Über MCP-Server können Sie die Fähigkeiten von HyperAgent erweitern, ohne Code schreiben zu müssen.
+
+**Wichtige Funktionen:**
+
+- KI-Befehle: Einfache APIs wie page.ai(), page.extract() und executeTask() für jede KI-Automatisierung
+- Rückfall auf reguläres Playwright: Nutzen Sie normales Playwright, wenn keine KI erforderlich ist
+- Stealth-Modus – Erkennung vermeiden mit integrierten Anti-Bot-Patches
+- Cloud-ready – Sofort auf Hunderte von Sitzungen skalieren über [Hyperbrowser](https://www.hyperbrowser.ai/)
+- MCP-Client – Verbinden Sie sich mit Werkzeugen wie Composio für vollständige Workflows (z. B. Schreiben von Webdaten in Google Sheets)
+
+<div id="jetbrains-ai-assistant">
+  ### JetBrains AI Assistant
+</div>
+
+Das Plugin [JetBrains AI Assistant](https://plugins.jetbrains.com/plugin/22282-jetbrains-ai-assistant) bietet KI-gestützte Funktionen für die Softwareentwicklung und ist in allen JetBrains-IDEs verfügbar.
+
+**Wesentliche Funktionen:**
+
+- Unbegrenzte Codevervollständigung auf Basis von Mellum, dem proprietären KI-Modell von JetBrains.
+- Kontextsensitiver KI-Chat, der Ihren Code versteht und Sie in Echtzeit unterstützt.
+- Zugriff auf Spitzenmodelle von OpenAI, Anthropic und Google.
+- Offline-Modus mit verbundenen lokalen LLMs über Ollama oder LM Studio.
+- Tief in die IDE-Workflows integriert, inklusive Codevorschlägen im Editor, VCS-Hilfe, Erklärungen zu Laufzeitfehlern und mehr.
+
+<div id="kilo-code">
+  ### Kilo Code
+</div>
+
+[Kilo Code](https://github.com/Kilo-Org/kilocode) ist ein autonomes KI-Entwicklungsteam für Code in VS Code, das Dateien bearbeitet, Befehle ausführt, einen Browser nutzt und mehr.
+
+**Wichtige Funktionen:**
+
+- Werkzeuge per natürlicher Sprache erstellen und hinzufügen (z. B. „Füge ein Werkzeug hinzu, das das Web durchsucht“)
+- MCP-Server über den MCP Marketplace entdecken
+- Ein-Klick-Installation von MCP-Servern über den MCP Marketplace
+- Anzeige der konfigurierten MCP-Server zusammen mit ihren Werkzeugen, Ressourcen und etwaigen Fehlerprotokollen
+
+<div id="klavis-ai-slackdiscordweb">
+  ### Klavis AI Slack/Discord/Web
+</div>
+
+[Klavis AI](https://www.klavis.ai/) ist eine Open-Source-Infrastruktur, um MCPs einfach zu verwenden, zu entwickeln und zu skalieren.
+
+**Hauptfunktionen:**
+
+- Slack-/Discord-/Web-MCP-Clients zur direkten Nutzung von MCPs
+- Einfache Web-UI mit Dashboard für unkomplizierte MCP-Konfiguration
+- Direkte OAuth-Integration mit Slack- und Discord-Clients sowie MCP-Servern für sichere Nutzerauthentifizierung
+- Unterstützung für SSE-Transport
+- Open-Source-Infrastruktur ([GitHub-Repository](https://github.com/Klavis-AI/klavis))
+
+**Mehr erfahren:**
+
+- [Demo-Video zur Nutzung von MCP in Slack/Discord](https://youtu.be/9-QQAhrQWw8)
+
+<div id="langflow">
+  ### Langflow
+</div>
+
+Langflow ist ein Open-Source-Visual-Builder, mit dem Entwickler schnell KI-Anwendungen prototypen und erstellen können; es integriert das Model Context Protocol (MCP) sowohl als MCP-Server als auch als MCP-Client.
+
+**Hauptfunktionen:**
+
+- Umfassende Unterstützung für die Nutzung von MCP-Server-Werkzeugen zum Erstellen von Agents und Flows.
+- Export von Agents und Flows als MCP-Server
+- Lokale und entfernte Serververbindungen für mehr Datenschutz und Sicherheit
+
+**Erfahre mehr:**
+
+- [Demo-Video, das zeigt, wie Langflow sowohl als MCP-Client als auch als MCP-Server verwendet wird](https://www.youtube.com/watch?v=pEjsaVVPjdI)
+
+<div id="librechat">
+  ### LibreChat
+</div>
+
+[LibreChat](https://github.com/danny-avila/LibreChat) ist eine Open-Source, anpassbare KI-Chat-Oberfläche, die mehrere KI-Anbieter unterstützt – jetzt mit MCP-Integration.
+
+**Hauptfunktionen:**
+
+- Erweiterung des bestehenden Werkzeug-Ökosystems, einschließlich [Code Interpreter](https://www.librechat.ai/docs/features/code_interpreter) und Tools zur Bildgenerierung, über MCP-Server
+- Hinzufügen von Werkzeugen zu anpassbaren [Agents](https://www.librechat.ai/docs/features/agents) unter Nutzung einer Vielzahl von LLMs führender Anbieter
+- Open-Source und selbst hostbar, mit sicherer Multi-User-Unterstützung
+- Zukünftige Roadmap mit erweitertem MCP-Funktionsumfang
+
+<div id="lm-studio">
+  ### LM Studio
+</div>
+
+[LM Studio](https://lmstudio.ai) ist eine plattformübergreifende Desktop-App zum Entdecken, Herunterladen und lokalen Ausführen von Open-Source-LLMs. Sie können jetzt lokale Modelle über das Model Context Protocol (MCP) mit Werkzeugen verbinden.
+
+**Wichtige Funktionen:**
+
+- Verwenden Sie MCP-Server mit lokalen Modellen auf Ihrem Computer. Fügen Sie Einträge zu `mcp.json` hinzu und speichern Sie, um loszulegen.
+- Werkzeugbestätigungs-UI: Wenn ein Modell ein Werkzeug aufruft, können Sie den Aufruf in der LM-Studio-App bestätigen.
+- Plattformübergreifend: läuft auf macOS, Windows und Linux; One-Click-Installer, ganz ohne Kommandozeile.
+- Unterstützt GGUF (llama.cpp) oder MLX-Modelle mit GPU-Beschleunigung
+- GUI- und Terminalmodus: Verwenden Sie die LM-Studio-App oder die CLI (lms) für Scripting und Automatisierung
+
+**Mehr erfahren:**
+
+- [Dokumentation: Verwendung von MCP in LM Studio](https://lmstudio.ai/docs/app/plugins/mcp)
+- [Erstellen Sie eine „Zu LM Studio hinzufügen“-Schaltfläche für Ihren Server](https://lmstudio.ai/docs/app/plugins/mcp/deeplink)
+- [Ankündigungsblog: LM Studio + MCP](https://lmstudio.ai/blog/mcp)
+
+<div id="lutra">
+  ### Lutra
+</div>
+
+[Lutra](https://lutra.ai) ist ein KI-Agent, der Gespräche in umsetzbare, automatisierte Workflows verwandelt.
+
+**Hauptfunktionen:**
+
+- Einfache MCP-Integration: Das Verbinden von Lutra mit MCP-Servern ist so einfach wie das Angeben der Server-URL; Lutra übernimmt den Rest im Hintergrund.
+- Per Chat handeln: Lutra versteht Ihren Gesprächskontext und Ihre Ziele und integriert sich automatisch in Ihre bestehenden Apps, um Aufgaben auszuführen.
+- Wiederverwendbare Playbooks: Nach Abschluss einer Aufgabe können die Schritte als wiederverwendbare, automatisierte Workflows gespeichert werden – das vereinfacht wiederkehrende Prozesse und reduziert manuellen Aufwand.
+- Freigebbare Automatisierungen: Geben Sie Ihre gespeicherten Playbooks unkompliziert an Teammitglieder weiter, um Best Practices zu standardisieren und kollaborative Workflows zu beschleunigen.
+
+**Erfahren Sie mehr:**
+
+- [Lutra-KI-Agent erklärt](https://www.youtube.com/watch?v=W5ZpN0cMY70)
+
+<div id="mcp-agent">
+  ### mcp-agent
+</div>
+
+[mcp-agent] ist ein einfaches, modular kombinierbares Framework zum Erstellen von Agenten mit dem Model Context Protocol.
+
+**Hauptfunktionen:**
+
+- Automatisches Verbindungsmanagement für MCP-Server.
+- Stellt Werkzeuge von mehreren Servern einem LLM zur Verfügung.
+- Implementiert alle in [Building Effective Agents](https://www.anthropic.com/research/building-effective-agents) definierten Muster.
+- Unterstützt Signale zum Anhalten und Fortsetzen von Workflows, z. B. das Warten auf menschliches Feedback.
+
+<div id="mcp-client-chatbot">
+  ### mcp-client-chatbot
+</div>
+
+[mcp-client-chatbot](https://github.com/cgoinglove/mcp-client-chatbot) ist ein lokal-first-Chatbot, entwickelt mit Vercels Next.js, AI SDK und Shadcn UI.
+
+**Wichtige Funktionen:**
+
+- Unterstützt standardmäßige MCP-Werkzeugaufrufe und enthält sowohl einen benutzerdefinierten MCP-Server als auch eine eigenständige UI zum Testen von MCP-Werkzeugen außerhalb des Chat-Flows.
+- Alle MCP-Werkzeuge werden dem LLM standardmäßig bereitgestellt; das Projekt enthält außerdem eine optionale `@toolname`-Erwähnung, um das Auslösen von Werkzeugen expliziter zu machen—besonders nützlich beim Verbinden mit mehreren MCP-Servern mit vielen Werkzeugen.
+- Visueller Workflow-Builder, mit dem Sie benutzerdefinierte Werkzeuge erstellen können, indem Sie LLM-Knoten und MCP-Werkzeuge miteinander verketten. Veröffentlichte Workflows sind im Chat als `@workflow_name`-Werkzeuge aufrufbar und ermöglichen komplexe, mehrstufige Automatisierungsabläufe.
+
+<div id="mcp-use">
+  ### mcp-use
+</div>
+
+[mcp-use] ist eine Open-Source-Python-Bibliothek, mit der sich sehr einfach jedes LLM sowohl lokal als auch remote mit jedem MCP-Server verbinden lässt.
+
+**Wichtigste Funktionen:**
+
+- Sehr einfache Schnittstelle, um jedes LLM mit jedem MCP zu verbinden.
+- Unterstützt die Erstellung benutzerdefinierter Agenten und Workflows.
+- Unterstützt die gleichzeitige Verbindung zu mehreren MCP-Servern.
+- Unterstützt alle von LangChain unterstützten Modelle, auch lokal.
+- Bietet effiziente Orchestrierung von Werkzeugen und Suchfunktionen.
+
+<div id="modelcontextchatcom">
+  ### modelcontextchat.com
+</div>
+
+[modelcontextchat.com](https://modelcontextchat.com) ist ein webbasierter MCP-Client, der für die Arbeit mit Remote-MCP-Servern entwickelt wurde und umfassende Unterstützung für Authentifizierung sowie eine Integration mit OpenRouter bietet.
+
+**Zentrale Funktionen:**
+
+- Webbasierte Oberfläche für Verbindungen zu Remote-MCP-Servern
+- Headerbasierte Autorisierung für sicheren Serverzugriff
+- Integration von OAuth-Authentifizierung
+- Unterstützung von OpenRouter-API-Schlüsseln für den Zugriff auf verschiedene LLM-Anbieter
+- Keine Installation erforderlich – in jedem Webbrowser nutzbar
+
+<div id="mcphub">
+  ### MCPHub
+</div>
+
+[MCPHub] ist ein leistungsstarkes Neovim-Plugin, das MCP-Server (Model Context Protocol) in deinen Workflow integriert.
+
+**Wichtigste Funktionen:**
+
+- Installiere, konfiguriere und verwalte MCP-Server über eine intuitive UI.
+- Integrierter Neovim-MCP-Server mit Unterstützung für Dateioperationen (lesen, schreiben, suchen, ersetzen), Befehlsausführung, Terminal-Integration, LSP-Integration, Puffer und Diagnostik.
+- Erstelle Lua-basierte MCP-Server direkt in Neovim.
+- Integriert sich mit den beliebten Neovim-Chat-Plugins Avante.nvim und CodeCompanion.nvim.
+
+<div id="mcpomni-connect">
+  ### MCPOmni-Connect
+</div>
+
+[MCPOmni-Connect](https://github.com/Abiorh001/mcp_omni_connect) ist ein vielseitiger CLI-Client (Command-Line Interface), der dafür entwickelt wurde, eine Verbindung zu verschiedenen Model Context Protocol (MCP)-Servern sowohl über STDIO-Transport (Standard Input/Output) als auch über Server-Sent Events (SSE) herzustellen.
+
+**Wichtige Funktionen:**
+
+- Unterstützung für Ressourcen, Prompts, Tools und Sampling
+- Agentischer Modus mit ReAct- und Orchestrator-Funktionen
+- Nahtlose Integration mit OpenAI-Modellen und anderen LLMs
+- Dynamisches Tool- und Ressourcenmanagement über mehrere Server hinweg
+- Unterstützung sowohl für STDIO- als auch für SSE-Transportprotokolle
+- Umfassende Tool-Orchestrierung und Ressourcenanalyse
+
+<div id="memex">
+  ### Memex
+</div>
+
+[Memex](https://memex.tech/) ist der erste MCP-Client und MCP-Server-Builder – eine All-in-One-Desktop-App. Anders als herkömmliche MCP-Clients, die nur auf bestehende Server zugreifen, kann Memex benutzerdefinierte MCP-Server aus natürlichsprachigen Prompts erstellen, sie sofort in sein Toolkit integrieren und zur Problemlösung einsetzen – alles innerhalb eines einzelnen Gesprächs.
+
+**Wichtigste Funktionen:**
+
+- **Prompt-zu-MCP-Server**: Voll funktionsfähige MCP-Server aus natürlichsprachigen Beschreibungen generieren
+- **Selbsttests & Debugging**: Erstellte MCP-Server eigenständig testen, debuggen und verbessern
+- **Universeller MCP-Client**: Funktioniert mit jedem MCP-Server durch intuitive, natürlichsprachige Integration
+- **Kuratiertes MCP-Verzeichnis**: Zugriff auf getestete, per Klick installierbare MCP-Server (Neon, Netlify, GitHub, Context7 und mehr)
+- **Multi-Server-Orchestrierung**: Mehrere MCP-Server gleichzeitig für komplexe Workflows nutzen
+
+**Mehr erfahren:**
+
+- [Memex Launch 2: MCP Teams and Agent API](https://memex.tech/blog/memex-launch-2-mcp-teams-and-agent-api-private-preview-125f)
+
+<div id="microsoft-copilot-studio">
+  ### Microsoft Copilot Studio
+</div>
+
+[Microsoft Copilot Studio] ist eine robuste SaaS-Plattform für den Aufbau benutzerdefinierter, KI-gestützter Anwendungen und intelligenter Agenten. Sie ermöglicht es Entwicklerinnen und Entwicklern, anspruchsvolle KI-Lösungen zu erstellen, bereitzustellen und zu verwalten.
+
+**Zentrale Funktionen:**
+
+- Unterstützung für MCP-Werkzeuge
+- Erweiterung von Copilot-Studio-Agenten mit MCP-Servern
+- Nutzung der einheitlichen, steuerbaren und sicheren API-Management-Lösungen von Microsoft
+
+<div id="mindpal">
+  ### MindPal
+</div>
+
+[MindPal](https://mindpal.io) ist eine No-Code-Plattform zum Erstellen und Ausführen von KI-Agenten sowie Multi-Agent-Workflows für Geschäftsprozesse.
+
+**Hauptfunktionen:**
+
+- Benutzerdefinierte KI-Agenten ohne Code erstellen
+- Jeden SSE-MCP-Server anbinden, um die Werkzeuge von Agenten zu erweitern
+- Multi-Agent-Workflows für komplexe Geschäftsprozesse erstellen
+- Benutzerfreundlich für technische und nicht-technische Fachleute
+- Fortlaufende Entwicklung mit kontinuierlicher Verbesserung der MCP-Unterstützung
+
+**Mehr erfahren:**
+
+- [MindPal MCP-Dokumentation](https://docs.mindpal.io/agent/mcp)
+
+<div id="moopoint">
+  ### MooPoint
+</div>
+
+[MooPoint](https://moopoint.io)
+
+MooPoint ist eine webbasierte KI-Chat-Plattform für Entwickler und fortgeschrittene Nutzer, die es Ihnen ermöglicht, mit mehreren Large Language Models (LLMs) über eine einzige, einheitliche Oberfläche zu interagieren. Verbinden Sie Ihre eigenen API-Schlüssel (OpenAI, Anthropic und mehr) und verwalten Sie benutzerdefinierte MCP-Serverintegrationen sicher.
+
+**Wichtige Funktionen:**
+
+- Von jedem PC oder Smartphone aus zugänglich – keine Installation erforderlich
+- Wählen Sie Ihren bevorzugten LLM-Anbieter
+- Unterstützt MCP-Server via `SSE`, `Streamable HTTP`, `npx` und `uvx`
+- Unterstützung für OAuth und Sampling
+- Täglich neue Funktionen
+
+<div id="msty-studio">
+  ### Msty Studio
+</div>
+
+[Msty Studio](https://msty.ai) ist eine datenschutzorientierte KI-Produktivitätsplattform, die lokale und Online-Sprachmodelle (LLMs) nahtlos in anpassbare Workflows integriert. Konzipiert für technische und nicht technische Nutzer bietet Msty Studio eine Suite von Werkzeugen, um KI-Interaktionen zu verbessern, Aufgaben zu automatisieren und die volle Kontrolle über Daten und Modellverhalten zu behalten.
+
+**Hauptfunktionen:**
+
+- **Toolbox & Toolsets**: Verbinden Sie KI-Modelle über MCP-konforme Konfigurationen mit lokalen Werkzeugen und Skripten. Gruppieren Sie Werkzeuge in Toolsets, um dynamische, mehrstufige Workflows innerhalb von Unterhaltungen zu ermöglichen.
+- **Turnstiles**: Erstellen Sie automatisierte, mehrstufige KI-Interaktionen und ermöglichen Sie komplexe Datenverarbeitungs- und Entscheidungsprozesse.
+- **Echtzeit-Datenintegration**: Verbessern Sie KI-Antworten mit aktuellen Informationen, indem Sie eine Echtzeit-Websuche integrieren.
+- **Split-Chats & Verzweigungen**: Führen Sie parallele Unterhaltungen mit mehreren Modellen gleichzeitig, um vergleichende Analysen und vielfältige Perspektiven zu ermöglichen.
+
+**Erfahren Sie mehr:**
+
+- [Msty Studio-Dokumentation](https://docs.msty.studio/features/toolbox/tools)
+
+<div id="nvidia-agent-intelligence-aiq-toolkit">
+  ### NVIDIA Agent Intelligence (AIQ) Toolkit
+</div>
+
+[Das NVIDIA Agent Intelligence (AIQ) Toolkit](https://github.com/NVIDIA/AIQToolkit) ist eine flexible, schlanke und vereinheitlichende Bibliothek, mit der Sie bestehende Enterprise-Agents unkompliziert über beliebige Frameworks mit Datenquellen und Werkzeugen verbinden können.
+
+**Wesentliche Funktionen:**
+
+- Fungiert als MCP-**Client**, um entfernte Werkzeuge zu nutzen
+- Fungiert als MCP-**Server**, um Werkzeuge bereitzustellen
+- Framework-unabhängig und kompatibel mit LangChain, CrewAI, Semantic Kernel und benutzerdefinierten Agents
+- Enthält integrierte Observability- und Evaluierungswerkzeuge
+
+**Mehr erfahren:**
+
+- [AIQ-Toolkit GitHub-Repository](https://github.com/NVIDIA/AIQToolkit)
+- [AIQ-Toolkit MCP-Dokumentation](https://docs.nvidia.com/aiqtoolkit/latest/workflows/mcp/index.html)
+
+<div id="opensumi">
+  ### OpenSumi
+</div>
+
+[OpenSumi](https://github.com/opensumi/core) ist ein Framework, mit dem Sie AI-native IDE-Produkte schnell entwickeln können.
+
+**Wichtige Funktionen:**
+
+- Unterstützt MCP-Werkzeuge in OpenSumi
+- Unterstützt integrierte IDE-MCP-Server sowie benutzerdefinierte MCP-Server
+
+<div id="oterm">
+  ### oterm
+</div>
+
+[oterm] ist ein Terminal-Client für Ollama, mit dem Nutzer Chats und Agenten erstellen können.
+
+**Hauptfunktionen:**
+
+- Unterstützung mehrerer vollständig anpassbarer Chatsitzungen mit Ollama, inkl. Anbindung von Werkzeugen.
+- Unterstützung für MCP-Werkzeuge.
+
+<div id="roo-code">
+  ### Roo Code
+</div>
+
+[Roo Code](https://roocode.com) ermöglicht KI-Coding-Unterstützung über MCP.
+
+**Hauptfunktionen:**
+
+- Unterstützung für MCP-Werkzeuge und -Ressourcen
+- Integration in Entwicklungs-Workflows
+- Erweiterbare KI-Funktionen
+
+<div id="postman">
+  ### Postman
+</div>
+
+[Postman](https://postman.com/downloads) ist der beliebteste API-Client und unterstützt jetzt das Testen und Debuggen von MCP-Servern.
+
+**Wichtige Funktionen:**
+
+- Vollständige Unterstützung aller zentralen MCP-Funktionen (Werkzeuge, Prompts, Ressourcen und Abonnements)
+- Schnelle, nahtlose UI zum Debuggen von MCP-Fähigkeiten
+- MCP-Config-Integration (Claude, VSCode etc.) für einen schnellen Einstieg beim Testen von MCPs
+- Integration mit Verlauf, Variablen und Sammlungen für Wiederverwendung und Zusammenarbeit
+
+<div id="recursechat">
+  ### RecurseChat
+</div>
+
+[RecurseChat](https://recurse.chat) ist ein leistungsstarker, schneller Chat-Client mit lokalem First-Ansatz und MCP-Unterstützung. RecurseChat unterstützt mehrere KI-Anbieter, darunter LLaMA.cpp, Ollama sowie OpenAI und Anthropic.
+
+**Wichtige Funktionen:**
+
+- Lokale KI: MCP-Unterstützung mit Ollama-Modellen.
+- MCP-Werkzeuge: Individuelle MCP-Serververwaltung. Verbindungszustände von MCP-Servern lassen sich leicht visualisieren.
+- MCP-Import: Konfiguration aus der Claude-Desktop-App oder aus JSON importieren
+
+**Erfahre mehr:**
+
+- [RecurseChat-Dokumentation](https://recurse.chat/docs/features/mcp/)
+
+<div id="shortwave">
+  ### Shortwave
+</div>
+
+[Shortwave](https://www.shortwave.com) ist ein KI-gestützter E-Mail-Client, der MCP-Werkzeuge unterstützt, um E-Mail-Produktivität und Workflow-Automatisierung zu verbessern.
+
+**Wichtigste Funktionen:**
+
+- Integration von MCP-Werkzeugen für optimierte E-Mail-Workflows
+- Leistungsstarke UI zum Hinzufügen, Verwalten und zur Interaktion mit einer breiten Palette von MCP-Servern
+- Unterstützung für entfernte (Streamable HTTP und SSE) sowie lokale (Stdio) MCP-Server
+- KI-Unterstützung für die Verwaltung von E-Mails, Kalender, Aufgaben und anderen Diensten von Drittanbietern
+
+<div id="slack-mcp-client">
+  ### Slack MCP-Client
+</div>
+
+[Slack MCP Client](https://github.com/tuannvm/slack-mcp-client) dient als Brücke zwischen Slack und Model Context Protocol (MCP)-Servern. Mit Slack als Oberfläche ermöglicht er großen Sprachmodellen (LLMs), über standardisierte MCP-Werkzeuge eine Verbindung zu verschiedenen MCP-Servern herzustellen und mit ihnen zu interagieren.
+
+**Hauptfunktionen:**
+
+- **Unterstützt beliebte LLM-Anbieter:** Integriert sich nahtlos mit führenden Anbietern großer Sprachmodelle wie OpenAI, Anthropic und Ollama, sodass Nutzende fortschrittliche konversationelle KI- und Orchestrierungsfunktionen direkt in Slack nutzen können.
+- **Dynamische und sichere Integration:** Unterstützt die dynamische Registrierung von MCP-Werkzeugen, funktioniert sowohl in Kanälen als auch in Direktnachrichten und verwaltet Zugangsdaten sicher über Umgebungsvariablen oder Kubernetes-Secrets.
+- **Einfache Bereitstellung und Erweiterbarkeit:** Bietet offizielle Docker-Images, ein Helm-Chart für Kubernetes und Docker Compose für die lokale Entwicklung und vereinfacht so Bereitstellung, Konfiguration und die Erweiterung um zusätzliche MCP-Server oder Werkzeuge.
+
+<div id="sourcegraph-cody">
+  ### Sourcegraph Cody
+</div>
+
+[Cody](https://openctx.org/docs/providers/modelcontextprotocol) ist der KI-Coding-Assistent von Sourcegraph, der MCP über OpenCTX implementiert.
+
+**Wichtige Funktionen:**
+
+- Unterstützung für MCP-Ressourcen
+- Integration mit der Code-Intelligence von Sourcegraph
+- Nutzt OpenCTX als Abstraktionsschicht
+- Geplante zukünftige Unterstützung für zusätzliche MCP-Funktionen
+
+<div id="spinai">
+  ### SpinAI
+</div>
+
+[SpinAI](https://spinai.dev) ist ein Open-Source-TypeScript-Framework zum Erstellen beobachtbarer KI-Agenten. Das Framework bietet native MCP-Kompatibilität, sodass Agenten nahtlos mit MCP-Servern und -Werkzeugen integrieren können.
+
+**Hauptfunktionen:**
+
+- Integrierte MCP-Kompatibilität für KI-Agenten
+- Open-Source-TypeScript-Framework
+- Beobachtbare Agentenarchitektur
+- Native Unterstützung für die Integration von MCP-Werkzeugen
+
+<div id="superinterface">
+  ### Superinterface
+</div>
+
+[Superinterface](https://superinterface.ai) ist eine KI-Infrastruktur und Entwicklerplattform zum Erstellen von In‑App‑KI‑Assistenten mit Unterstützung für MCP, interaktive Komponenten, clientseitiges Function Calling und mehr.
+
+**Wichtigste Funktionen:**
+
+- Nutzung von Werkzeugen aus MCP-Servern in Assistenten, die über React-Komponenten oder Script-Tags eingebettet sind
+- Unterstützung für SSE-Transport
+- Verwendung beliebiger KI-Modelle von beliebigen KI-Anbietern (OpenAI, Anthropic, Ollama, andere)
+
+<div id="superjoin">
+  ### Superjoin
+</div>
+
+[Superjoin](https://superjoin.ai) bringt die Leistungsfähigkeit von MCP direkt als Google-Sheets-Erweiterung. Mit Superjoin können Nutzer MCP-Werkzeuge und -Agenten aufrufen und nutzen, ohne ihre Tabellen zu verlassen – so entstehen leistungsstarke KI-Workflows und Automatisierungen genau dort, wo ihre Daten liegen.
+
+**Hauptfunktionen:**
+
+- Native Google-Sheets-Add-on mit mühelosem Zugriff auf MCP-Funktionen
+- Unterstützt OAuth 2.1 und headerbasierte Authentifizierung für sichere und flexible Verbindungen
+- Kompatibel mit SSE und dem Streamable-HTTP-Transport für effiziente, echtzeitfähige Streaming-Kommunikation
+- Vollständig webbasiert, plattformübergreifend; keine zusätzliche Softwareinstallation erforderlich
+
+<div id="systemprompt">
+  ### systemprompt
+</div>
+
+[systemprompt](https://systemprompt.io) ist eine sprachgesteuerte Mobile-App, mit der Sie Ihre MCP-Server verwalten. Nutzen Sie MCP-Agenten sicher direkt aus der Hosentasche. Verfügbar für iOS und Android.
+
+**Hauptfunktionen:**
+
+- **Native Mobile-Erfahrung**: Greifen Sie jederzeit und überall auf Ihre MCP-Server zu und verwalten Sie diese auf Android- und iOS-Geräten
+- **Erweiterte KI-gestützte Spracherkennung**: Leistungsstarke Spracherkennungsengine, unterstützt durch modernste KI und Natural Language Processing (NLP), speziell darauf abgestimmt, komplexe Entwicklerterminologie und Befehlsstrukturen zu verstehen
+- **Zentrale Verwaltung mehrerer MCP-Server**: Verwalten und nutzen Sie mehrere Model Context Protocol (MCP)-Server mühelos in einer einzigen, zentralen Mobile-App
+
+<div id="tambo">
+  ### Tambo
+</div>
+
+[Tambo](https://tambo.co) ist eine Plattform zum Erstellen maßgeschneiderter Chat-Erlebnisse in React, mit integrierten, individuell anpassbaren UI-Komponenten.
+
+**Wichtige Funktionen:**
+
+- Gehostete Plattform mit React-SDK zur Integration von Chat- oder anderen LLM-basierten Erlebnissen in Ihre eigene App.
+- Unterstützung für die Auswahl beliebiger React-Komponenten innerhalb des Chat-Erlebnisses, inklusive Zustandsverwaltung und Tool-Aufrufen.
+- Unterstützung für MCP-Server, entweder über Tambos Server oder direkt aus dem Browser.
+- Unterstützt OAuth 2.1 und benutzerdefinierte Header-basierte Authentifizierung.
+- Unterstützung für MCP-Werkzeuge; weitere MCP-Funktionen folgen in Kürze.
+
+<div id="tencent-cloudbase-ai-devkit">
+  ### Tencent CloudBase AI DevKit
+</div>
+
+[Tencent CloudBase AI DevKit](https://docs.cloudbase.net/ai/agent/mcp) ist ein Tool, mit dem sich in wenigen Minuten KI-Agenten erstellen lassen – mit No-Code-Tools, sicherer Datenintegration und erweiterbaren Plug-ins über MCP.
+
+**Zentrale Funktionen:**
+
+- Unterstützung für MCP-Werkzeuge
+- Agenten mit MCP-Servern erweitern
+- Hosting von MCP-Servern: serverloses Hosting und Unterstützung für Authentifizierung
+
+<div id="theiaaitheiaide">
+  ### TheiaAI/TheiaIDE
+</div>
+
+[Theia AI](https://eclipsesource.com/blogs/2024/10/07/introducing-theia-ai/) ist ein Framework zum Erstellen von KI-gestützten Werkzeugen und IDEs. Die [KI-gestützte Theia IDE](https://eclipsesource.com/blogs/2024/10/08/introducting-ai-theia-ide/) ist eine offene und flexible Entwicklungsumgebung, die auf Theia AI aufbaut.
+
+**Wichtige Funktionen:**
+
+- **Tool-Integration**: Theia AI ermöglicht KI-Agenten – einschließlich jener in der Theia IDE – die Nutzung von MCP-Servern für nahtlose Interaktionen mit Werkzeugen.
+- **Anpassbare Prompts**: Die Theia IDE erlaubt es Nutzerinnen und Nutzern, Prompts zu definieren und anzupassen sowie MCP-Server dynamisch für maßgeschneiderte Workflows zu integrieren.
+- **Benutzerdefinierte Agenten**: Die Theia IDE unterstützt die Erstellung benutzerdefinierter Agenten, die MCP-Funktionen nutzen und es Nutzerinnen und Nutzern ermöglichen, dedizierte Workflows spontan zu entwerfen.
+
+Die MCP-Integration von Theia AI und der Theia IDE bietet Nutzerinnen und Nutzern hohe Flexibilität und macht beide zu leistungsstarken Plattformen, um MCP zu erkunden und anzupassen.
+
+**Mehr erfahren:**
+
+- [Theia IDE und Theia AI: MCP-Ankündigung](https://eclipsesource.com/blogs/2024/12/19/theia-ide-and-theia-ai-support-mcp/)
+- [Die KI-gestützte Theia IDE herunterladen](https://theia-ide.org/)
+
+<div id="tome">
+  ### Tome
+</div>
+
+[Tome](https://github.com/runebookai/tome) ist eine Open-Source, plattformübergreifende Desktop-App, die für die Arbeit mit lokalen LLMs und MCP-Servern entwickelt wurde. Sie ist einsteigerfreundlich konzipiert und nimmt Menschen, die mit MCP anfangen, die Detailkonfiguration ab.
+
+**Hauptfunktionen:**
+
+- MCP-Server werden von Tome verwaltet, sodass es nicht nötig ist, uv oder npm zu installieren oder JSON zu konfigurieren
+- Nutzer können MCP-Server schnell über die UI hinzufügen oder entfernen
+- Jedes von Werkzeugen unterstützte lokale Modell auf Ollama ist kompatibel
+
+<div id="typingmind-app">
+  ### TypingMind App
+</div>
+
+[TypingMind](https://www.typingmind.com) ist ein fortgeschrittenes Frontend für LLMs mit MCP-Unterstützung. TypingMind unterstützt alle gängigen LLM-Anbieter wie OpenAI, Gemini und Claude; Nutzende können dabei ihre eigenen API-Schlüssel verwenden.
+
+**Wichtigste Funktionen:**
+
+- **MCP-Werkzeugintegration**: Sobald MCP konfiguriert ist, werden MCP-Werkzeuge als Plugins angezeigt, die sich über die Hauptoberfläche der App einfach aktivieren bzw. deaktivieren lassen.
+- **MCP-Werkzeuge Agenten zuweisen**: TypingMind ermöglicht es Nutzenden, KI-Agenten zu erstellen und ihnen eine Reihe von MCP-Servern zuzuweisen.
+- **Remote-MCP-Server**: Über die MCP-Connector-Konfiguration lässt sich festlegen, wo die MCP-Server ausgeführt werden. So können MCP-Werkzeuge geräteübergreifend (Laptop, Mobilgeräte usw.) genutzt oder MCP-Server von einem entfernten privaten Server aus gesteuert werden.
+
+**Erfahre mehr:**
+
+- [TypingMind MCP-Dokument](https://www.typingmind.com/mcp)
+- [TypingMind herunterladen (PWA)](https://www.typingmind.com/)
+
+<div id="vs-code-github-copilot">
+  ### VS Code GitHub Copilot
+</div>
+
+[VS Code](https://code.visualstudio.com/) integriert MCP mit GitHub Copilot über den [Agent-Modus](https://code.visualstudio.com/docs/copilot/chat/chat-agent-mode) und ermöglicht so die direkte Interaktion mit von MCP bereitgestellten Werkzeugen innerhalb Ihres agentischen Coding-Workflows. Konfigurieren Sie Server in Claude Desktop sowie in Arbeitsbereichs- oder Benutzereinstellungen, mit geführter MCP-Installation und sicherer Handhabung von Schlüsseln in Eingabevariablen, um das Auslaufen hartcodierter Schlüssel zu vermeiden.
+
+**Hauptfunktionen:**
+
+- Unterstützung für STDIO- und Server-Sent Events (SSE)-Transporte
+- Sitzungsweise Auswahl von Werkzeugen pro Agent-Sitzung für optimale Leistung
+- Einfaches Server-Debugging mit Neustartbefehlen und Ausgabelogs
+- Tool-Aufrufe mit editierbaren Eingaben und Umschalter „immer erlauben“
+- Integration in das bestehende VS-Code-Erweiterungssystem zur Registrierung von MCP-Servern aus Erweiterungen
+
+<div id="warp">
+  ### Warp
+</div>
+
+[Warp](https://www.warp.dev/) ist das intelligente Terminal mit integrierter KI und dem Wissen deines Dev-Teams. Mit in die agentische Kommandozeile integrierten Funktionen für natürliche Sprache ermöglicht Warp Entwicklerinnen und Entwicklern, effizienter zu programmieren, zu automatisieren und zusammenzuarbeiten – alles in einem Terminal mit moderner UX.
+
+**Wichtige Funktionen:**
+
+- **Agent-Modus mit MCP-Unterstützung**: Werkzeuge aufrufen und mit natürlichsprachlichen Prompts auf Daten von MCP-Servern zugreifen
+- **Flexible Serververwaltung**: CLI- oder SSE-basierte MCP-Server über die integrierte UI von Warp hinzufügen und verwalten
+- **Live-Erkennung von Werkzeugen/Ressourcen**: Werkzeuge und Ressourcen jedes laufenden MCP-Servers anzeigen
+- **Konfigurierbarer Start**: MCP-Server so einstellen, dass sie automatisch mit Warp starten oder bei Bedarf manuell starten
+
+<div id="whatsmcp">
+  ### WhatsMCP
+</div>
+
+[WhatsMCP](https://wassist.app/mcp/) ist ein MCP-Client für WhatsApp. Mit WhatsMCP können Sie bequem im WhatsApp-Chat mit Ihrem AI-Stack interagieren.
+
+**Hauptfunktionen:**
+
+- Unterstützung für MCP-Werkzeuge
+- SSE-Transport, vollständige OAuth2-Unterstützung
+- Chatflow-Management für WhatsApp-Nachrichten
+- Ein-Klick-Einrichtung zur Verbindung mit Ihren MCP-Servern
+- Verwaltung von MCP-Servern direkt im Chat
+- OAuth-Flow wird in WhatsApp nativ unterstützt
+
+<div id="windsurf-editor">
+  ### Windsurf Editor
+</div>
+
+[Windsurf Editor](https://codeium.com/windsurf) ist eine agentenbasierte IDE, die KI-Unterstützung nahtlos mit Entwickler-Workflows verbindet. Sie bietet ein innovatives AI-Flow-System, das sowohl kollaborative als auch autonome KI-Interaktionen ermöglicht und gleichzeitig die Kontrolle bei den Entwicklern belässt.
+
+**Wichtige Funktionen:**
+
+- Revolutionäres AI-Flow-Paradigma für die Zusammenarbeit zwischen Mensch und KI
+- Intelligente Codegenerierung und -verständnis
+- Umfassende Entwicklungswerkzeuge mit Unterstützung für mehrere Modelle
+
+<div id="witsy">
+  ### Witsy
+</div>
+
+[Witsy](https://github.com/nbonamy/witsy) ist ein KI-Desktop-Assistent, der Anthropic-Modelle unterstützt und MCP-Server als LLM-Werkzeuge nutzt.
+
+**Wichtige Funktionen:**
+
+- Unterstützung mehrerer MCP-Server
+- Integration von Werkzeugen zum Ausführen von Befehlen und Skripten
+- Lokale Serververbindungen für mehr Datenschutz und Sicherheit
+- Einfache Installation über Smithery.ai
+- Open Source, verfügbar für macOS, Windows und Linux
+
+<div id="zed">
+  ### Zed
+</div>
+
+[Zed](https://zed.dev/docs/assistant/model-context-protocol) ist ein hochperformanter Code-Editor mit integrierter MCP-Unterstützung, der sich auf Prompt-Vorlagen und die Integration von Werkzeuge konzentriert.
+
+**Hauptfunktionen:**
+
+- Prompt-Vorlagen werden als Slash-Befehle im Editor angezeigt
+- Integration von Werkzeuge für optimierte Coding-Workflows
+- Enge Verzahnung mit Editorfunktionen und dem Workspace-Kontext
+- Unterstützt keine MCP-Ressourcen
+
+<div id="zencoder">
+  ### Zencoder
+</div>
+
+[Zencoder](https://zecoder.ai) ist ein Coding-Agent, der als Erweiterung für VS Code und die JetBrains‑Familie von IDEs verfügbar ist und Entwickler dort unterstützt, wo sie bereits arbeiten. Er bietet RepoGrokking (tiefes kontextuelles Verständnis von Codebasen), eine agentische Pipeline sowie die Möglichkeit, benutzerdefinierte Agenten zu erstellen und zu teilen.
+
+**Wichtige Funktionen:**
+
+- RepoGrokking – tiefes kontextuelles Verständnis von Codebasen
+- Agentische Pipeline – führt Code aus, testet ihn und überprüft Ergebnisse, bevor sie ausgegeben werden
+- Zen Agents‑Plattform – Möglichkeit, benutzerdefinierte Agenten zu erstellen und im Team zu teilen
+- Integrierte MCP‑Werkzeugbibliothek mit Ein-Klick‑Installationen
+- Spezialisierte Agenten für Unit- und E2E-Tests
+
+**Mehr erfahren:**
+
+- [Zencoder-Dokumentation](https://docs.zencoder.ai)
+
+<div id="adding-mcp-support-to-your-application">
+  ## Hinzufügen von MCP-Unterstützung zu Ihrer Anwendung
+</div>
+
+Wenn Sie Ihrer Anwendung MCP-Unterstützung hinzugefügt haben, ermutigen wir Sie, einen Pull-Request einzureichen, um sie in diese Liste aufzunehmen. Die MCP-Integration kann Ihren Nutzern leistungsstarke, kontextbezogene KI-Funktionen bereitstellen und Ihre Anwendung zu einem Teil des wachsenden MCP-Ökosystems machen.
+
+Vorteile der MCP-Unterstützung:
+
+- Ermöglichen Sie Nutzern, ihren eigenen Kontext und ihre eigenen Werkzeuge einzubringen
+- Schließen Sie sich einem wachsenden Ökosystem interoperabler KI-Anwendungen an
+- Bieten Sie flexible Integrationsoptionen
+- Unterstützen Sie Local-First-KI-Workflows
+
+Um mit der Implementierung von MCP in Ihrer Anwendung zu beginnen, sehen Sie sich unsere [Python](https://github.com/modelcontextprotocol/python-sdk)- oder [TypeScript-SDK-Dokumentation](https://github.com/modelcontextprotocol/typescript-sdk) an
+
+<div id="updates-and-corrections">
+  ## Aktualisierungen und Korrekturen
+</div>
+
+Diese Liste wird von der Community gepflegt. Wenn Ihnen Ungenauigkeiten auffallen oder Sie Informationen zur MCP-Unterstützung in Ihrer Anwendung aktualisieren möchten, erstellen Sie bitte eine Pull-Request oder [eröffnen Sie ein Issue im Dokumentations-Repository](https://github.com/modelcontextprotocol/modelcontextprotocol/issues).

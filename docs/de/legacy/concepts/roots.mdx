@@ -1,0 +1,91 @@
+---
+title: "Wurzeln"
+description: "Wurzeln im MCP verstehen"
+---
+
+Wurzeln sind ein Konzept im Model Context Protocol (MCP), das die Grenzen definiert, innerhalb derer Server arbeiten können. Sie ermöglichen es Clients, Server über relevante Ressourcen und deren Speicherorte zu informieren.
+
+<div id="what-are-roots">
+  ## Was sind Wurzeln?
+</div>
+
+Eine Wurzel ist eine URI, die ein Client vorschlägt, auf die sich ein Server konzentrieren soll. Wenn sich ein Client mit einem Server verbindet, gibt er an, mit welchen Wurzeln der Server arbeiten soll. Obwohl sie hauptsächlich für Dateisystempfade verwendet werden, können Wurzeln jede gültige URI sein, einschließlich HTTP-URLs.
+
+Beispiele für Wurzeln:
+
+```
+file:///home/user/projects/myapp
+https://api.example.com/v1
+```
+
+<div id="why-use-roots">
+  ## Warum Wurzeln verwenden?
+</div>
+
+Wurzeln erfüllen mehrere wichtige Zwecke:
+
+1. **Orientierung**: Sie informieren Server über relevante Ressourcen und Speicherorte
+2. **Klarheit**: Wurzeln machen deutlich, welche Ressourcen zu Ihrem Arbeitsbereich gehören
+3. **Organisation**: Mehrere Wurzeln ermöglichen es Ihnen, parallel mit unterschiedlichen Ressourcen zu arbeiten
+
+<div id="how-roots-work">
+  ## Funktionsweise von Wurzeln
+</div>
+
+Wenn ein Client Wurzeln unterstützt, dann:
+
+1. deklariert er die Fähigkeit `roots` beim Verbindungsaufbau
+2. übermittelt er dem Server eine Liste vorgeschlagener Wurzeln
+3. benachrichtigt er den Server, wenn sich Wurzeln ändern (falls unterstützt)
+
+Auch wenn Wurzeln nur informativen Charakter haben und nicht strikt durchgesetzt werden, sollten Server:
+
+1. die bereitgestellten Wurzeln respektieren
+2. Root-URIs verwenden, um Ressourcen zu lokalisieren und darauf zuzugreifen
+3. Vorgänge innerhalb der Root-Grenzen priorisieren
+
+<div id="common-use-cases">
+  ## Häufige Anwendungsfälle
+</div>
+
+Wurzeln werden häufig verwendet, um Folgendes zu definieren:
+
+- Projektverzeichnisse
+- Repository-Standorte
+- API-Endpunkte
+- Konfigurationspfade
+- Ressourcenbegrenzungen
+
+<div id="best-practices">
+  ## Bewährte Praktiken
+</div>
+
+Beim Arbeiten mit Wurzeln:
+
+1. Nur notwendige Ressourcen vorschlagen
+2. Klare, aussagekräftige Namen für Wurzeln verwenden
+3. Die Zugänglichkeit der Wurzeln überwachen
+4. Änderungen an Wurzeln sorgfältig handhaben
+
+<div id="example">
+  ## Beispiel
+</div>
+
+So könnte ein typischer MCP-Client Wurzeln bereitstellen:
+
+```json
+{
+  "roots": [
+    {
+      "uri": "file:///home/user/projects/frontend",
+      "name": "Frontend Repository"
+    },
+    {
+      "uri": "https://api.example.com/v1",
+      "name": "API Endpoint"
+    }
+  ]
+}
+```
+
+Diese Konfiguration deutet darauf hin, dass sich der Server sowohl auf ein lokales Repository als auch auf einen API-Endpunkt konzentriert und sie dabei logisch getrennt hält.

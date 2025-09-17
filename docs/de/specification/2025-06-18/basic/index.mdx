@@ -1,0 +1,161 @@
+---
+title: Überblick
+---
+
+<div id="enable-section-numbers" />
+
+<Info>**Protokollrevision**: 2025-06-18</Info>
+
+Das Model Context Protocol besteht aus mehreren zentralen Komponenten, die zusammenwirken:
+
+* **Basisprotokoll**: Zentrale JSON-RPC-Nachrichtentypen
+* **Lebenszyklusverwaltung**: Verbindungsinitialisierung, Fähigkeitsaushandlung und
+  Sitzungssteuerung
+* **Autorisierung**: Framework für Authentifizierung und Autorisierung bei HTTP-basierten Transporten
+* **Serverfunktionen**: Ressourcen, Prompts und Werkzeuge, die von Servern bereitgestellt werden
+* **Clientfunktionen**: Sampling und Root-Verzeichnislisten, die von Clients bereitgestellt werden
+* **Dienstprogramme**: Querschnittsaspekte wie Protokollierung und Argumentvervollständigung
+
+Alle Implementierungen **MÜSSEN** das Basisprotokoll und die Komponenten der Lebenszyklusverwaltung
+unterstützen. Weitere Komponenten **KÖNNEN** abhängig von den spezifischen Anforderungen der
+Anwendung implementiert werden.
+
+Diese Protokollschichten schaffen eine klare Trennung der Zuständigkeiten und ermöglichen zugleich
+umfangreiche Interaktionen zwischen Clients und Servern. Das modulare Design erlaubt Implementierungen,
+genau die Funktionen zu unterstützen, die sie benötigen.
+
+<div id="messages">
+  ## Nachrichten
+</div>
+
+Alle Nachrichten zwischen MCP-Clients und MCP-Servern **MÜSSEN** der Spezifikation von [JSON-RPC 2.0](https://www.jsonrpc.org/specification) entsprechen. Das Protokoll definiert folgende Nachrichtentypen:
+
+<div id="requests">
+  ### Anfragen
+</div>
+
+Anfragen werden vom Client an den Server oder umgekehrt gesendet, um eine Operation zu starten.
+
+```typescript
+{
+  jsonrpc: "2.0";
+  id: string | number;
+  method: string;
+  params?: {
+    [key: string]: unknown;
+  };
+}
+```
+
+* Anfragen **MÜSSEN** eine String- oder Integer-ID enthalten.
+* Anders als bei JSON-RPC in der Basisversion **DARF** die ID **NICHT** `null` sein.
+* Die Anfrage-ID **DARF** innerhalb derselben Sitzung nicht bereits vom Anfragenden verwendet worden sein.
+
+<div id="responses">
+  ### Antworten
+</div>
+
+Antworten werden als Reaktion auf Anfragen gesendet und enthalten das Ergebnis oder den Fehler des Vorgangs.
+
+```typescript
+{
+  jsonrpc: "2.0";
+  id: string | number;
+  result?: {
+    [key: string]: unknown;
+  }
+  error?: {
+    code: number;
+    message: string;
+    data?: unknown;
+  }
+}
+```
+
+* Antworten **MÜSSEN** dieselbe ID enthalten wie die entsprechende Anfrage.
+* **Antworten** werden weiter in **erfolgreiche Ergebnisse** oder **Fehler** unterteilt. Entweder ein `result` oder ein `error` **MUSS** gesetzt sein. Eine Antwort **DARF NICHT**
+  beides setzen.
+* Ergebnisse **KÖNNEN** jeder JSON-Objektstruktur folgen, während Fehler mindestens einen
+  Fehlercode und eine Fehlermeldung **ENTHALTEN MÜSSEN**.
+* Fehlercodes **MÜSSEN** ganze Zahlen sein.
+
+<div id="notifications">
+  ### Benachrichtigungen
+</div>
+
+Benachrichtigungen werden vom Client an den Server oder umgekehrt als Einweg­nachricht gesendet.
+Der Empfänger **DARF KEINE** Antwort senden.
+
+```typescript
+{
+  jsonrpc: "2.0";
+  method: string;
+  params?: {
+    [key: string]: unknown;
+  };
+}
+```
+
+* Benachrichtigungen **DÜRFEN KEINE** ID enthalten.
+
+<div id="auth">
+  ## Auth
+</div>
+
+MCP stellt ein [Authorization](/de/specification/2025-06-18/basic/authorization)-Framework für die Nutzung mit HTTP bereit.
+Implementierungen, die einen HTTP-basierten Transport verwenden, **SOLLTEN** dieser Spezifikation entsprechen,
+während Implementierungen, die den STDIO-Transport verwenden, **NICHT** dieser Spezifikation folgen sollten
+und stattdessen Anmeldedaten aus der Umgebung beziehen.
+
+Zusätzlich **KÖNNEN** Clients und Server eigene benutzerdefinierte Authentifizierungs- und
+Autorisierungsstrategien aushandeln.
+
+Für weiterführende Diskussionen und Beiträge zur Weiterentwicklung der Auth-Mechanismen von MCP schließen Sie sich
+uns in den
+[GitHub Discussions](https://github.com/modelcontextprotocol/specification/discussions)
+an, um die Zukunft des Protokolls mitzugestalten!
+
+<div id="schema">
+  ## Schema
+</div>
+
+Die vollständige Spezifikation des Protokolls ist als
+[TypeScript-Schema](https://github.com/modelcontextprotocol/specification/blob/main/schema/2025-06-18/schema.ts) definiert.
+Dies ist die maßgebliche Quelle für alle Protokollnachrichten und -strukturen.
+
+Es gibt außerdem ein
+[JSON-Schema](https://github.com/modelcontextprotocol/specification/blob/main/schema/2025-06-18/schema.json),
+das automatisch aus der maßgeblichen TypeScript-Quelle generiert wird und mit
+verschiedenen automatisierten Werkzeugen verwendet werden kann.
+
+<div id="general-fields">
+  ### Allgemeine Felder
+</div>
+
+<div id="_meta">
+  #### `_meta`
+</div>
+
+Die Eigenschaft bzw. der Parameter `_meta` ist durch MCP reserviert, damit Clients und Server
+ihren Interaktionen zusätzliche Metadaten anhängen können.
+
+Bestimmte Schlüsselnamen sind durch MCP für Metadaten auf Protokollebene reserviert, wie unten angegeben;
+Implementierungen DÜRFEN KEINE Annahmen über Werte an diesen Schlüsseln treffen.
+
+Zusätzlich können Definitionen im [Schema](https://github.com/modelcontextprotocol/specification/blob/main/schema/2025-06-18/schema.ts)
+bestimmte Namen für zweckbezogene Metadaten reservieren, wie in diesen Definitionen festgelegt.
+
+**Format des Schlüsselnamens:** Gültige `_meta`-Schlüsselnamen bestehen aus zwei Segmenten: einem optionalen **Präfix** und einem **Namen**.
+
+**Präfix:**
+
+* Falls angegeben, MUSS es aus einer Reihe von Labels bestehen, die durch Punkte (`.`) getrennt sind, gefolgt von einem Schrägstrich (`/`).
+  * Labels MÜSSEN mit einem Buchstaben beginnen und mit einem Buchstaben oder einer Ziffer enden; dazwischen sind Buchstaben, Ziffern oder Bindestriche (`-`) zulässig.
+* Jedes Präfix, das mit null oder mehr gültigen Labels beginnt, gefolgt von `modelcontextprotocol` oder `mcp`, gefolgt von einem beliebigen gültigen Label,
+  ist für die MCP-Verwendung **reserviert**.
+  * Zum Beispiel: `modelcontextprotocol.io/`, `mcp.dev/`, `api.modelcontextprotocol.org/` und `tools.mcp.com/` sind alle reserviert.
+
+**Name:**
+
+* Sofern nicht leer, MUSS er mit einem alphanumerischen Zeichen (`[a-z0-9A-Z]`) beginnen und enden.
+* DARF Bindestriche (`-`), Unterstriche (`_`), Punkte (`.`) und alphanumerische Zeichen dazwischen enthalten.

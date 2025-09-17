@@ -1,0 +1,210 @@
+---
+title: Überblick
+---
+
+<div id="enable-section-numbers" />
+
+<Info>**Protokollrevision**: Entwurf</Info>
+
+Das Model Context Protocol (MCP) besteht aus mehreren zentralen Komponenten, die zusammenwirken:
+
+* **Basisprotokoll**: Zentrale JSON-RPC-2.0-Nachrichtentypen
+* **Lebenszyklusverwaltung**: Verbindungsinitialisierung, Fähigkeitsaushandlung und
+  Sitzungssteuerung
+* **Autorisierung**: Rahmen für Authentifizierung und Autorisierung bei HTTP-basierten Transporten
+* **Serverfunktionen**: Ressourcen, Prompts und Werkzeuge, die von Servern bereitgestellt werden
+* **Clientfunktionen**: Sampling und Verzeichnislisten für Wurzeln, die von Clients bereitgestellt werden
+* **Hilfsfunktionen**: Querschnittsthemen wie Protokollierung und Argumentvervollständigung
+
+Alle Implementierungen **MÜSSEN** das Basisprotokoll und die Komponenten der Lebenszyklusverwaltung
+unterstützen. Andere Komponenten **DÜRFEN** je nach den spezifischen Anforderungen der
+Anwendung implementiert werden.
+
+Diese Protokollschichten schaffen eine klare Trennung der Zuständigkeiten und ermöglichen zugleich
+umfangreiche Interaktionen zwischen Clients und Servern. Das modulare Design erlaubt Implementierungen,
+genau die benötigten Funktionen zu unterstützen.
+
+<div id="messages">
+  ## Nachrichten
+</div>
+
+Alle Nachrichten zwischen MCP-Clients und -Servern **MÜSSEN** der Spezifikation
+[JSON-RPC 2.0](https://www.jsonrpc.org/specification) entsprechen. Das Protokoll definiert
+folgende Nachrichtentypen:
+
+<div id="requests">
+  ### Anfragen
+</div>
+
+Anfragen werden vom Client an den Server oder umgekehrt gesendet, um eine Operation zu starten.
+
+```typescript
+{
+  jsonrpc: "2.0";
+  id: string | number;
+  method: string;
+  params?: {
+    [key: string]: unknown;
+  };
+}
+```
+
+* Anfragen **MÜSSEN** eine string- oder integerbasierte ID enthalten.
+* Anders als bei der Basisversion von JSON-RPC gilt: Die ID **DARF NICHT** `null` sein.
+* Die Anfrage-ID **DARF NICHT** zuvor vom Anfragenden innerhalb derselben Sitzung verwendet worden sein.
+
+<div id="responses">
+  ### Antworten
+</div>
+
+Antworten werden als Antwort auf Anfragen gesendet und enthalten das Ergebnis oder den Fehler der Operation.
+
+```typescript
+{
+  jsonrpc: "2.0";
+  id: string | number;
+  result?: {
+    [key: string]: unknown;
+  }
+  error?: {
+    code: number;
+    message: string;
+    data?: unknown;
+  }
+}
+```
+
+* Antworten **MÜSSEN** dieselbe ID enthalten wie die entsprechende Anfrage.
+* **Antworten** werden weiter in **erfolgreiche Ergebnisse** oder **Fehler** unterteilt. Entweder `result` oder `error` **MUSS** gesetzt sein. Eine Antwort **DARF NICHT** beides setzen.
+* Ergebnisse **KÖNNEN** beliebige JSON-Objektstrukturen verwenden, während Fehler **MINDESTENS** einen Fehlercode und eine Meldung enthalten **MÜSSEN**.
+* Fehlercodes **MÜSSEN** ganze Zahlen sein.
+
+<div id="notifications">
+  ### Benachrichtigungen
+</div>
+
+Benachrichtigungen werden als unidirektionale Nachrichten vom Client an den Server oder umgekehrt gesendet.
+Der Empfänger **DARF KEINE** Antwort senden.
+
+```typescript
+{
+  jsonrpc: "2.0";
+  method: string;
+  params?: {
+    [key: string]: unknown;
+  };
+}
+```
+
+* Benachrichtigungen **DÜRFEN KEINE** ID enthalten.
+
+<div id="auth">
+  ## Auth
+</div>
+
+MCP stellt einen [Authorization](/de/specification/draft/basic/authorization)-Rahmen für die Verwendung mit HTTP bereit.
+Implementierungen, die einen HTTP-basierten Transport verwenden, **SOLLEN** dieser Spezifikation entsprechen,
+während Implementierungen, die den STDIO-Transport verwenden, dieser Spezifikation **NICHT FOLGEN SOLLEN**
+und stattdessen Anmeldeinformationen aus der Umgebung beziehen.
+
+Zusätzlich **KÖNNEN** Clients und Server eigene, benutzerdefinierte Authentifizierungs- und
+Autorisierungsstrategien aushandeln.
+
+Für weitere Diskussionen und Beiträge zur Weiterentwicklung der Auth-Mechanismen von MCP, treten Sie
+uns bei in den
+[GitHub Discussions](https://github.com/modelcontextprotocol/specification/discussions),
+um die Zukunft des Protokolls mitzugestalten!
+
+<div id="schema">
+  ## Schema
+</div>
+
+Die vollständige Spezifikation des Protokolls ist als
+[TypeScript-Schema](https://github.com/modelcontextprotocol/specification/blob/main/schema/draft/schema.ts) definiert.
+Dies ist die maßgebliche Referenz für alle Protokollnachrichten und -strukturen.
+
+Es gibt außerdem ein
+[JSON-Schema](https://github.com/modelcontextprotocol/specification/blob/main/schema/draft/schema.json),
+das automatisch aus der maßgeblichen TypeScript-Quelle erzeugt wird und für den Einsatz mit
+verschiedenen automatisierten Werkzeugen gedacht ist.
+
+<div id="general-fields">
+  ### Allgemeine Felder
+</div>
+
+<div id="_meta">
+  #### `_meta`
+</div>
+
+Die Eigenschaft bzw. der Parameter `_meta` ist vom MCP reserviert, damit Clients und Server zusätzliche Metadaten an ihre Interaktionen anhängen können.
+
+Bestimmte Schlüsselnamen sind vom MCP für Metadaten auf Protokollebene reserviert, wie unten angegeben; Implementierungen DÜRFEN keine Annahmen über Werte an diesen Schlüsseln treffen.
+
+Zusätzlich können Definitionen im [Schema](https://github.com/modelcontextprotocol/specification/blob/main/schema/draft/schema.ts) bestimmte Namen für zweckgebundene Metadaten reservieren, wie in diesen Definitionen festgelegt.
+
+Schlüsselnamenformat: Gültige `_meta`-Schlüsselnamen bestehen aus zwei Segmenten: einem optionalen Präfix und einem Namen.
+
+Präfix:
+
+* Falls angegeben, MUSS es aus einer Folge von Labels bestehen, die durch Punkte (`.`) getrennt sind, gefolgt von einem Schrägstrich (`/`).
+  * Labels MÜSSEN mit einem Buchstaben beginnen und mit einem Buchstaben oder einer Ziffer enden; innenliegende Zeichen DÜRFEN Buchstaben, Ziffern oder Bindestriche (`-`) sein.
+* Jedes Präfix, das mit null oder mehr gültigen Labels beginnt, gefolgt von `modelcontextprotocol` oder `mcp`, gefolgt von einem beliebigen gültigen Label, ist für die MCP-Nutzung RESERVIERT.
+  * Zum Beispiel: `modelcontextprotocol.io/`, `mcp.dev/`, `api.modelcontextprotocol.org/` und `tools.mcp.com/` sind alle reserviert.
+
+Name:
+
+* Sofern nicht leer, MUSS er mit einem alphanumerischen Zeichen (`[a-z0-9A-Z]`) beginnen und enden.
+* Dazwischen DÜRFEN Bindestriche (`-`), Unterstriche (`_`), Punkte (`.`) und alphanumerische Zeichen vorkommen.
+
+<div id="icons">
+  #### `icons`
+</div>
+
+Die Eigenschaft `icons` bietet Servern eine standardisierte Möglichkeit, visuelle Kennungen für ihre Ressourcen, Werkzeuge, Prompts und Implementierungen bereitzustellen. Symbole verbessern Benutzeroberflächen, indem sie visuellen Kontext liefern und die Auffindbarkeit verfügbarer Funktionen erhöhen.
+
+Symbole werden als Array von `Icon`-Objekten dargestellt, wobei jedes Symbol Folgendes enthält:
+
+* `src`: Eine URI, die auf die Symbolressource verweist (erforderlich). Dies kann sein:
+  * Eine HTTP/HTTPS-URL, die auf eine Bilddatei zeigt
+  * Eine Data-URI mit base64-codierten Bilddaten
+* `mimeType`: Optionaler MIME-Typ, falls der vom Server gelieferte Typ fehlt oder zu allgemein ist
+* `sizes`: Optionale Größenangabe (z. B. &quot;48x48&quot;, &quot;any&quot; für skalierbare Formate wie SVG oder &quot;48x48 96x96&quot; für mehrere Größen)
+
+**Erforderliche Unterstützung für MIME-Typen:**
+
+Clients, die das Rendern von Symbolen unterstützen, **MÜSSEN** mindestens die folgenden MIME-Typen unterstützen:
+
+* `image/png` - PNG-Bilder (sicher, weitgehend kompatibel)
+* `image/jpeg` (und `image/jpg`) - JPEG-Bilder (sicher, weitgehend kompatibel)
+
+Clients, die das Rendern von Symbolen unterstützen, **SOLLTEN** außerdem unterstützen:
+
+* `image/svg+xml` - SVG-Bilder (skalierbar, erfordert jedoch die unten genannten Sicherheitsvorkehrungen)
+* `image/webp` - WebP-Bilder (modernes, effizientes Format)
+
+**Sicherheitsaspekte:**
+
+Verbraucher von Symbolmetadaten **MÜSSEN** geeignete Sicherheitsvorkehrungen beim Umgang mit Symbolen treffen, um Kompromittierungen zu verhindern:
+
+* Behandeln Sie Symbolmetadaten und Symbol-Bytes als nicht vertrauenswürdige Eingaben und schützen Sie sich vor Netzwerk-, Datenschutz- und Parserisiken.
+* Stellen Sie sicher, dass die Symbol-URI entweder eine HTTPS- oder `data:`-URI ist. Clients **MÜSSEN** Symbol-URIs ablehnen, die unsichere Schemata und Weiterleitungen verwenden, wie `javascript:`, `file:`, `ftp:`, `ws:` oder lokale App-URI-Schemata.
+  * Untersagen Sie Schemaänderungen und Weiterleitungen zu Hosts mit anderem Origin.
+* Seien Sie widerstandsfähig gegen Ressourcenerschöpfungsangriffe durch übergroße Bilder, große Abmessungen oder übermäßige Frames (z. B. bei GIFs).
+  * Verbraucher **DÜRFEN** Grenzwerte für Bild- und Inhaltsgrößen festlegen.
+* Rufen Sie Symbole ohne Anmeldeinformationen ab. Senden Sie keine Cookies, keine `Authorization`-Header und keine Client-Anmeldedaten.
+* Überprüfen Sie, dass Symbol-URIs vom selben Origin stammen wie der Server. Dies minimiert das Risiko, Daten oder Tracking-Informationen an Dritte offenzulegen.
+* Seien Sie vorsichtig beim Abrufen und Rendern von Symbolen, da die Nutzlast **AUSFÜHRBARE** Inhalte enthalten **KANN** (z. B. SVG mit [eingebettetem JavaScript](https://www.w3.org/TR/SVG11/script.html) oder [erweiterten Möglichkeiten](https://www.w3.org/TR/SVG11/extend.html)).
+  * Verbraucher **DÜRFEN** bestimmte Dateitypen verbieten oder Symboldateien vor dem Rendern anderweitig bereinigen.
+* Validieren Sie MIME-Typen und Dateiinhalte vor dem Rendern. Behandeln Sie MIME-Typ-Informationen als Hinweis. Erkennen Sie den Inhaltstyp über Magic Bytes; lehnen Sie bei Nichtübereinstimmung oder unbekannten Typen ab.
+  * Führen Sie eine strikte Positivliste (Allowlist) zulässiger Bildtypen.
+
+**Verwendung:**
+
+Symbole können angehängt werden an:
+
+* `Implementation`: Visuelle Kennung der MCP-Server/Client-Implementierung
+* `Tool`: Visuelle Darstellung der Funktionalität des Werkzeugs
+* `Prompt`: Symbol zur Anzeige neben Prompt-Vorlagen
+* `Resource`: Visueller Indikator für verschiedene Ressourcentypen
+
+Es können mehrere Symbole bereitgestellt werden, um unterschiedliche Anzeige­kontexte und Auflösungen zu unterstützen. Clients sollten das passendste Symbol basierend auf ihren UI-Anforderungen auswählen.

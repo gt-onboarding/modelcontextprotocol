@@ -1,0 +1,306 @@
+---
+title: Werkzeuge
+type: docs
+weight: 40
+---
+
+<Info>**Protokollrevision**: 2024-11-05</Info>
+
+Das Model Context Protocol (MCP) ermöglicht es Servern, Werkzeuge bereitzustellen, die von
+Sprachmodellen aufgerufen werden können. Werkzeuge erlauben es Modellen, mit externen Systemen zu interagieren, etwa indem sie
+Datenbanken abfragen, APIs aufrufen oder Berechnungen ausführen. Jedes Werkzeug ist eindeutig
+durch einen Namen identifizierbar und enthält Metadaten, die sein Schema beschreiben.
+
+<div id="user-interaction-model">
+  ## Benutzerinteraktionsmodell
+</div>
+
+Werkzeuge im MCP sind **modellgesteuert** konzipiert. Das bedeutet, dass das Sprachmodell auf Basis seines kontextuellen Verständnisses und der Prompts der Nutzenden Werkzeuge automatisch entdecken und aufrufen kann.
+
+Implementierungen können Werkzeuge jedoch über jedes beliebige Interface‑Muster bereitstellen, das ihren Anforderungen entspricht—das Protokoll selbst schreibt kein spezielles Benutzerinteraktionsmodell vor.
+
+<Warning>
+  Aus Gründen von Trust &amp; Safety sowie Sicherheit **SOLLTE** stets ein Mensch eingebunden sein, der die Möglichkeit hat, Werkzeugaufrufe abzulehnen.
+
+  Anwendungen **SOLLTEN**:
+
+  * Eine Benutzeroberfläche bereitstellen, die klar macht, welche Werkzeuge dem AI‑Modell zur Verfügung stehen
+  * Klare visuelle Indikatoren einblenden, wenn Werkzeuge aufgerufen werden
+  * Bestätigungsaufforderungen für Vorgänge anzeigen, um sicherzustellen, dass ein Mensch eingebunden ist
+</Warning>
+
+<div id="capabilities">
+  ## Fähigkeiten
+</div>
+
+Server, die Werkzeuge unterstützen, **MÜSSEN** die Fähigkeit `tools` deklarieren:
+
+```json
+{
+  "capabilities": {
+    "tools": {
+      "listChanged": true
+    }
+  }
+}
+```
+
+`listChanged` gibt an, ob der Server Benachrichtigungen ausgibt, wenn sich die Liste der verfügbaren Werkzeuge ändert.
+
+<div id="protocol-messages">
+  ## Protokollnachrichten
+</div>
+
+<div id="listing-tools">
+  ### Werkzeuge auflisten
+</div>
+
+Um verfügbare Werkzeuge zu ermitteln, senden Clients eine `tools/list`-Anfrage. Dieser Vorgang unterstützt
+[Paginierung](/de/specification/2024-11-05/server/utilities/pagination).
+
+**Anfrage:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/list",
+  "params": {
+    "cursor": "optional-cursor-value"
+  }
+}
+```
+
+**Antwort:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "tools": [
+      {
+        "name": "get_weather",
+        "description": "Aktuelle Wetterinformationen für einen Standort abrufen",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "location": {
+              "type": "string",
+              "description": "Stadtname oder Postleitzahl"
+            }
+          },
+          "required": ["location"]
+        }
+      }
+    ],
+    "nextCursor": "next-page-cursor"
+  }
+}
+```
+
+<div id="calling-tools">
+  ### Aufrufen von Werkzeugen
+</div>
+
+Um ein Werkzeug aufzurufen, senden Clients eine `tools/call`-Anfrage:
+
+**Anfrage:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/call",
+  "params": {
+    "name": "get_weather",
+    "arguments": {
+      "location": "New York"
+    }
+  }
+}
+```
+
+**Antwort:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Aktuelles Wetter in New York:\nTemperatur: 72°F\nBedingungen: Teilweise bewölkt"
+      }
+    ],
+    "isError": false
+  }
+}
+```
+
+<div id="list-changed-notification">
+  ### Benachrichtigung über geänderte Liste
+</div>
+
+Wenn sich die Liste der verfügbaren Werkzeuge ändert, sollten Server, die die Fähigkeit `listChanged` deklariert haben, eine Benachrichtigung senden:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/tools/list_changed"
+}
+```
+
+<div id="message-flow">
+  ## Nachrichtenfluss
+</div>
+
+```mermaid
+sequenceDiagram
+    participant LLM
+    participant Client
+    participant Server
+
+    Note over Client,Server: Ermittlung
+    Client->>Server: tools/list
+    Server-->>Client: Liste der Werkzeuge
+
+    Note over Client,LLM: Werkzeugauswahl
+    LLM->>Client: Werkzeug auswählen
+
+    Note over Client,Server: Aufruf
+    Client->>Server: tools/call
+    Server-->>Client: Ergebnis des Werkzeugs
+    Client->>LLM: Ergebnis verarbeiten
+
+    Note over Client,Server: Aktualisierungen
+    Server--)Client: tools/list_changed
+    Client->>Server: tools/list
+    Server-->>Client: Aktualisierte Werkzeuge
+```
+
+<div id="data-types">
+  ## Datentypen
+</div>
+
+<div id="tool">
+  ### Werkzeug
+</div>
+
+Eine Werkzeugdefinition umfasst:
+
+* `name`: Eindeutiger Bezeichner des Werkzeugs
+* `description`: Verständliche, menschenlesbare Beschreibung der Funktionalität
+* `inputSchema`: JSON-Schema, das die erwarteten Parameter definiert
+
+<div id="tool-result">
+  ### Werkzeugergebnis
+</div>
+
+Werkzeugergebnisse können mehrere Inhaltelemente unterschiedlicher Typen enthalten:
+
+<div id="text-content">
+  #### Textinhalt
+</div>
+
+```json
+{
+  "type": "text",
+  "text": "Werkzeug-Ergebnistext"
+}
+```
+
+<div id="image-content">
+  #### Bildinhalt
+</div>
+
+```json
+{
+  "type": "image",
+  "data": "base64-encoded-data",
+  "mimeType": "image/png"
+}
+```
+
+<div id="embedded-resources">
+  #### Eingebettete Ressourcen
+</div>
+
+[Resources](/de/specification/2024-11-05/server/resources) **KÖNNEN**
+eingebettet werden, um zusätzlichen Kontext oder Daten bereitzustellen, hinter einer URI, die der Client später abonnieren oder erneut abrufen kann:
+
+```json
+{
+  "type": "resource",
+  "resource": {
+    "uri": "resource://example",
+    "mimeType": "text/plain",
+    "text": "Resource content"
+  }
+}
+```
+
+<div id="error-handling">
+  ## Fehlerbehandlung
+</div>
+
+Werkzeuge verwenden zwei Mechanismen zur Fehlerberichterstattung:
+
+1. **Protokollfehler**: Standard-JSON-RPC-Fehler bei Problemen wie:
+   * Unbekannte Werkzeuge
+   * Ungültige Argumente
+   * Serverfehler
+
+2. **Fehler bei der Werkzeugausführung**: In den Werkzeugergebnissen mit `isError: true` gemeldet:
+   * API-Fehlschläge
+   * Ungültige Eingabedaten
+   * Fehler in der Geschäftslogik
+
+Beispiel für einen Protokollfehler:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "error": {
+    "code": -32602,
+    "message": "Unknown tool: invalid_tool_name"
+  }
+}
+```
+
+Beispiel für einen Fehler bei der Werkzeugausführung:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 4,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Failed to fetch weather data: API rate limit exceeded"
+      }
+    ],
+    "isError": true
+  }
+}
+```
+
+<div id="security-considerations">
+  ## Sicherheitsaspekte
+</div>
+
+1. Server **MÜSSEN**:
+   * Alle Werkzeugeingaben validieren
+   * Angemessene Zugriffskontrollen implementieren
+   * Aufrufe von Werkzeugen rate-limitieren
+   * Werkzeugausgaben bereinigen
+
+2. Clients **SOLLEN**:
+   * Bei sensiblen Aktionen eine Bestätigung durch den Benutzer anfordern
+   * Dem Benutzer die Werkzeugeingaben vor dem Aufruf des Servers anzeigen, um bösartige oder versehentliche Datenexfiltration zu vermeiden
+   * Werkzeugergebnisse validieren, bevor sie an das LLM weitergegeben werden
+   * Timeouts für Werkzeugaufrufe implementieren
+   * Die Nutzung von Werkzeugen zu Prüfzwecken protokollieren

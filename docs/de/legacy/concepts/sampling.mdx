@@ -1,0 +1,288 @@
+---
+title: "Sampling"
+description: "Ermöglichen Sie Ihren Servern, Abschlüsse von LLMs anzufordern"
+---
+
+Sampling ist eine leistungsstarke MCP-Funktion, die es Servern ermöglicht, über den Client LLM-Abschlüsse anzufordern. So werden anspruchsvolle agentische Verhaltensweisen ermöglicht, während Sicherheit und Datenschutz gewahrt bleiben.
+
+<Info>
+
+Diese MCP-Funktion wird im Claude-Desktop-Client derzeit nicht unterstützt.
+
+</Info>
+
+<div id="how-sampling-works">
+  ## Wie Sampling funktioniert
+</div>
+
+Der Sampling-Ablauf umfasst die folgenden Schritte:
+
+1. Der Server sendet eine `sampling/createMessage`-Anfrage an den Client
+2. Der Client prüft die Anfrage und kann sie anpassen
+3. Der Client führt Sampling mit einem LLM durch
+4. Der Client überprüft die Completion
+5. Der Client gibt das Ergebnis an den Server zurück
+
+Dieses Human-in-the-Loop-Design stellt sicher, dass Nutzer:innen die Kontrolle darüber behalten, was das LLM sieht und generiert.
+
+<div id="message-format">
+  ## Nachrichtenformat
+</div>
+
+Sampling-Anfragen verwenden ein standardisiertes Nachrichtenformat:
+
+```typescript
+{
+  messages: [
+    {
+      role: "user" | "assistant",
+      content: {
+        type: "text" | "image",
+
+        // Für Text:
+        text?: string,
+
+        // Für Bilder:
+        data?: string,             // base64-codiert
+        mimeType?: string
+      }
+    }
+  ],
+  modelPreferences?: {
+    hints?: [{
+      name?: string                // Vorgeschlagener Modellname/-familie
+    }],
+    costPriority?: number,         // 0–1, Priorität der Kostensenkung
+    speedPriority?: number,        // 0–1, Priorität niedriger Latenz
+    intelligencePriority?: number  // 0–1, Priorität der Fähigkeiten
+  },
+  systemPrompt?: string,
+  includeContext?: "none" | "thisServer" | "allServers",
+  temperature?: number,
+  maxTokens: number,
+  stopSequences?: string[],
+  metadata?: Record<string, unknown>
+}
+```
+
+<div id="request-parameters">
+  ## Anforderungsparameter
+</div>
+
+<div id="messages">
+  ### Nachrichten
+</div>
+
+Das Array `messages` enthält den Gesprächsverlauf, der an das LLM gesendet wird. Jede Nachricht hat:
+
+- `role`: Entweder „user“ oder „assistant“
+- `content`: Der Nachrichteninhalt, der Folgendes sein kann:
+  - Textinhalt mit einem `text`-Feld
+  - Bildinhalt mit `data` (base64) und `mimeType`-Feldern
+
+<div id="model-preferences">
+  ### Modellpräferenzen
+</div>
+
+Das Objekt `modelPreferences` ermöglicht Servern, ihre Präferenzen für die Modellauswahl festzulegen:
+
+- `hints`: Array von Vorschlägen für Modellnamen, die Clients zur Auswahl eines geeigneten Modells verwenden können:
+  - `name`: Zeichenfolge, die vollständige oder teilweise Modellnamen abgleichen kann (z. B. „claude-3“, „sonnet“)
+  - Clients können Hinweise auf gleichwertige Modelle anderer Anbieter abbilden
+  - Mehrere Hinweise werden in der Reihenfolge ihrer Priorität ausgewertet
+
+- Prioritätswerte (0–1 normalisiert):
+  - `costPriority`: Wichtigkeit der Kostenminimierung
+  - `speedPriority`: Wichtigkeit niedriger Latenz bei der Antwort
+  - `intelligencePriority`: Wichtigkeit fortgeschrittener Modellfähigkeiten
+
+Clients treffen die endgültige Modellauswahl auf Grundlage dieser Präferenzen und der ihnen verfügbaren Modelle.
+
+<div id="system-prompt">
+  ### System-Prompt
+</div>
+
+Ein optionales Feld `systemPrompt` ermöglicht Servern, einen bestimmten System-Prompt anzufordern. Der Client kann dies anpassen oder ignorieren.
+
+<div id="context-inclusion">
+  ### Kontexteinbindung
+</div>
+
+Der Parameter `includeContext` gibt an, welcher MCP-Kontext einbezogen werden soll:
+
+- `"none"`: Kein zusätzlicher Kontext
+- `"thisServer"`: Kontext des anfragenden Servers einbeziehen
+- `"allServers"`: Kontext aller verbundenen MCP-Server einbeziehen
+
+Der Client steuert, welcher Kontext tatsächlich einbezogen wird.
+
+<div id="sampling-parameters">
+  ### Sampling-Parameter
+</div>
+
+Feinabstimmung des LLM-Samplings mit:
+
+- `temperature`: Steuert die Zufälligkeit (0,0 bis 1,0)
+- `maxTokens`: Maximale Anzahl zu generierender Token
+- `stopSequences`: Liste von Sequenzen, die die Generierung beenden
+- `metadata`: Zusätzliche anbieterspezifische Parameter
+
+<div id="response-format">
+  ## Antwortformat
+</div>
+
+Der Client gibt ein Completion-Ergebnis zurück:
+
+```typescript
+{
+  model: string,  // Name des verwendeten Modells
+  stopReason?: "endTurn" | "stopSequence" | "maxTokens" | string,
+  role: "user" | "assistant",
+  content: {
+    type: "text" | "image",
+    text?: string,
+    data?: string,
+    mimeType?: string
+  }
+}
+```
+
+<div id="example-request">
+  ## Beispielanfrage
+</div>
+
+Hier ist ein Beispiel dafür, wie das Sampling von einem Client angefordert wird:
+
+```json
+{
+  "method": "sampling/createMessage",
+  "params": {
+    "messages": [
+      {
+        "role": "user",
+        "content": {
+          "type": "text",
+          "text": "What files are in the current directory?"
+        }
+      }
+    ],
+    "systemPrompt": "You are a helpful file system assistant.",
+    "includeContext": "thisServer",
+    "maxTokens": 100
+  }
+}
+```
+
+<div id="best-practices">
+  ## Bewährte Praktiken
+</div>
+
+Bei der Implementierung von Sampling:
+
+1. Verwenden Sie stets klare, gut strukturierte Prompts
+2. Behandeln Sie Text- und Bildinhalte angemessen
+3. Setzen Sie sinnvolle Token-Grenzen
+4. Fügen Sie relevanten Kontext über `includeContext` hinzu
+5. Validieren Sie Antworten, bevor Sie sie verwenden
+6. Gehen Sie mit Fehlern robust um
+7. Erwägen Sie eine Begrenzung der Sampling-Rate
+8. Dokumentieren Sie das erwartete Sampling-Verhalten
+9. Testen Sie mit unterschiedlichen Modellparametern
+10. Überwachen Sie die Sampling-Kosten
+
+<div id="human-in-the-loop-controls">
+  ## Mensch-in-der-Schleife-Kontrollen
+</div>
+
+Sampling ist mit menschlicher Aufsicht im Sinn entwickelt:
+
+<div id="for-prompts">
+  ### Für Prompts
+</div>
+
+- MCP-Clients sollten den Nutzerinnen und Nutzern den vorgeschlagenen Prompt anzeigen
+- Nutzerinnen und Nutzer sollten Prompts bearbeiten oder ablehnen können
+- System-Prompts können gefiltert oder angepasst werden
+- Die Einbindung von Kontext wird vom MCP-Client gesteuert
+
+<div id="for-completions">
+  ### Für Completions
+</div>
+
+- Clients sollten den Nutzenden die Completion anzeigen
+- Nutzende sollten Completions ändern oder ablehnen können
+- Clients können Completions filtern oder ändern
+- Nutzende entscheiden, welches Modell verwendet wird
+
+<div id="security-considerations">
+  ## Sicherheitsaspekte
+</div>
+
+Bei der Implementierung von Sampling:
+
+- Sämtliche Nachrichteninhalte validieren
+- Sensible Informationen bereinigen
+- Angemessene Ratenbegrenzungen implementieren
+- Sampling-Nutzung überwachen
+- Daten während der Übertragung verschlüsseln
+- Datenschutz für Nutzerdaten sicherstellen
+- Sampling-Anfragen prüfen und protokollieren
+- Kostenrisiken kontrollieren
+- Timeouts implementieren
+- Modellfehler robust behandeln
+
+<div id="common-patterns">
+  ## Gängige Muster
+</div>
+
+<div id="agentic-workflows">
+  ### Agentische Workflows
+</div>
+
+Sampling ermöglicht agentische Muster wie:
+
+- Lesen und Analysieren von Ressourcen
+- Treffen von Entscheidungen auf Basis des Kontexts
+- Generieren strukturierter Daten
+- Ausführen mehrstufiger Aufgaben
+- Bereitstellen interaktiver Unterstützung
+
+<div id="context-management">
+  ### Kontextverwaltung
+</div>
+
+Bewährte Vorgehensweisen für den Umgang mit Kontext:
+
+- Fordern Sie nur den unbedingt notwendigen Kontext an
+- Strukturieren Sie den Kontext eindeutig
+- Berücksichtigen Sie Größenbeschränkungen des Kontexts
+- Aktualisieren Sie den Kontext bei Bedarf
+- Entfernen Sie veralteten Kontext
+
+<div id="error-handling">
+  ### Fehlerbehandlung
+</div>
+
+Eine robuste Fehlerbehandlung sollte:
+
+- Sampling-Fehler abfangen
+- Zeitüberschreitungen (Timeouts) behandeln
+- Ratenbegrenzungen handhaben
+- Antworten validieren
+- Fallback-Verhalten bereitstellen
+- Fehler angemessen protokollieren
+
+<div id="limitations">
+  ## Einschränkungen
+</div>
+
+Beachten Sie die folgenden Einschränkungen:
+
+- Sampling hängt von den Fähigkeiten des Clients ab
+- Benutzer steuern das Sampling-Verhalten
+- Die Kontextgröße ist begrenzt
+- Rate Limits können gelten
+- Kosten sollten berücksichtigt werden
+- Die Verfügbarkeit von Modellen variiert
+- Antwortzeiten variieren
+- Nicht alle Inhaltstypen werden unterstützt

@@ -1,0 +1,741 @@
+---
+title: "Transporte"
+description: "Erfahren Sie mehr über die Kommunikationsmechanismen von MCP"
+---
+
+Transporte im Model Context Protocol (MCP) bilden die Grundlage für die Kommunikation zwischen Clients und Servern. Ein Transport übernimmt die zugrunde liegenden Abläufe, mit denen Nachrichten gesendet und empfangen werden.
+
+<div id="message-format">
+  ## Nachrichtenformat
+</div>
+
+MCP verwendet [JSON-RPC](https://www.jsonrpc.org/) 2.0 als sein Übertragungsformat. Die Transportschicht ist dafür verantwortlich, MCP-Protokollnachrichten für die Übertragung in das JSON-RPC-Format umzuwandeln und empfangene JSON-RPC-Nachrichten wieder in MCP-Protokollnachrichten zurückzuübersetzen.
+
+Es werden drei Arten von JSON-RPC-Nachrichten verwendet:
+
+<div id="requests">
+  ### Anfragen
+</div>
+
+```typescript
+{
+  jsonrpc: "2.0",
+  id: number | string,
+  method: string,
+  params?: object
+}
+```
+
+<div id="responses">
+  ### Antworten
+</div>
+
+```typescript
+{
+  jsonrpc: "2.0",
+  id: number | string,
+  result?: object,
+  error?: {
+    code: number,
+    message: string,
+    data?: unknown
+  }
+}
+```
+
+<div id="notifications">
+  ### Benachrichtigungen
+</div>
+
+```typescript
+{
+  jsonrpc: "2.0",
+  method: string,
+  params?: object
+}
+```
+
+<div id="built-in-transport-types">
+  ## Eingebaute Transporttypen
+</div>
+
+Das MCP definiert derzeit zwei standardisierte Transportmechanismen:
+
+<div id="standard-inputoutput-stdio">
+  ### Standard Input/Output (stdio)
+</div>
+
+Der STDIO-Transport (Standard Input/Output) ermöglicht die Kommunikation über Standard-Ein- und -Ausgabeströme. Dies ist besonders nützlich für lokale Integrationen und Kommandozeilenwerkzeuge.
+
+Verwenden Sie STDIO, wenn:
+
+- Sie Kommandozeilenwerkzeuge entwickeln
+- Sie lokale Integrationen implementieren
+- eine einfache Prozesskommunikation erforderlich ist
+- Sie mit Shell-Skripten arbeiten
+
+<div id="server">
+  #### Server
+</div>
+
+<CodeGroup>
+
+```typescript TypeScript
+const server = new Server(
+  {
+    name: "example-server",
+    version: "1.0.0",
+  },
+  {
+    capabilities: {},
+  },
+);
+
+const transport = new StdioServerTransport();
+await server.connect(transport);
+```
+
+```python Python
+app = Server("example-server")
+
+async with stdio_server() as streams:
+    await app.run(
+        streams[0],
+        streams[1],
+        app.create_initialization_options()
+    )
+```
+
+</CodeGroup>
+
+<div id="client">
+  #### Client
+</div>
+
+<CodeGroup>
+
+```typescript TypeScript
+const client = new Client(
+  {
+    name: "example-client",
+    version: "1.0.0",
+  },
+  {
+    capabilities: {},
+  },
+);
+
+const transport = new StdioClientTransport({
+  command: "./server",
+  args: ["--option", "value"],
+});
+await client.connect(transport);
+```
+
+```python Python
+params = StdioServerParameters(
+    command="./server",
+    args=["--option", "value"]
+)
+
+async with stdio_client(params) as streams:
+    async with ClientSession(streams[0], streams[1]) as session:
+        await session.initialize()
+```
+
+</CodeGroup>
+
+<div id="streamable-http">
+  ### Streambares HTTP
+</div>
+
+Der Streambare-HTTP-Transport verwendet HTTP-POST-Anfragen für die Kommunikation vom Client zum Server und optionale Server-Sent-Events-(SSE)-Streams für die Kommunikation vom Server zum Client.
+
+Verwenden Sie Streambares HTTP, wenn:
+
+- Sie webbasierte Integrationen entwickeln
+- eine Client-Server-Kommunikation über HTTP benötigt wird
+- zustandsbehaftete Sitzungen erforderlich sind
+- mehrere gleichzeitige Clients unterstützt werden
+- wiederaufnehmbare Verbindungen implementiert werden
+
+<div id="how-it-works">
+  #### Funktionsweise
+</div>
+
+1. **Client-zu-Server-Kommunikation**: Jede JSON-RPC-Nachricht vom Client an den Server wird als neue HTTP-POST-Anfrage an den MCP-Endpunkt gesendet.
+2. **Serverantworten**: Der Server kann wie folgt antworten:
+   - Mit einer einzelnen JSON-Antwort (`Content-Type: application/json`)
+   - Mit einem SSE-Stream (`Content-Type: text/event-stream`) für mehrere Nachrichten
+3. **Server-zu-Client-Kommunikation**: Server können Anfragen/Benachrichtigungen an Clients senden über:
+   - Von Client-Anfragen initiierte SSE-Streams
+   - SSE-Streams aus HTTP-GET-Anfragen an den MCP-Endpunkt
+
+<div id="server">
+  #### Server
+</div>
+
+<CodeGroup>
+
+```typescript TypeScript
+import express from "express";
+
+const app = express();
+
+const server = new Server(
+  {
+    name: "example-server",
+    version: "1.0.0",
+  },
+  {
+    capabilities: {},
+  },
+);
+
+// MCP-Endpunkt unterstützt sowohl POST als auch GET
+app.post("/mcp", async (req, res) => {
+  // JSON-RPC-Anfrage verarbeiten
+  const response = await server.handleRequest(req.body);
+
+  // Entweder einzelne Antwort oder SSE-Stream zurückgeben
+  if (needsStreaming) {
+    res.setHeader("Content-Type", "text/event-stream");
+    // SSE-Ereignisse senden ...
+  } else {
+    res.json(response);
+  }
+});
+
+app.get("/mcp", (req, res) => {
+  // Optional: Vom Server initiierte SSE-Streams unterstützen
+  res.setHeader("Content-Type", "text/event-stream");
+  // Serverbenachrichtigungen/-anfragen senden ...
+});
+
+app.listen(3000);
+```
+
+```python Python
+from mcp.server.http import HttpServerTransport
+from starlette.applications import Starlette
+from starlette.routing import Route
+
+app = Server("example-server")
+
+async def handle_mcp(scope, receive, send):
+    if scope["method"] == "POST":
+        # JSON-RPC-Anfrage verarbeiten
+        response = await app.handle_request(request_body)
+
+        if needs_streaming:
+            # SSE-Stream zurückgeben
+            await send_sse_response(send, response)
+        else:
+            # JSON-Antwort zurückgeben
+            await send_json_response(send, response)
+
+    elif scope["method"] == "GET":
+        # Optional: Vom Server initiierte SSE-Streams unterstützen
+        await send_sse_stream(send)
+
+starlette_app = Starlette(
+    routes=[
+        Route("/mcp", endpoint=handle_mcp, methods=["POST", "GET"]),
+    ]
+)
+```
+
+</CodeGroup>
+
+<div id="client">
+  #### Client
+</div>
+
+<CodeGroup>
+
+```typescript TypeScript
+const client = new Client(
+  {
+    name: "example-client",
+    version: "1.0.0",
+  },
+  {
+    capabilities: {},
+  },
+);
+
+const transport = new HttpClientTransport(new URL("http://localhost:3000/mcp"));
+await client.connect(transport);
+```
+
+```python Python
+async with http_client("http://localhost:8000/mcp") as transport:
+    async with ClientSession(transport[0], transport[1]) as session:
+        await session.initialize()
+```
+
+</CodeGroup>
+
+<div id="session-management">
+  #### Sitzungsverwaltung
+</div>
+
+Streambares HTTP unterstützt zustandsbehaftete Sitzungen, um den Kontext über mehrere Anfragen hinweg beizubehalten:
+
+1. **Initialisierung der Sitzung**: Server können während der Initialisierung eine Sitzungs-ID vergeben, indem sie diese im Header `Mcp-Session-Id` bereitstellen
+2. **Sitzungspersistenz**: Clients müssen die Sitzungs-ID in allen nachfolgenden Anfragen im Header `Mcp-Session-Id` mitsenden
+3. **Beendigung der Sitzung**: Sitzungen können explizit beendet werden, indem eine HTTP-DELETE-Anfrage mit der Sitzungs-ID gesendet wird
+
+Beispielhafter Sitzungsablauf:
+
+```typescript
+// Server vergibt während der Initialisierung eine Sitzungs-ID
+app.post("/mcp", (req, res) => {
+  if (req.body.method === "initialize") {
+    const sessionId = generateSecureId();
+    res.setHeader("Mcp-Session-Id", sessionId);
+    // Sitzungszustand speichern ...
+  }
+  // Anfrage verarbeiten ...
+});
+
+// Client sendet die Sitzungs-ID in nachfolgenden Anfragen mit
+fetch("/mcp", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Mcp-Session-Id": sessionId,
+  },
+  body: JSON.stringify(request),
+});
+```
+
+<div id="resumability-and-redelivery">
+  #### Wiederaufnahme und erneute Zustellung
+</div>
+
+Zur Unterstützung der Wiederaufnahme unterbrochener Verbindungen bietet Streambares HTTP:
+
+1. **Ereignis-IDs**: Server können SSE-Ereignissen eindeutige IDs zur Nachverfolgung zuweisen
+2. **Fortsetzen ab letztem Ereignis**: Clients können fortsetzen, indem sie den `Last-Event-ID`-Header senden
+3. **Nachrichtenwiedergabe**: Server können verpasste Nachrichten ab dem Zeitpunkt der Unterbrechung erneut zustellen
+
+Dies gewährleistet eine zuverlässige Nachrichtenübermittlung selbst bei instabilen Netzwerkverbindungen.
+
+<div id="security-considerations">
+  #### Sicherheitshinweise
+</div>
+
+Bei der Implementierung des Transports über Streambares HTTP befolgen Sie diese bewährten Sicherheitspraktiken:
+
+1. **Origin-Header validieren**: Validieren Sie bei allen eingehenden Verbindungen stets den `Origin`-Header, um DNS-Rebinding-Angriffe zu verhindern.
+2. **An localhost binden**: Bei lokalem Betrieb binden Sie nur an localhost (127.0.0.1) statt an alle Netzwerkschnittstellen (0.0.0.0).
+3. **Authentifizierung implementieren**: Verwenden Sie für alle Verbindungen eine geeignete Authentifizierung.
+4. **HTTPS verwenden**: Nutzen Sie für Produktionsumgebungen stets TLS/HTTPS.
+5. **Sitzungs-IDs validieren**: Stellen Sie sicher, dass Sitzungs-IDs kryptografisch sicher sind und ordnungsgemäß validiert werden.
+
+Ohne diese Schutzmaßnahmen könnten Angreifer DNS-Rebinding nutzen, um von entfernten Websites aus mit lokalen MCP-Servern zu interagieren.
+
+<div id="server-sent-events-sse-deprecated">
+  ### Server-Sent Events (SSE) – veraltet
+</div>
+
+<Note>
+  SSE als eigenständiger Transport ist seit Protokollversion 2024-11-05 veraltet.
+  Es wurde durch Streambares HTTP ersetzt, das SSE als optionalen
+  Streaming-Mechanismus integriert. Informationen zur Abwärtskompatibilität finden Sie im
+  untenstehenden Abschnitt [Abwärtskompatibilität](#backwards-compatibility).
+</Note>
+
+Der frühere SSE-Transport ermöglichte Server-zu-Client-Streaming; für die Client-zu-Server-Kommunikation wurden HTTP-POST-Anfragen verwendet.
+
+Früher verwendet, wenn:
+
+- nur Server-zu-Client-Streaming benötigt wurde
+- in eingeschränkten Netzwerken gearbeitet wurde
+- einfache Aktualisierungen implementiert werden sollten
+
+<div id="legacy-security-considerations">
+  #### Sicherheitshinweise zu Legacy-Funktionen
+</div>
+
+Der veraltete SSE-Transport hatte ähnliche Sicherheitsaspekte wie Streambares HTTP, insbesondere hinsichtlich DNS-Rebinding-Angriffen. Dieselben Schutzmaßnahmen sollten angewendet werden, wenn SSE-Streams innerhalb des Transports für Streambares HTTP verwendet werden.
+
+<div id="server">
+  #### Server
+</div>
+
+<CodeGroup>
+
+```typescript TypeScript
+import express from "express";
+
+const app = express();
+
+const server = new Server(
+  {
+    name: "example-server",
+    version: "1.0.0",
+  },
+  {
+    capabilities: {},
+  },
+);
+
+let transport: SSEServerTransport | null = null;
+
+app.get("/sse", (req, res) => {
+  transport = new SSEServerTransport("/messages", res);
+  server.connect(transport);
+});
+
+app.post("/messages", (req, res) => {
+  if (transport) {
+    transport.handlePostMessage(req, res);
+  }
+});
+
+app.listen(3000);
+```
+
+```python Python
+from mcp.server.sse import SseServerTransport
+from starlette.applications import Starlette
+from starlette.routing import Route
+
+app = Server("example-server")
+sse = SseServerTransport("/messages")
+
+async def handle_sse(scope, receive, send):
+    async with sse.connect_sse(scope, receive, send) as streams:
+        await app.run(streams[0], streams[1], app.create_initialization_options())
+
+async def handle_messages(scope, receive, send):
+    await sse.handle_post_message(scope, receive, send)
+
+starlette_app = Starlette(
+    routes=[
+        Route("/sse", endpoint=handle_sse),
+        Route("/messages", endpoint=handle_messages, methods=["POST"]),
+    ]
+)
+```
+
+</CodeGroup>
+
+<div id="client">
+  #### Client
+</div>
+
+<CodeGroup>
+
+```typescript TypeScript
+const client = new Client(
+  {
+    name: "example-client",
+    version: "1.0.0",
+  },
+  {
+    capabilities: {},
+  },
+);
+
+const transport = new SSEClientTransport(new URL("http://localhost:3000/sse"));
+await client.connect(transport);
+```
+
+```python Python
+async with sse_client("http://localhost:8000/sse") as streams:
+    async with ClientSession(streams[0], streams[1]) as session:
+        await session.initialize()
+```
+
+</CodeGroup>
+
+<div id="custom-transports">
+  ## Benutzerdefinierte Transporte
+</div>
+
+MCP macht es einfach, benutzerdefinierte Transporte für spezifische Anforderungen zu implementieren. Jede Transport-Implementierung muss lediglich der Transport-Schnittstelle entsprechen:
+
+Sie können benutzerdefinierte Transporte implementieren für:
+
+- Benutzerdefinierte Netzwerkprotokolle
+- Spezialisierte Kommunikationskanäle
+- Integration in bestehende Systeme
+- Leistungsoptimierung
+
+<CodeGroup>
+
+```typescript TypeScript
+interface Transport {
+  // Nachrichtenverarbeitung starten
+  start(): Promise<void>;
+
+  // Eine JSON-RPC-Nachricht senden
+  send(message: JSONRPCMessage): Promise<void>;
+
+  // Die Verbindung schließen
+  close(): Promise<void>;
+
+  // Callbacks
+  onclose?: () => void;
+  onerror?: (error: Error) => void;
+  onmessage?: (message: JSONRPCMessage) => void;
+}
+```
+
+```python Python
+# Beachten Sie, dass MCP-Server zwar häufig mit asyncio implementiert werden,
+# wir jedoch empfehlen, Low-Level-Schnittstellen wie Transporte mit `anyio`
+# für eine breitere Kompatibilität umzusetzen.
+
+@contextmanager
+async def create_transport(
+    read_stream: MemoryObjectReceiveStream[JSONRPCMessage | Exception],
+    write_stream: MemoryObjectSendStream[JSONRPCMessage]
+):
+    """
+    Transport-Schnittstelle für MCP.
+
+    Args:
+        read_stream: Stream zum Lesen eingehender Nachrichten
+        write_stream: Stream zum Schreiben ausgehender Nachrichten
+    """
+    async with anyio.create_task_group() as tg:
+        try:
+            # Nachrichtenverarbeitung starten
+            tg.start_soon(lambda: process_messages(read_stream))
+
+            # Nachrichten senden
+            async with write_stream:
+                yield write_stream
+
+        except Exception as exc:
+            # Fehlerbehandlung
+            raise exc
+        finally:
+            # Aufräumen
+            tg.cancel_scope.cancel()
+            await write_stream.aclose()
+            await read_stream.aclose()
+```
+
+</CodeGroup>
+
+<div id="error-handling">
+  ## Fehlerbehandlung
+</div>
+
+Transportimplementierungen sollten verschiedene Fehlerszenarien abdecken:
+
+1. Verbindungsfehler
+2. Fehler beim Parsen von Nachrichten
+3. Protokollfehler
+4. Netzwerk-Timeouts
+5. Bereinigung von Ressourcen
+
+Beispiel für Fehlerbehandlung:
+
+<CodeGroup>
+
+```typescript TypeScript
+class ExampleTransport implements Transport {
+  async start() {
+    try {
+      // Verbindungslogik
+    } catch (error) {
+      this.onerror?.(new Error(`Failed to connect: ${error}`));
+      throw error;
+    }
+  }
+
+  async send(message: JSONRPCMessage) {
+    try {
+      // Sendelogik
+    } catch (error) {
+      this.onerror?.(new Error(`Failed to send message: ${error}`));
+      throw error;
+    }
+  }
+}
+```
+
+```python Python
+# Beachten Sie: MCP-Server werden häufig mit asyncio implementiert.
+# Für eine breitere Kompatibilität empfehlen wir jedoch, Low-Level-Schnittstellen
+# wie Transporte mit `anyio` zu implementieren.
+
+@contextmanager
+async def example_transport(scope: Scope, receive: Receive, send: Send):
+    try:
+        # Streams für bidirektionale Kommunikation erstellen
+        read_stream_writer, read_stream = anyio.create_memory_object_stream(0)
+        write_stream, write_stream_reader = anyio.create_memory_object_stream(0)
+
+        async def message_handler():
+            try:
+                async with read_stream_writer:
+                    # Logik zur Nachrichtenverarbeitung
+                    pass
+            except Exception as exc:
+                logger.error(f"Failed to handle message: {exc}")
+                raise exc
+
+        async with anyio.create_task_group() as tg:
+            tg.start_soon(message_handler)
+            try:
+                # Streams für die Kommunikation bereitstellen
+                yield read_stream, write_stream
+            except Exception as exc:
+                logger.error(f"Transport error: {exc}")
+                raise exc
+            finally:
+                tg.cancel_scope.cancel()
+                await write_stream.aclose()
+                await read_stream.aclose()
+    except Exception as exc:
+        logger.error(f"Failed to initialize transport: {exc}")
+        raise exc
+```
+
+</CodeGroup>
+
+<div id="best-practices">
+  ## Bewährte Praktiken
+</div>
+
+Beim Implementieren oder Verwenden von MCP-Transporten:
+
+1. Den Verbindungslebenszyklus korrekt handhaben
+2. Angemessenes Fehlerhandling implementieren
+3. Ressourcen beim Schließen der Verbindung aufräumen
+4. Geeignete Timeouts verwenden
+5. Nachrichten vor dem Senden validieren
+6. Transportereignisse zu Debugging-Zwecken protokollieren
+7. Bei Bedarf Wiederverbindungslogik implementieren
+8. Backpressure in Nachrichtenwarteschlangen handhaben
+9. Die Verbindungsgesundheit überwachen
+10. Angemessene Sicherheitsmaßnahmen implementieren
+
+<div id="security-considerations">
+  ## Sicherheitserwägungen
+</div>
+
+Bei der Implementierung von Transporten:
+
+<div id="authentication-and-authorization">
+  ### Authentifizierung und Autorisierung
+</div>
+
+- Implementieren Sie geeignete Authentifizierungsmechanismen
+- Validieren Sie die Anmeldedaten des Clients
+- Verwenden Sie eine sichere Token-Handhabung
+- Implementieren Sie Autorisierungsprüfungen
+
+<div id="data-security">
+  ### Datensicherheit
+</div>
+
+- TLS für die Netzwerkübertragung verwenden
+- Vertrauliche Daten verschlüsseln
+- Nachrichtenintegrität prüfen
+- Größenlimits für Nachrichten implementieren
+- Eingabedaten bereinigen
+
+<div id="network-security">
+  ### Netzwerksicherheit
+</div>
+
+- Rate Limiting implementieren
+- Angemessene Timeouts verwenden
+- Denial-of-Service-Szenarien abfangen
+- Auf ungewöhnliche Muster überwachen
+- Geeignete Firewall-Regeln implementieren
+- Für HTTP-basierte Transporte (einschließlich Streambares HTTP) Origin-Header validieren, um DNS-Rebinding-Angriffe zu verhindern
+- Bei lokalen Servern nur an localhost (127.0.0.1) binden statt an alle Schnittstellen (0.0.0.0)
+
+<div id="debugging-transport">
+  ## Debugging des Transports
+</div>
+
+Tipps zum Debuggen von Transportproblemen:
+
+1. Debug-Logging aktivieren
+2. Nachrichtenfluss überwachen
+3. Verbindungszustände prüfen
+4. Nachrichtenformate validieren
+5. Fehlerszenarien testen
+6. Netzwerkanalysewerkzeuge verwenden
+7. Health-Checks implementieren
+8. Ressourcennutzung überwachen
+9. Randfälle testen
+10. Ordentliches Fehler-Tracking verwenden
+
+<div id="backwards-compatibility">
+  ## Abwärtskompatibilität
+</div>
+
+Um die Kompatibilität zwischen verschiedenen Protokollversionen sicherzustellen:
+
+<div id="for-servers-supporting-older-clients">
+  ### Für Server mit Unterstützung älterer Clients
+</div>
+
+Server, die Clients mit dem veralteten HTTP+SSE-Transport unterstützen möchten, sollten:
+
+1. Sowohl die alten SSE- und POST-Endpunkte als auch den neuen MCP-Endpunkt bereitstellen
+2. Initialisierungsanfragen auf beiden Endpunkten bearbeiten
+3. Separate Logik für die Verarbeitung jedes Transporttyps vorhalten
+
+<div id="for-clients-supporting-older-servers">
+  ### Für Clients mit Unterstützung älterer Server
+</div>
+
+Clients, die Server mit dem veralteten Transport unterstützen möchten, sollten:
+
+1. Server-URLs akzeptieren, die möglicherweise einen der beiden Transporte verwenden
+2. Versuchen, eine `InitializeRequest` mit korrekten `Accept`-Headern per POST zu senden:
+   - Wenn erfolgreich, den Transport „Streambares HTTP“ verwenden
+   - Bei Fehlschlag mit 4xx-Status auf den Legacy-SSE-Transport zurückfallen
+3. Eine GET-Anfrage senden, die bei Legacy-Servern einen SSE-Stream mit `endpoint`-Event erwartet
+
+Beispiel zur Kompatibilitätserkennung:
+
+```typescript
+async function detectTransport(serverUrl: string): Promise<TransportType> {
+  try {
+    // Zuerst Streambares HTTP versuchen
+    const response = await fetch(serverUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json, text/event-stream",
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "initialize",
+        params: {
+          /* ... */
+        },
+      }),
+    });
+
+    if (response.ok) {
+      return "streamable-http";
+    }
+  } catch (error) {
+    // Auf Legacy-SSE zurückfallen
+    const sseResponse = await fetch(serverUrl, {
+      method: "GET",
+      headers: { Accept: "text/event-stream" },
+    });
+
+    if (sseResponse.ok) {
+      return "legacy-sse";
+    }
+  }
+
+  throw new Error("Nicht unterstützter Transport");
+}
+```

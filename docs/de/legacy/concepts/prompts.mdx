@@ -1,0 +1,454 @@
+---
+title: "Prompts"
+description: "Wiederverwendbare Prompt-Vorlagen und Workflows erstellen"
+---
+
+Prompts ermöglichen Servern, wiederverwendbare Prompt-Vorlagen und Workflows zu definieren, die Clients Nutzerinnen und Nutzern sowie LLMs leicht zugänglich machen können. Sie bieten eine wirkungsvolle Möglichkeit, gängige LLM-Interaktionen zu standardisieren und zu teilen.
+
+<Note>
+
+Prompts sind darauf ausgelegt, **von Nutzenden gesteuert** zu sein. Das heißt, sie werden von Servern für Clients bereitgestellt, damit die Nutzerinnen und Nutzer sie gezielt zur Verwendung auswählen können.
+
+</Note>
+
+<div id="overview">
+  ## Überblick
+</div>
+
+Prompts im MCP sind vordefinierte Vorlagen, die Folgendes ermöglichen:
+
+- Dynamische Argumente akzeptieren
+- Kontext aus Ressourcen einbeziehen
+- Mehrere Interaktionen verketten
+- Spezifische Workflows anleiten
+- Als UI-Elemente erscheinen (z. B. Slash-Befehle)
+
+<div id="prompt-structure">
+  ## Prompt-Struktur
+</div>
+
+Jedes Prompt wird wie folgt definiert:
+
+```typescript
+{
+  name: string;              // Eindeutiger Bezeichner für das Prompt
+  description?: string;      // Verständliche Beschreibung
+  arguments?: [              // Optionale Liste von Argumenten
+    {
+      name: string;          // Bezeichner des Arguments
+      description?: string;  // Beschreibung des Arguments
+      required?: boolean;    // Ob das Argument erforderlich ist
+    }
+  ]
+}
+```
+
+<div id="discovering-prompts">
+  ## Prompts entdecken
+</div>
+
+Clients können verfügbare Prompts ermitteln, indem sie eine `prompts/list`-Anfrage senden:
+
+```typescript
+// Request
+{
+  method: "prompts/list";
+}
+
+// Response
+{
+  prompts: [
+    {
+      name: "analyze-code",
+      description: "Code auf mögliche Verbesserungen analysieren",
+      arguments: [
+        {
+          name: "language",
+          description: "Programmiersprache",
+          required: true,
+        },
+      ],
+    },
+  ];
+}
+```
+
+<div id="using-prompts">
+  ## Verwendung von Prompts
+</div>
+
+Um ein Prompt zu nutzen, senden Clients eine `prompts/get`-Anfrage:
+
+````typescript
+// Request
+{
+  method: "prompts/get",
+  params: {
+    name: "analyze-code",
+    arguments: {
+      language: "python"
+    }
+  }
+}
+
+// Response
+{
+  description: "Python-Code auf mögliche Verbesserungen analysieren",
+  messages: [
+    {
+      role: "user",
+      content: {
+        type: "text",
+        text: "Bitte analysieren Sie den folgenden Python-Code auf mögliche Verbesserungen:\n\n```python\ndef calculate_sum(numbers):\n    total = 0\n    for num in numbers:\n        total = total + num\n    return total\n\nresult = calculate_sum([1, 2, 3, 4, 5])\nprint(result)\n```"
+      }
+    }
+  ]
+}
+````
+
+<div id="dynamic-prompts">
+  ## Dynamische Prompts
+</div>
+
+Prompts können dynamisch sein und Folgendes umfassen:
+
+<div id="embedded-resource-context">
+  ### Eingebetteter Ressourcen­kontext
+</div>
+
+```json
+{
+  "name": "analyze-project",
+  "description": "Analyze project logs and code",
+  "arguments": [
+    {
+      "name": "timeframe",
+      "description": "Zeitraum, für den Protokolle analysiert werden sollen",
+      "required": true
+    },
+    {
+      "name": "fileUri",
+      "description": "URI der zu überprüfenden Code-Datei",
+      "required": true
+    }
+  ]
+}
+```
+
+Beim Bearbeiten der `prompts/get`-Anfrage:
+
+```json
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": {
+        "type": "text",
+        "text": "Analysiere diese Systemprotokolle und die Code-Datei auf mögliche Probleme:"
+      }
+    },
+    {
+      "role": "user",
+      "content": {
+        "type": "resource",
+        "resource": {
+          "uri": "logs://recent?timeframe=1h",
+          "text": "[2024-03-14 15:32:11] ERROR: Connection timeout in network.py:127\n[2024-03-14 15:32:15] WARN: Retrying connection (attempt 2/3)\n[2024-03-14 15:32:20] ERROR: Max retries exceeded",
+          "mimeType": "text/plain"
+        }
+      }
+    },
+    {
+      "role": "user",
+      "content": {
+        "type": "resource",
+        "resource": {
+          "uri": "file:///path/to/code.py",
+          "text": "def connect_to_service(timeout=30):\n    retries = 3\n    for attempt in range(retries):\n        try:\n            return establish_connection(timeout)\n        except TimeoutError:\n            if attempt == retries - 1:\n                raise\n            time.sleep(5)\n\ndef establish_connection(timeout):\n    # Connection implementation\n    pass",
+          "mimeType": "text/x-python"
+        }
+      }
+    }
+  ]
+}
+```
+
+<div id="multi-step-workflows">
+  ### Mehrstufige Workflows
+</div>
+
+```typescript
+const debugWorkflow = {
+  name: "debug-error",
+  async getMessages(error: string) {
+    return [
+      {
+        role: "user",
+        content: {
+          type: "text",
+          text: `Hier ist ein Fehler, den ich erhalte: ${error}`,
+        },
+      },
+      {
+        role: "assistant",
+        content: {
+          type: "text",
+          text: "Ich helfe dir, diesen Fehler zu analysieren. Was hast du bisher versucht?",
+        },
+      },
+      {
+        role: "user",
+        content: {
+          type: "text",
+          text: "Ich habe versucht, den Dienst neu zu starten, aber der Fehler bleibt bestehen.",
+        },
+      },
+    ];
+  },
+};
+```
+
+<div id="example-implementation">
+  ## Beispielimplementierung
+</div>
+
+Hier ist ein vollständiges Beispiel dafür, wie Prompts in einem MCP-Server implementiert werden:
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Server } from "@modelcontextprotocol/sdk/server";
+import {
+  ListPromptsRequestSchema,
+  GetPromptRequestSchema,
+} from "@modelcontextprotocol/sdk/types";
+
+const PROMPTS = {
+  "git-commit": {
+    name: "git-commit",
+    description: "Generate a Git commit message",
+    arguments: [
+      {
+        name: "changes",
+        description: "Git diff or description of changes",
+        required: true,
+      },
+    ],
+  },
+  "explain-code": {
+    name: "explain-code",
+    description: "Explain how code works",
+    arguments: [
+      {
+        name: "code",
+        description: "Code to explain",
+        required: true,
+      },
+      {
+        name: "language",
+        description: "Programming language",
+        required: false,
+      },
+    ],
+  },
+};
+
+const server = new Server(
+  {
+    name: "example-prompts-server",
+    version: "1.0.0",
+  },
+  {
+    capabilities: {
+      prompts: {},
+    },
+  },
+);
+
+// Verfügbare Prompts auflisten
+server.setRequestHandler(ListPromptsRequestSchema, async () => {
+  return {
+    prompts: Object.values(PROMPTS),
+  };
+});
+
+// Spezifischen Prompt abrufen
+server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+  const prompt = PROMPTS[request.params.name];
+  if (!prompt) {
+    throw new Error(`Prompt not found: ${request.params.name}`);
+  }
+
+  if (request.params.name === "git-commit") {
+    return {
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: `Generate a concise but descriptive commit message for these changes:\n\n${request.params.arguments?.changes}`,
+          },
+        },
+      ],
+    };
+  }
+
+  if (request.params.name === "explain-code") {
+    const language = request.params.arguments?.language || "Unknown";
+    return {
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: `Explain how this ${language} code works:\n\n${request.params.arguments?.code}`,
+          },
+        },
+      ],
+    };
+  }
+
+  throw new Error("Prompt implementation not found");
+});
+```
+
+```python Python
+from mcp.server import Server
+import mcp.types as types
+
+# Verfügbare Prompts definieren
+PROMPTS = {
+    "git-commit": types.Prompt(
+        name="git-commit",
+        description="Generate a Git commit message",
+        arguments=[
+            types.PromptArgument(
+                name="changes",
+                description="Git diff or description of changes",
+                required=True
+            )
+        ],
+    ),
+    "explain-code": types.Prompt(
+        name="explain-code",
+        description="Explain how code works",
+        arguments=[
+            types.PromptArgument(
+                name="code",
+                description="Code to explain",
+                required=True
+            ),
+            types.PromptArgument(
+                name="language",
+                description="Programming language",
+                required=False
+            )
+        ],
+    )
+}
+
+# Server initialisieren
+app = Server("example-prompts-server")
+
+@app.list_prompts()
+async def list_prompts() -> list[types.Prompt]:
+    return list(PROMPTS.values())
+
+@app.get_prompt()
+async def get_prompt(
+    name: str, arguments: dict[str, str] | None = None
+) -> types.GetPromptResult:
+    if name not in PROMPTS:
+        raise ValueError(f"Prompt not found: {name}")
+
+    if name == "git-commit":
+        changes = arguments.get("changes") if arguments else ""
+        return types.GetPromptResult(
+            messages=[
+                types.PromptMessage(
+                    role="user",
+                    content=types.TextContent(
+                        type="text",
+                        text=f"Generate a concise but descriptive commit message "
+                        f"for these changes:\n\n{changes}"
+                    )
+                )
+            ]
+        )
+
+    if name == "explain-code":
+        code = arguments.get("code") if arguments else ""
+        language = arguments.get("language", "Unknown") if arguments else "Unknown"
+        return types.GetPromptResult(
+            messages=[
+                types.PromptMessage(
+                    role="user",
+                    content=types.TextContent(
+                        type="text",
+                        text=f"Explain how this {language} code works:\n\n{code}"
+                    )
+                )
+            ]
+        )
+
+    raise ValueError("Prompt implementation not found")
+```
+
+</CodeGroup>
+
+<div id="best-practices">
+  ## Bewährte Praktiken
+</div>
+
+Bei der Implementierung von Prompts:
+
+1. Klare, aussagekräftige Prompt-Namen verwenden
+2. Ausführliche Beschreibungen für Prompts und Argumente bereitstellen
+3. Alle erforderlichen Argumente validieren
+4. Fehlende Argumente robust und nutzerfreundlich behandeln
+5. Versionierung für Prompt-Vorlagen in Betracht ziehen
+6. Dynamische Inhalte bei Bedarf zwischenspeichern
+7. Fehlerbehandlung implementieren
+8. Erwartete Argumentformate dokumentieren
+9. Zusammensetzbarkeit von Prompts berücksichtigen
+10. Prompts mit unterschiedlichen Eingaben testen
+
+<div id="ui-integration">
+  ## UI-Integration
+</div>
+
+Prompts können in Client-UIs wie folgt bereitgestellt werden:
+
+- Slash-Befehle
+- Schnellaktionen
+- Kontextmenüeinträge
+- Einträge in der Befehlspalette
+- Geführte Workflows
+- Interaktive Formulare
+
+<div id="updates-and-changes">
+  ## Aktualisierungen und Änderungen
+</div>
+
+Server können Clients über Prompt-Änderungen benachrichtigen:
+
+1. Serverfähigkeit: `prompts.listChanged`
+2. Benachrichtigung: `notifications/prompts/list_changed`
+3. Client ruft die Promptliste erneut ab
+
+<div id="security-considerations">
+  ## Sicherheitserwägungen
+</div>
+
+Bei der Implementierung von Prompts:
+
+- Alle Argumente validieren
+- Benutzereingaben bereinigen
+- Ratenbegrenzung in Erwägung ziehen
+- Zugriffskontrollen implementieren
+- Prompt-Nutzung protokollieren und prüfen
+- Sensible Daten angemessen behandeln
+- Generierte Inhalte validieren
+- Timeouts implementieren
+- Risiken durch Prompt-Injection berücksichtigen
+- Sicherheitsanforderungen dokumentieren

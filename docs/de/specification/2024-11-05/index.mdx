@@ -1,0 +1,146 @@
+---
+title: Spezifikation
+---
+
+[Model Context Protocol](https://modelcontextprotocol.io) (MCP) ist ein offenes Protokoll, das
+eine nahtlose Integration zwischen LLM-Anwendungen und externen Datenquellen sowie
+Werkzeugen ermöglicht. Ob Sie eine KI-gestützte IDE entwickeln, eine Chat-Oberfläche erweitern oder
+benutzerdefinierte KI-Workflows erstellen: MCP bietet eine standardisierte Möglichkeit, LLMs mit dem Kontext
+zu verbinden, den sie benötigen.
+
+Diese Spezifikation definiert die maßgeblichen Protokollanforderungen auf Basis des
+TypeScript-Schemas in
+[schema.ts](https://github.com/modelcontextprotocol/specification/blob/main/schema/2024-11-05/schema.ts).
+
+Implementierungsanleitungen und Beispiele finden Sie auf
+[modelcontextprotocol.io](https://modelcontextprotocol.io).
+
+Die Schlüsselwörter „MUST“, „MUST NOT“, „REQUIRED“, „SHALL“, „SHALL NOT“, „SHOULD“, „SHOULD
+NOT“, „RECOMMENDED“, „NOT RECOMMENDED“, „MAY“ und „OPTIONAL“ in diesem Dokument sind so zu
+interpretieren, wie in [BCP 14](https://datatracker.ietf.org/doc/html/bcp14)
+[[RFC2119](https://datatracker.ietf.org/doc/html/rfc2119)]
+[[RFC8174](https://datatracker.ietf.org/doc/html/rfc8174)] beschrieben — und zwar nur dann,
+wenn sie vollständig in Großbuchstaben erscheinen, wie hier dargestellt.
+
+<div id="overview">
+  ## Überblick
+</div>
+
+MCP bietet Anwendungen eine standardisierte Möglichkeit, um:
+
+* Kontextinformationen mit Sprachmodellen zu teilen
+* Werkzeuge und Fähigkeiten für KI-Systeme bereitzustellen
+* Komponierbare Integrationen und Workflows zu erstellen
+
+Das Protokoll verwendet [JSON-RPC](https://www.jsonrpc.org/) 2.0-Nachrichten, um die
+Kommunikation zwischen folgenden Komponenten herzustellen:
+
+* **Hosts**: LLM-Anwendungen, die Verbindungen initiieren
+* **Clients**: Connectoren innerhalb der Host-Anwendung
+* **Servers**: Dienste, die Kontext und Fähigkeiten bereitstellen
+
+MCP lässt sich teilweise vom
+[Language Server Protocol](https://microsoft.github.io/language-server-protocol/) inspirieren, das
+standardisiert, wie Programmiersprachen in einem gesamten Ökosystem von
+Entwicklungswerkzeugen unterstützt werden. In ähnlicher Weise standardisiert MCP, wie zusätzlicher Kontext
+und Werkzeuge in das Ökosystem von KI-Anwendungen integriert werden.
+
+<div id="key-details">
+  ## Wichtige Details
+</div>
+
+<div id="base-protocol">
+  ### Basisprotokoll
+</div>
+
+* [JSON-RPC](https://www.jsonrpc.org/)-Nachrichtenformat
+* Zustandsbehaftete Verbindungen
+* Fähigkeitenaushandlung zwischen Server und Client
+
+<div id="features">
+  ### Funktionen
+</div>
+
+Server bieten Clients die folgenden Funktionen an:
+
+* **Ressourcen**: Kontext und Daten zur Nutzung durch den Benutzer oder das KI-Modell
+* **Prompts**: Vorlagenbasierte Nachrichten und Workflows für Benutzer
+* **Werkzeuge**: Funktionen, die das KI-Modell ausführen kann
+
+Clients können Servern die folgende Funktion anbieten:
+
+* **Sampling**: Vom Server initiierte agentische Verhaltensweisen und rekursive LLM-Interaktionen
+
+<div id="additional-utilities">
+  ### Zusätzliche Hilfsfunktionen
+</div>
+
+* Konfiguration
+* Fortschrittsverfolgung
+* Abbrechen
+* Fehlerberichterstattung
+* Protokollierung
+
+## Sicherheit und Trust &amp; Safety
+
+Das Model Context Protocol ermöglicht leistungsstarke Funktionen durch beliebigen Datenzugriff
+und Ausführungswege für Code. Mit dieser Macht gehen wichtige Sicherheits- und Vertrauensfragen
+einher, die alle Implementierenden sorgfältig berücksichtigen müssen.
+
+<div id="key-principles">
+  ### Zentrale Grundsätze
+</div>
+
+1. **Einwilligung und Kontrolle der Nutzer**
+   * Nutzer müssen ausdrücklich in alle Datenzugriffe und Vorgänge einwilligen und diese verstehen
+   * Nutzer müssen die Kontrolle darüber behalten, welche Daten geteilt werden und welche Aktionen durchgeführt werden
+   * Implementierende sollten klare UIs zur Überprüfung und Autorisierung von Aktivitäten bereitstellen
+
+2. **Datenschutz**
+   * Hosts müssen die ausdrückliche Einwilligung der Nutzer einholen, bevor sie Nutzerdaten für Server zugänglich machen
+   * Hosts dürfen Ressourcendaten ohne Einwilligung der Nutzer nicht anderweitig übertragen
+   * Nutzerdaten sollten mit geeigneten Zugriffskontrollen geschützt werden
+
+3. **Werkzeugsicherheit**
+   * Werkzeuge ermöglichen die Ausführung beliebigen Codes und müssen mit entsprechender Vorsicht behandelt werden
+   * Hosts müssen die ausdrückliche Einwilligung der Nutzer einholen, bevor ein Werkzeug aufgerufen wird
+   * Nutzer sollten verstehen, was jedes Werkzeug tut, bevor sie dessen Nutzung autorisieren
+
+4. **LLM-Sampling-Kontrollen**
+   * Nutzer müssen alle LLM-Sampling-Anfragen ausdrücklich genehmigen
+   * Nutzer sollten kontrollieren:
+     * Ob Sampling überhaupt stattfindet
+     * Den tatsächlichen Prompt, der gesendet wird
+     * Welche Ergebnisse der Server sehen kann
+   * Das Protokoll beschränkt bewusst die Sichtbarkeit des Servers auf Prompts
+
+<div id="implementation-guidelines">
+  ### Implementierungsrichtlinien
+</div>
+
+Auch wenn das MCP diese Sicherheitsgrundsätze nicht auf Protokollebene durchsetzen kann,
+sollten Implementierer Folgendes **BERÜCKSICHTIGEN**:
+
+1. Robuste Einwilligungs- und Autorisierungsabläufe in ihre Anwendungen integrieren
+2. Klare Dokumentation zu Sicherheitsimplikationen bereitstellen
+3. Geeignete Zugriffskontrollen und Schutzmaßnahmen für Daten implementieren
+4. Sicherheitsbewährte Praktiken in ihren Integrationen befolgen
+5. Datenschutzimplikationen in ihren Funktionsentwürfen berücksichtigen
+
+<div id="learn-more">
+  ## Weitere Informationen
+</div>
+
+Entdecken Sie die detaillierte Spezifikation für jede Protokollkomponente:
+
+<CardGroup cols={5}>
+  <Card title="Architektur" icon="sitemap" href="/de/specification/2024-11-05/architecture" />
+
+  <Card title="Basisprotokoll" icon="code" href="/de/specification/2024-11-05/basic" />
+
+  <Card title="Serverfunktionen" icon="server" href="/de/specification/2024-11-05/server" />
+
+  <Card title="Clientfunktionen" icon="user" href="/de/specification/2024-11-05/client" />
+
+  <Card title="Beitragen" icon="pencil" href="/de/development/contributing" />
+</CardGroup>

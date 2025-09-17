@@ -1,0 +1,312 @@
+---
+title: Verständnis von MCP-Servern
+sidebarTitle: Server
+---
+
+MCP-Server sind Programme, die KI-Anwendungen über standardisierte Protokollschnittstellen spezifische Funktionen bereitstellen.
+
+Häufige Beispiele sind Dateisystemserver für den Dokumentenzugriff, Datenbankserver für Datenabfragen, GitHub-Server für die Codeverwaltung, Slack-Server für die Teamkommunikation und Kalenderserver für die Terminplanung.
+
+<div id="core-server-features">
+  ## Zentrale Serverfunktionen
+</div>
+
+Server stellen Funktionalität über drei Bausteine bereit:
+
+| Feature       | Erklärung                                                                                                                                                                               | Beispiele                                                          | Wer steuert es |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | -------------- |
+| **Werkzeuge** | Funktionen, die Ihr LLM aktiv aufrufen kann und deren Einsatz es basierend auf Benutzeranfragen entscheidet. Werkzeuge können in Datenbanken schreiben, externe APIs aufrufen, Dateien ändern oder andere Logik auslösen. | Flüge suchen<br />Nachrichten senden<br />Kalendereinträge erstellen | Modell         |
+| **Ressourcen** | Passive Datenquellen, die schreibgeschützten Zugriff auf Informationen für Kontext liefern, etwa Dateiinhalte, Datenbankschemata oder API-Dokumentation.                                | Dokumente abrufen<br />Wissensbasen nutzen<br />Kalender lesen     | Anwendung      |
+| **Prompts**   | Vorgefertigte Anweisungsvorlagen, die dem Modell vorgeben, mit bestimmten Werkzeugen und Ressourcen zu arbeiten.                                                                         | Einen Urlaub planen<br />Meine Meetings zusammenfassen<br />Eine E-Mail entwerfen | Benutzer       |
+
+Wir verwenden ein hypothetisches Szenario, um die Rolle dieser Features zu veranschaulichen und zu zeigen, wie sie zusammenwirken können.
+
+<div id="tools">
+  ### Werkzeuge
+</div>
+
+Werkzeuge ermöglichen KI-Modellen, Aktionen auszuführen. Jedes Werkzeug definiert eine spezifische Operation mit typisierten Ein- und Ausgaben. Das Modell fordert die Ausführung eines Werkzeugs kontextabhängig an.
+
+<div id="how-tools-work">
+  #### Funktionsweise von Werkzeugen
+</div>
+
+Werkzeuge sind schemadefinierte Schnittstellen, die von LLMs aufgerufen werden können. MCP verwendet JSON Schema zur Validierung. Jedes Werkzeug führt eine einzelne Operation mit klar definierten Eingaben und Ausgaben aus. Werkzeuge können vor der Ausführung die Zustimmung der Nutzerinnen und Nutzer erfordern, damit diese die Kontrolle über von einem Modell ausgeführte Aktionen behalten.
+
+**Protokolloperationen:**
+
+| Methode       | Zweck                           | Rückgabe                                 |
+| ------------- | -------------------------------- | ---------------------------------------- |
+| `tools/list`  | Verfügbare Werkzeuge ermitteln   | Array von Werkzeugdefinitionen mit Schemas |
+| `tools/call`  | Ein bestimmtes Werkzeug ausführen | Ergebnis der Werkzeugausführung          |
+
+**Beispiel für eine Werkzeugdefinition:**
+
+```typescript
+{
+  name: "searchFlights",
+  description: "Search for available flights",
+  inputSchema: {
+    type: "object",
+    properties: {
+      origin: { type: "string", description: "Departure city" },
+      destination: { type: "string", description: "Arrival city" },
+      date: { type: "string", format: "date", description: "Travel date" }
+    },
+    required: ["origin", "destination", "date"]
+  }
+}
+```
+
+<div id="example-travel-booking">
+  #### Beispiel: Reisebuchung
+</div>
+
+Werkzeuge ermöglichen KI-Anwendungen, im Namen von Nutzenden Aktionen auszuführen. In einem Reiseplanungs­szenario könnte die KI-Anwendung mehrere Werkzeuge verwenden, um einen Urlaub zu buchen:
+
+**Flugsuche**
+
+```
+searchFlights(origin: "NYC", destination: "Barcelona", date: "2024-06-15")
+```
+
+Fragt mehrere Fluggesellschaften ab und liefert strukturierte Flugoptionen.
+
+**Kalendereintrag**
+
+```
+createCalendarEvent(title: "Barcelona Trip", startDate: "2024-06-15", endDate: "2024-06-22")
+```
+
+Markiert die Reisedaten im Kalender der nutzenden Person.
+
+**E-Mail-Benachrichtigung**
+
+```
+sendEmail(to: "team@work.com", subject: "Out of Office", body: "...")
+```
+
+Versendet eine automatische Abwesenheitsnotiz an Kolleginnen und Kollegen.
+
+<div id="user-interaction-model">
+  #### Modell für die Nutzerinteraktion
+</div>
+
+Werkzeuge sind modellgesteuert, das heißt, KI-Modelle können sie automatisch erkennen und aufrufen. MCP legt jedoch durch mehrere Mechanismen Wert auf menschliche Aufsicht.
+
+Für Vertrauen und Sicherheit können Anwendungen die Nutzerkontrolle über verschiedene Mechanismen umsetzen, zum Beispiel:
+
+- Anzeige verfügbarer Werkzeuge in der UI, sodass Nutzer festlegen können, ob ein Werkzeug in bestimmten Interaktionen verfügbar sein soll
+- Genehmigungsdialoge für einzelne Werkzeugausführungen
+- Berechtigungseinstellungen zum Vorabgenehmigen bestimmter sicherer Aktionen
+- Aktivitätsprotokolle, die alle Werkzeugausführungen mitsamt ihren Ergebnissen anzeigen
+
+<div id="resources">
+  ### Ressourcen
+</div>
+
+Ressourcen bieten einen strukturierten Zugriff auf Informationen, die die KI-Anwendung abrufen und den Modellen als Kontext bereitstellen kann.
+
+<div id="how-resources-work">
+  #### Funktionsweise von Ressourcen
+</div>
+
+Ressourcen stellen Daten aus Dateien, APIs, Datenbanken oder anderen Quellen bereit, die eine KI zur Kontextverständnis benötigt. Anwendungen können direkt auf diese Informationen zugreifen und entscheiden, wie sie sie nutzen – etwa durch Auswahl relevanter Abschnitte, Suche mit Embeddings oder Übergabe aller Daten an das Modell.
+
+Jede Ressource hat eine eindeutige URI (z. B. `file:///path/to/document.md`) und gibt ihren MIME-Typ für eine passende Inhaltsverarbeitung an. Ressourcen unterstützen zwei Erkennungsmuster:
+
+- **Direkte Ressourcen** – feste URIs, die auf spezifische Daten verweisen. Beispiel: `calendar://events/2024` – liefert die Kalenderverfügbarkeit für 2024
+- **Ressourcenvorlagen** – dynamische URIs mit Parametern für flexible Abfragen. Beispiel:
+  - `travel://activities/{city}/{category}` – liefert Aktivitäten nach Stadt und Kategorie
+  - `travel://activities/barcelona/museums` – liefert alle Museen in Barcelona
+
+Ressourcenvorlagen enthalten Metadaten wie Titel, Beschreibung und erwarteten MIME-Typ, wodurch sie auffindbar und selbstdokumentierend sind.
+
+**Protokolloperationen:**
+
+| Methode                    | Zweck                                   | Rückgabe                                 |
+| -------------------------- | --------------------------------------- | ---------------------------------------- |
+| `resources/list`           | Verfügbare direkte Ressourcen auflisten | Array von Ressourcenbeschreibungen       |
+| `resources/templates/list` | Ressourcenvorlagen entdecken            | Array von Ressourcenvorlagendefinitionen |
+| `resources/read`           | Ressourceninhalte abrufen               | Ressourcendaten mit Metadaten            |
+| `resources/subscribe`      | Ressourcenänderungen überwachen         | Bestätigung des Abonnements              |
+
+<div id="example-getting-travel-planning-context">
+  #### Beispiel: Kontext für die Reiseplanung abrufen
+</div>
+
+Im Reiseplanungsbeispiel verschaffen Ressourcen der KI-Anwendung Zugriff auf relevante Informationen:
+
+- **Kalenderdaten** (`calendar://events/2024`) – Prüft die Verfügbarkeit des Nutzers
+- **Reisedokumente** (`file:///Documents/Travel/passport.pdf`) – Greift auf wichtige Dokumente zu
+- **Frühere Reiserouten** (`trips://history/barcelona-2023`) – Verweist auf vergangene Reisen und Vorlieben
+
+Die KI-Anwendung ruft diese Ressourcen ab und entscheidet, wie sie verarbeitet werden, sei es durch Auswahl eines Datenausschnitts mittels Embeddings oder Stichwortsuche oder durch direkte Übergabe der Rohdaten an das Modell.
+
+In diesem Fall stellt sie dem Modell Kalenderdaten, Wetterinformationen und Reisepräferenzen bereit, sodass es Verfügbarkeiten prüfen, Wetterverläufe nachschlagen und frühere Reisepräferenzen berücksichtigen kann.
+
+**Beispiele für Ressourcentemplates:**
+
+```json
+{
+  "uriTemplate": "weather://forecast/{city}/{date}",
+  "name": "weather-forecast",
+  "title": "Weather Forecast",
+  "description": "Get weather forecast for any city and date",
+  "mimeType": "application/json"
+}
+
+{
+  "uriTemplate": "travel://flights/{origin}/{destination}",
+  "name": "flight-search",
+  "title": "Flight Search",
+  "description": "Search available flights between cities",
+  "mimeType": "application/json"
+}
+```
+
+Diese Templates ermöglichen flexible Abfragen. Für Wetterdaten können Nutzer Vorhersagen für beliebige Stadt-/Datums-Kombinationen abrufen. Für Flüge können sie Verbindungen zwischen beliebigen Flughäfen suchen. Wenn ein Nutzer „NYC“ als `origin`-Flughafen eingegeben hat und beginnt, „Bar“ als `destination`-Flughafen einzugeben, kann das System „Barcelona (BCN)“ oder „Barbados (BGI)“ vorschlagen.
+
+<div id="parameter-completion">
+  #### Parametervervollständigung
+</div>
+
+Dynamische Ressourcen unterstützen die Parametervervollständigung. Zum Beispiel:
+
+- Die Eingabe von „Par“ für `weather://forecast/{city}` könnte „Paris“ oder „Park City“ vorschlagen
+- Die Eingabe von „JFK“ für `flights://search/{airport}` könnte „JFK – John F. Kennedy International“ vorschlagen
+
+Das System hilft, gültige Werte zu finden, ohne dass genaue Kenntnisse des Formats erforderlich sind.
+
+<div id="user-interaction-model">
+  #### Benutzerinteraktionsmodell
+</div>
+
+Ressourcen sind anwendungsgetrieben und bieten dadurch Flexibilität bei der Art und Weise, wie verfügbarer Kontext abgerufen, verarbeitet und präsentiert wird. Häufige Interaktionsmuster umfassen:
+
+- Baum- oder Listenansichten zum Durchstöbern von Ressourcen in vertrauten, ordnerähnlichen Strukturen
+- Such- und Filteroberflächen zum Auffinden spezifischer Ressourcen
+- Automatische Kontexteinbindung oder intelligente Vorschläge auf Basis von Heuristiken oder KI-Auswahl
+- Manuelle oder gebündelte Auswahloberflächen zum Einbeziehen einzelner oder mehrerer Ressourcen
+
+Anwendungen können die Ressourcenerkennung frei über jedes Schnittstellenmuster umsetzen, das ihren Anforderungen entspricht. Das Protokoll schreibt keine spezifischen UI-Muster vor und ermöglicht Ressourcenauswahlen mit Vorschaufunktionen, intelligente Vorschläge basierend auf dem aktuellen Gesprächskontext, Sammelauswahl zum Einbeziehen mehrerer Ressourcen oder die Integration mit bestehenden Dateibrowsern und Datenexplorern.
+
+<div id="prompts">
+  ### Prompts
+</div>
+
+Prompts bieten wiederverwendbare Vorlagen. Sie ermöglichen Autorinnen und Autoren eines MCP-Servers, parametrisierte Prompts für eine Domäne bereitzustellen oder zu zeigen, wie der MCP-Server am besten genutzt werden kann.
+
+<div id="how-prompts-work">
+  #### Funktionsweise von Prompts
+</div>
+
+Prompts sind strukturierte Vorlagen, die erwartete Eingaben und Interaktionsmuster festlegen. Sie werden von Nutzerinnen und Nutzern gesteuert und erfordern eine ausdrückliche Ausführung statt einer automatischen Auslösung. Prompts können kontextbewusst sein und auf verfügbare Ressourcen und Werkzeuge verweisen, um umfassende Workflows zu erstellen. Ähnlich wie Ressourcen unterstützen Prompts die Parametervervollständigung, um Nutzenden zu helfen, gültige Argumentwerte zu finden.
+
+**Protokollvorgänge:**
+
+| Method         | Purpose                             | Returns                                   |
+| -------------- | ----------------------------------- | ----------------------------------------- |
+| `prompts/list` | Verfügbare Prompts ermitteln        | Array von Prompt-Beschreibungen           |
+| `prompts/get`  | Details zu einem Prompt abrufen     | Vollständige Prompt-Definition mit Argumenten |
+
+<div id="example-streamlined-workflows">
+  #### Beispiel: Schlanke Workflows
+</div>
+
+Prompts bieten strukturierte Vorlagen für gängige Aufgaben. Im Kontext der Reiseplanung:
+
+**„Plan a vacation“-Prompt:**
+
+```json
+{
+  "name": "plan-vacation",
+  "title": "Plan a vacation",
+  "description": "Guide through vacation planning process",
+  "arguments": [
+    { "name": "destination", "type": "string", "required": true },
+    { "name": "duration", "type": "number", "description": "days" },
+    { "name": "budget", "type": "number", "required": false },
+    { "name": "interests", "type": "array", "items": { "type": "string" } }
+  ]
+}
+```
+
+Anstelle unstrukturierter Eingaben in natürlicher Sprache ermöglicht das Prompt-System:
+
+1. Auswahl der Vorlage „Plan a vacation“
+2. Strukturierte Eingabe: Barcelona, 7 Tage, 3.000 $, ["beaches", "architecture", "food"]
+3. Konsistente Workflow-Ausführung auf Basis der Vorlage
+
+<div id="user-interaction-model">
+  #### Benutzerinteraktionsmodell
+</div>
+
+Prompts sind nutzergesteuert und erfordern eine explizite Auslösung. Das Protokoll gibt Implementierenden die Freiheit, Schnittstellen zu entwerfen, die sich in ihrer Anwendung natürlich anfühlen. Wichtige Prinzipien sind:
+
+- Einfache Auffindbarkeit verfügbarer Prompts
+- Klare Beschreibungen, was jeder Prompt bewirkt
+- Natürliche Argumenteingabe mit Validierung
+- Transparente Anzeige der zugrunde liegenden Prompt-Vorlage
+
+Anwendungen stellen Prompts typischerweise über verschiedene UI-Muster bereit, etwa:
+
+- Slash-Befehle (durch Eingabe von „/“ werden verfügbare Prompts wie /plan-vacation angezeigt)
+- Befehlspaletten für durchsuchbaren Zugriff
+- Dedizierte UI-Schaltflächen für häufig verwendete Prompts
+- Kontextmenüs, die relevante Prompts vorschlagen
+
+<div id="bringing-servers-together">
+  ## Server zusammenbringen
+</div>
+
+Die wahre Stärke von MCP zeigt sich, wenn mehrere Server zusammenarbeiten und ihre spezialisierten Fähigkeiten über eine einheitliche Schnittstelle bündeln.
+
+<div id="example-multi-server-travel-planning">
+  ### Beispiel: Reiseplanung mit mehreren Servern
+</div>
+
+Stellen Sie sich eine personalisierte KI-Reiseplaner-Anwendung mit drei verbundenen Servern vor:
+
+- **Travel Server** – Verwaltet Flüge, Hotels und Reiserouten
+- **Weather Server** – Liefert Klimadaten und Vorhersagen
+- **Calendar/Email Server** – Verwaltet Kalender und E‑Mails
+
+<div id="the-complete-flow">
+  #### Der vollständige Ablauf
+</div>
+
+1. **Benutzer ruft einen Prompt mit Parametern auf:**
+
+   ```json
+   {
+     "prompt": "plan-vacation",
+     "arguments": {
+       "destination": "Barcelona",
+       "departure_date": "2024-06-15",
+       "return_date": "2024-06-22",
+       "budget": 3000,
+       "travelers": 2
+     }
+   }
+   ```
+
+2. **Benutzer wählt einzubeziehende Ressourcen aus:**
+   - `calendar://my-calendar/June-2024` (vom Calendar-Server)
+   - `travel://preferences/europe` (vom Travel-Server)
+   - `travel://past-trips/Spain-2023` (vom Travel-Server)
+
+3. **KI verarbeitet die Anfrage mit Werkzeuge:**
+
+   Die KI liest zunächst alle ausgewählten Ressourcen, um Kontext zu sammeln – sie identifiziert verfügbare Termine aus dem Kalender, lernt bevorzugte Fluggesellschaften und Hoteltypen aus den Reisepräferenzen kennen und entdeckt aus vergangenen Reisen zuvor besonders geschätzte Orte.
+
+   Mithilfe dieses Kontexts führt die KI anschließend eine Reihe von Werkzeugen aus:
+   - `searchFlights()` - Fragt Fluggesellschaften nach Flügen von NYC nach Barcelona ab
+   - `checkWeather()` - Ruft Wettervorhersagen für die Reisedaten ab
+
+   Die KI verwendet diese Informationen anschließend, um die Buchung sowie die folgenden Schritte vorzubereiten und holt, wo nötig, die Zustimmung des Benutzers ein:
+   - `bookHotel()` - Findet Hotels innerhalb des angegebenen Budgets
+   - `createCalendarEvent()` - Fügt die Reise dem Kalender des Benutzers hinzu
+   - `sendEmail()` - Sendet eine Bestätigung mit Reisedetails
+
+**Das Ergebnis:** Über mehrere MCP-Server hinweg recherchierte und buchte der Benutzer eine auf seinen Zeitplan zugeschnittene Barcelona-Reise. Der Prompt „Plan a Vacation“ leitete die KI an, Ressourcen (Kalenderverfügbarkeit und Reisehistorie) mit Werkzeugen (Flugsuche, Hotelbuchung, Kalenderaktualisierung) über verschiedene Server zu kombinieren – Kontext zu sammeln und die Buchung auszuführen. Eine Aufgabe, die Stunden hätte dauern können, wurde mit MCP in Minuten erledigt.
